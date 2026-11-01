@@ -113,39 +113,6 @@ function top100(ui, g, st) {
   return out;
 }
 
-// ---------- All About That Bass ----------
-function spuren(ui, g, st) {
-  const i = st.index ?? -1;
-  const r = (st.rounds || {})[i];
-  const out = [tabs(g.content.songs.map((s, k) => s.title ? s.title.slice(0, 22) : `Song ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.resolved)];
-  if (i < 0 || !r) return [...out, muted('Song öffnen (lädt die Spuren auf dem Beamer vor), dann „Abspielen“. Alle Teams dürfen buzzern; die Musik hält an. Richtig = Punkte nach Zahl der laufenden Spuren, falsch = gesperrt, Musik läuft weiter.')];
-  const song = g.content.songs[i];
-  const tracks = (song.tracks || []).filter((t) => t && t.audio);
-  const interval = Number(g.content.interval) || 10;
-  const pb = r.playback;
-  const sec = pb.pos + (pb.state === 'playing' ? Math.max(0, (Date.now() - pb.at) / 1000) : 0);
-  const stage = Math.max(1, Math.min(tracks.length, Math.floor(sec / interval) + 1));
-  out.push(h('p', {}, h('b', {}, song.title || '–'), song.artist ? ` – ${song.artist}` : '', h('br'),
-    h('span', { class: 'muted' }, tracks.map((t, k) => `${k + 1}. ${t.label || 'Spur'} (${plus(pvc(g, `stage${k + 1}`, [5, 4, 3, 2, 1, 1][k]))})`).join(' · '))));
-  const b = (r.buzzes || []).find((x) => x.status === 'pending');
-  if (b) {
-    out.push(h('p', { class: 'notice' }, '🔔 ', h('b', {}, ui.teamName(b.teamId)), ` antwortet – bei ${b.stage} ${b.stage === 1 ? 'Spur' : 'Spuren'} (${plus(pvc(g, `stage${b.stage}`, [5, 4, 3, 2, 1, 1][b.stage - 1]))})`),
-      row(btn('ok', '✓ Richtig', () => ui.act('play.judge', { correct: true })), btn('bad', '✗ Falsch – Musik läuft weiter', () => ui.act('play.judge', { correct: false }))));
-  } else if (!r.resolved) {
-    out.push(row(
-      pb.state === 'playing' ? btn('ghost', '⏸ Pause', () => ui.act('play.pause')) : btn('pink', r.started ? '▶ Weiter' : '▶ Abspielen', () => ui.act('play.play')),
-      r.started ? btn('ghost', '⟲ Von vorn', () => ui.act('play.play', { restart: true })) : null,
-      r.started ? h('span', { class: 'muted' }, `zuletzt bei Spur ${stage} von ${tracks.length}`) : null,
-      btn('ghost', 'Auflösen (niemand weiß es)', () => ui.confirmAct('Song auflösen? Dann gibt es keine Punkte mehr.', 'play.close'))));
-  } else {
-    out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(r.points || 0)}` : 'Niemand richtig'),
-      pb.state === 'reveal' ? btn('ghost', '⏹ Musik aus', () => ui.act('play.stopReveal')) : null));
-  }
-  const done = (r.buzzes || []).filter((x) => x.status !== 'pending');
-  if (done.length) out.push(h('ul', { class: 'list' }, done.map((x) => teamLi(ui, x.teamId, ` – bei ${x.stage} ${x.stage === 1 ? 'Spur' : 'Spuren'}`, badge(x.status === 'correct' ? 'ok' : 'bad', x.status === 'correct' ? 'richtig' : 'falsch')))));
-  return out;
-}
-
 // ---------- 30 Seconds to Spaß ----------
 // Große Knöpfe „Richtig“/„Falsch“ (auch Tasten J/N bzw. 1/2): ein Tipp wertet die
 // Frage und zeigt sofort die nächste – das Team verliert keine Zeit.
@@ -330,4 +297,4 @@ function hostdu(ui, g, st) {
   return out;
 }
 
-export const MOD_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, spuren };
+export const MOD_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden };
