@@ -170,6 +170,8 @@ function migrate(db) {
       // Brain or Dreh'n: Joker getrennt nach positiv/negativ (6 + 6 aufs Rad).
       if (e.type === 'brain') migrateBrainContent(e.content);
     }
+    // Datenbank-Einträge von Spielarten, die es nicht mehr gibt (z. B. „All About That Bass“), entfernen.
+    db.library = db.library.filter((e) => TYPES[e.type]);
     // Neue Spielarten einmalig in die Datenbank aufnehmen – nur ergänzen, nichts ändern.
     db.libraryTypesAdded = db.libraryTypesAdded || [];
     for (const type of EXTRA_ORDER) {
