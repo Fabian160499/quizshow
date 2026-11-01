@@ -360,6 +360,26 @@ const EXTRA_TYPES = {
     example: { rounds: [{ category: '', source: '', period: '', asOf: '', entries: '' }] },
   },
 
+  spuren: {
+    title: 'All About That Bass',
+    playable: true,
+    summary: 'Ein Song in Einzelspuren: erst nur Bass, alle 10 Sekunden kommt eine Spur dazu. Buzzern, sobald man ihn erkennt – je früher, desto mehr Punkte.',
+    schema: [
+      num('interval', 'Sekunden bis zur nächsten Spur (Standard 10)', 2, 60),
+      { key: 'songs', label: 'Songs', type: 'list', min: 1, max: 15, itemLabel: (i) => `Song ${i + 1}`, addLabel: 'Song hinzufügen', noPreview: true,
+        fields: [
+          text('title', 'Lösung: Songtitel', 160),
+          text('artist', 'Interpret (wird bei der Auflösung gezeigt)', 160),
+          num('start', 'Startpunkt in Sekunden (optional, z. B. 45 für den Refrain)', 0, 3600),
+          { key: 'tracks', label: 'Spuren in der Reihenfolge, in der sie einsetzen (alle aus demselben Song, gleich lang, ab 0:00 ausgerichtet)', type: 'list', min: 1, max: 6, itemLabel: (i) => `Spur ${i + 1}`, addLabel: 'Spur hinzufügen',
+            fields: [text('label', 'Name der Spur (z. B. Bass, Schlagzeug, Gitarre, Keyboard, Gesang)', 40), media('audio', 'Tonspur (MP3, WAV, M4A oder MP4)', 'audio')] },
+          media('full', 'Komplette Fassung für die Auflösung (optional – sonst alle Spuren zusammen)', 'audio'),
+          media('cover', 'Cover-Bild für die Auflösung (optional)', 'image'),
+        ] },
+    ],
+    example: { interval: 10, songs: [{ title: '', artist: '', start: null, tracks: [{ label: 'Bass', audio: null }, { label: 'Schlagzeug', audio: null }, { label: 'Gitarre', audio: null }, { label: 'Gesang', audio: null }], full: null, cover: null }] },
+  },
+
   sekunden: {
     title: '30 Seconds to Spaß',
     playable: true,
@@ -513,6 +533,6 @@ const EXTRA_TYPES = {
 };
 
 // Reihenfolge in der Spiele-Datenbank.
-const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden'];
+const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'spuren'];
 
 module.exports = { EXTRA_TYPES, EXTRA_ORDER, WHEEL, WHEEL_SLOTS, migrateBrainContent };

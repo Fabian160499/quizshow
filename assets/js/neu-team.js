@@ -194,6 +194,22 @@ function top100(g, ui) {
   return out;
 }
 
+// ---------- All About That Bass ----------
+function spuren(g, ui) {
+  const out = [muted(`Song ${g.index + 1} von ${g.count} · ${g.tracks} Spuren – je früher ihr buzzert, desto mehr Punkte`)];
+  if (g.resolved) {
+    out.push(h('p', { class: 'question' }, `♫ ${g.title}${g.artist ? ` – ${g.artist}` : ''}`));
+    out.push(g.won ? stateBox('ok', '★', `Richtig! ${plus(g.points)}`) : g.ownStatus === 'wrong' ? stateBox('bad', '✗', 'Leider daneben') : stateBox('', '■', 'Song aufgelöst'));
+    return out;
+  }
+  if (!g.started) return [...out, ...wait('Gleich geht’s los …', 'Hört genau hin: Es beginnt mit einer einzelnen Spur.')];
+  if (g.answering) return [...out, stateBox('ok', '🎤', `Ihr seid dran – sagt laut den Song! (bei ${g.ownStage} ${g.ownStage === 1 ? 'Spur' : 'Spuren'})`)];
+  if (g.locked) return [...out, stateBox('bad', '✗', 'Falsch – für diesen Song gesperrt')];
+  if (g.someoneAnswering) out.push(stateBox('', '⏳', 'Ein anderes Team antwortet …'));
+  out.push(buzzButton('Buzzer', g.canBuzz, (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.buzz'); }));
+  return out;
+}
+
 // ---------- 30 Seconds to Spaß ----------
 function sekunden(g, ui) {
   const out = [muted(`Durchgang ${g.index + 1} von ${g.count} · Zielzeit ${g.seconds} Sekunden · Toleranz ± ${String(g.tol).replace('.', ',')} Sekunden`)];
@@ -354,4 +370,4 @@ function hostdu(g, ui) {
   return out;
 }
 
-export const TEAM_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden };
+export const TEAM_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, spuren };
