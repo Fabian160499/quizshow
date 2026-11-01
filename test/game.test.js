@@ -172,7 +172,7 @@ test('Spiele-Datenbank: alle acht Spiele vorhanden, Show frei zusammenstellbar, 
   const { db } = setup();
   assert.deepEqual(db.library.map((e) => e.type).slice(0, 8), ['leichte5', 'dummes', 'land', 'kassenschlager', 'trumpf5', 'musik', 'jauch', 'nerd']);
   // Die neuen Spielarten stehen nur in der Datenbank, nicht in der Show.
-  assert.equal(db.library.length, 28);
+  assert.equal(db.library.length, 29);
   assert.deepEqual(db.project.games.map((g) => g.type), ['leichte5', 'dummes', 'land', 'kassenschlager', 'trumpf5', 'musik', 'jauch', 'nerd']);
   const trumpf = db.library.find((e) => e.type === 'trumpf5');
   assert.throws(() => game.applyAction(db, mod(), 'game.add', { libraryId: trumpf.id }), /schon 8 Spiele/);

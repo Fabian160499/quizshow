@@ -35,7 +35,7 @@ const pts = (db, id) => totals(db)[id] || 0;
 
 test('Neue Module stehen nur in der Datenbank, nicht automatisch in der Show', () => {
   const db = game.createState();
-  for (const t of ['sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden']) {
+  for (const t of ['sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'spuren']) {
     assert.ok(db.library.some((e) => e.type === t), t);
     assert.ok(!db.project.games.some((g) => g.type === t), t);
   }
@@ -665,4 +665,33 @@ test('30 Seconds to Spaß: reihum, gleiche Blöcke, Stopp im Zeitfenster behält
   act(db, mod(), 'mark', { correct: true });
   act(db, team(ids[1], B + 100000 + 32500), 'buzz'); // 32,5 s – außerhalb ± 2
   assert.equal(pts(db, ids[1]), 2);
+});
+
+test('All About That Bass: Punkte nach Zahl der laufenden Spuren, falsch sperrt, Musik läuft weiter', () => {
+  const { db, ids } = setup(3);
+  const B = 20_000_000;
+  const m = (n) => ({ id: `media_${String(n).repeat(12)}`, type: 'audio/mpeg', name: `s${n}.mp3`, size: 1 });
+  const g = use(db, 'spuren', { songs: [{ title: 'Another One Bites the Dust', artist: 'Queen', start: null, full: null, cover: null,
+    tracks: [{ label: 'Bass', audio: m(1) }, { label: 'Schlagzeug', audio: m(2) }, { label: 'Gitarre', audio: m(3) }, { label: 'Gesang', audio: m(4) }] }] });
+  act(db, mod(), 'open', { index: 0 });
+  assert.throws(() => act(db, team(ids[0]), 'buzz'), /läuft noch nicht/);
+  act(db, { ...mod(), now: B }, 'play');
+  act(db, team(ids[0], B + 14000), 'buzz'); // 14 s → 2 Spuren
+  const st = db.live.games[g.id];
+  assert.equal(st.rounds[0].playback.state, 'paused');
+  assert.equal(st.rounds[0].playback.pos, 14);
+  assert.throws(() => act(db, team(ids[1]), 'buzz'), /anderes Team/);
+  act(db, { ...mod(), now: B + 20000 }, 'judge', { correct: false });
+  assert.equal(st.rounds[0].playback.state, 'playing');
+  assert.equal(st.rounds[0].playback.pos, 14); // weiter an derselben Stelle
+  assert.throws(() => act(db, team(ids[0], B + 21000), 'buzz'), /gesperrt|bereits/);
+  act(db, team(ids[1], B + 20000 + 12000), 'buzz'); // 26 s → 3 Spuren
+  act(db, mod(), 'judge', { correct: true });
+  assert.equal(pts(db, ids[1]), 3);
+  assert.equal(pts(db, ids[0]), 0);
+  const v = bv(db);
+  assert.equal(v.title, 'Another One Bites the Dust');
+  assert.equal(v.playback.state, 'reveal');
+  assert.equal(v.tracks.length, 4);
+  assert.ok(game.referencedMedia(db).has(m(3).id));
 });

@@ -134,6 +134,39 @@ function top100(v, teamOf) {
   return [...head, board];
 }
 
+// ---------- All About That Bass ----------
+// Jede Spur als graue Box mit Equalizer; sie leuchtet auf, sobald sie einsetzt
+// (per CSS-Verzögerung, ohne Uhr im Browser). „Jetzt“-Punkte zählen mit.
+function spuren(v, teamOf) {
+  if (v.waiting) return waitTitle('All About That Bass', 'Spur für Spur zum Song – je früher ihr buzzert, desto mehr Punkte.');
+  const pb = v.playback;
+  const playing = pb.state === 'playing';
+  const pos = pb.pos || 0;
+  const stageNow = Math.max(1, Math.min(v.tracks.length, Math.floor(pos / v.interval) + 1));
+  if (v.resolved) {
+    const out = [h('div', { class: 'sp-solve' }, v.cover ? img(v.cover, 'sp-cover') : h('div', { class: 'sp-cover none' }, '♫'),
+      h('div', { class: 'sp-solve-tx' }, h('small', {}, 'Gesucht war'), h('b', {}, v.title || '–'), v.artist ? h('span', {}, v.artist) : null))];
+    out.push(v.winner ? h('div', { class: 'solution', style: { marginTop: '2vh' } }, `${teamOf(v.winner).name} ${plus(v.points)}`) : h('div', { class: 'solution', style: { marginTop: '2vh' } }, 'Niemand hat es erraten'));
+    if (v.buzzOrder.length) out.push(row(...v.buzzOrder.map((b) => chip(teamOf(b.teamId), b.status === 'wrong' ? 'wrong' : '', ` ${b.status === 'correct' ? '✓' : '✗'} bei ${b.stage} ${b.stage === 1 ? 'Spur' : 'Spuren'}`))));
+    return out;
+  }
+  const rows = h('div', { class: `sp-tracks${playing ? ' playing' : ''}` }, v.tracks.map((t, i) => {
+    const onset = i * v.interval;
+    const on = pos >= onset;
+    const delay = playing && !on ? onset - pos : 0;
+    return h('div', { class: `sp-track${on ? ' on' : playing ? ' later' : ''}`, '--d': `${delay}s` },
+      h('span', { class: 'n' }, String(i + 1)), h('b', { class: 'lb' }, t.label),
+      h('span', { class: 'eq' }, [0, 1, 2, 3, 4, 5, 6].map((k) => h('i', { style: { animationDelay: `${delay + ((k * 0.13) % 0.7)}s` } }))),
+      h('span', { class: 'pt' }, plus(t.points)));
+  }));
+  const status = v.answering ? h('div', { class: 'sp-status', '--team': teamOf(v.answering).color }, h('b', {}, teamOf(v.answering).name), ` antwortet – bei ${stageNow} ${stageNow === 1 ? 'Spur' : 'Spuren'} gibt es ${plus(v.tracks[stageNow - 1].points)}`)
+    : !v.started ? sub('Gleich geht’s los …', { marginTop: '2vh' })
+      : playing ? sub('Buzzer frei! Alle ' + v.interval + ' Sekunden kommt eine Spur dazu.', { marginTop: '2vh' }) : sub('Pause', { marginTop: '2vh' });
+  const locked = v.buzzOrder.filter((b) => b.status === 'wrong');
+  return [h('div', { class: 'level-tag' }, `Song ${v.index + 1} von ${v.count}`), rows, status,
+    locked.length ? row(...locked.map((b) => chip(teamOf(b.teamId), 'wrong', ' ✗ gesperrt'))) : null];
+}
+
 // ---------- 30 Seconds to Spaß ----------
 function sekunden(v, teamOf) {
   if (v.waiting) return waitTitle('30 Seconds to Spaß', `${v.seconds || 30} Sekunden – ohne Uhr. Wer zu früh oder zu spät stoppt, verliert alles.`);
@@ -277,4 +310,4 @@ function hostdu(v, teamOf) {
   return out;
 }
 
-export const BEAMER_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden };
+export const BEAMER_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, spuren };

@@ -33,6 +33,7 @@ const PLAY = {
   top100: require('./play-top100'),
   allein: require('./play-allein'),
   sekunden: require('./play-sekunden'),
+  spuren: require('./play-spuren'),
   star: require('./play-star'),
   timeline: require('./play-timeline'),
   chat: require('./play-chat'),

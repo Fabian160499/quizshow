@@ -7,7 +7,7 @@
 // kann, ob die Dateien im data-Ordner wirklich vorhanden sind.
 
 // Felder, die bewusst leer bleiben dürfen.
-const OPTIONAL_KEYS = new Set(['aliases', 'note', 'asOf', 'fixes', 'min', 'max', 'start', 'audio', 'target', 'lat', 'lng', 'country', 'unit', 'info', 'label', 'photo']);
+const OPTIONAL_KEYS = new Set(['aliases', 'note', 'asOf', 'fixes', 'min', 'max', 'start', 'audio', 'target', 'lat', 'lng', 'country', 'unit', 'info', 'label', 'photo', 'full', 'cover', 'artist']);
 const COUNTRY_MODE = /Ganzes Land/;
 
 function isEmpty(v) {
@@ -44,6 +44,7 @@ function checkFields(fields, obj, where, out, media) {
 function special(type, content, where, out) {
   const each = (list, label, fn) => (list || []).forEach((x, i) => { const err = fn(x); if (err) out.push({ level: 'fehlt', where: `${where} · ${label} ${i + 1}`, text: err }); });
   if (type === 'brain') { const err = require('./play-brain').slotProblem({ type, content }); if (err) out.push({ level: 'fehlt', where: `${where} · Glücksrad`, text: err }); }
+  if (type === 'spuren') each(content.songs, 'Song', (s) => ((s.tracks || []).filter((t) => t && t.audio).length < 2 ? 'Mindestens zwei Spuren hochladen' : null));
   if (type === 'allein') each(content.rounds, 'Kategorie', (rd) => (require('./play-allein').parseList(rd.entries).length < 2 ? 'Liste der richtigen Antworten fehlt' : null));
   if (type === 'star') each(content.puzzles, 'Rätsel', require('./play-star').validate);
   if (type === 'timeline') each(content.rounds, 'Durchgang', require('./play-timeline').validate);

@@ -86,6 +86,68 @@ function konPlay(ctx, buf, from, len) {
   src.onended = () => { if (konSrc && konSrc.src === src) konSrc = null; };
 }
 
+// „All About That Bass“: alle Spuren laufen sample-genau synchron über Web Audio;
+// Spur k ist bis zu ihrem Einsatz stumm und blendet dann kurz ein.
+let spur = null;
+function spurStop() {
+  if (!spur) return;
+  const { srcs, ctx } = spur;
+  spur = null;
+  for (const { src, gain } of srcs) {
+    try {
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
+      src.stop(ctx.currentTime + 0.1);
+    } catch { /* schon beendet */ }
+  }
+}
+function spurStart(ctx, list, from, waits, level) {
+  spurStop();
+  if (ctx.state === 'suspended') ctx.resume();
+  const t0 = ctx.currentTime + 0.06;
+  const srcs = [];
+  list.forEach((buf, i) => {
+    if (!buf || from >= buf.duration) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    const wait = waits[i];
+    if (wait <= 0) { gain.gain.setValueAtTime(0, t0); gain.gain.linearRampToValueAtTime(level, t0 + 0.05); }
+    else { gain.gain.setValueAtTime(0, t0); gain.gain.setValueAtTime(0, t0 + wait); gain.gain.linearRampToValueAtTime(level, t0 + wait + 0.25); }
+    src.connect(gain).connect(ctx.destination);
+    src.start(t0, from);
+    srcs.push({ src, gain });
+  });
+  spur = { srcs, ctx };
+}
+function spurSync(v, s) {
+  if (!v) { spurStop(); last.spurSeq = null; return; }
+  if (!env.soundOn() || !env.audioCtx || !env.audioCtx()) return;
+  const ctx = env.audioCtx();
+  const level = Math.max(0, Math.min(1, ((s.settings && s.settings.musicVolume) ?? 80) / 100));
+  const bufs = v.tracks.map((t) => konBuffer(ctx, t.audio.id)); // beim Öffnen schon laden
+  const fullP = v.full ? konBuffer(ctx, v.full.id) : null;
+  const pb = v.playback;
+  const key = `${v.index}:${pb.seq}`;
+  if (last.spurSeq === key) return;
+  last.spurSeq = key;
+  spurStop();
+  const got = performance.now();
+  if (pb.state === 'playing') {
+    Promise.all(bufs).then((list) => {
+      if (last.spurSeq !== key) return;
+      const pos = pb.pos + (performance.now() - got) / 1000;
+      spurStart(ctx, list, v.start + pos, v.tracks.map((_, i) => i * v.interval - pos), level);
+    });
+  } else if (pb.state === 'reveal') {
+    (fullP ? fullP.then((b) => [b]) : Promise.all(bufs)).then((list) => {
+      if (last.spurSeq !== key) return;
+      spurStart(ctx, list, v.start, list.map(() => -1), level);
+    });
+  }
+}
+
 function audioEl() {
   if (!media.audio) {
     media.audio = pooled('audio');
@@ -127,6 +189,7 @@ export function syncMedia(s) {
       });
     }
   }
+  spurSync(v && v.type === 'spuren' && !v.waiting ? v : null, s);
   const song = v && v.type === 'songsong' && !v.waiting ? v : null;
   const kon = v && v.type === 'konsequenz' && !v.waiting ? v : null;
   const mus = v && v.type === 'musik' && v.current && v.current.clip ? v.current : null;
