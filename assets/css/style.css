@@ -2039,37 +2039,3 @@ details.item.drop-here { outline: 2px dashed var(--accent-2, #ffc23d); outline-o
 .beamer .sek-o b { font-size: 2.6vh; color: var(--accent-2); }
 .beamer .sek-o.turn { box-shadow: inset 0.5vh 0 0 var(--team), 0 0 0 0.3vh var(--team), 0 0 2.6vh color-mix(in srgb, var(--team) 50%, transparent); }
 .beamer .sek-o.fail b { color: var(--bad); }
-
-/* ===== All About That Bass ===== */
-.beamer .sp-tracks { display: grid; gap: 1.2vh; width: min(80vw, 140vh); margin: 2vh auto 0; }
-.beamer .sp-track { display: grid; grid-template-columns: 6vh 1fr 34% 8vh; align-items: center; gap: 1.4vw; padding: 1.4vh 1.4vw; background: var(--box); color: rgba(255, 255, 255, 0.45); box-shadow: 0 0.8vh 2vh rgba(0, 0, 0, 0.5); transition: color 0.3s; }
-.beamer .sp-track .n { display: grid; place-items: center; width: 5vh; height: 5vh; background: #333; color: #888; font-weight: 900; font-size: 2.6vh; }
-.beamer .sp-track .lb { font-size: 3.6vh; text-transform: uppercase; letter-spacing: 0.03em; }
-.beamer .sp-track .pt { font-size: 3.4vh; font-weight: 900; text-align: right; }
-.beamer .sp-track .eq { display: flex; align-items: flex-end; justify-content: center; gap: 0.6vw; height: 5vh; }
-.beamer .sp-track .eq i { width: 0.9vw; height: 15%; background: #444; }
-.beamer .sp-track.on, .beamer .sp-track.later { --lit: 1; }
-.beamer .sp-track.on { color: #fff; box-shadow: inset 0.8vh 0 0 var(--accent-2), 0 0 2.6vh rgba(255, 194, 61, 0.3), 0 0.8vh 2vh rgba(0, 0, 0, 0.5); }
-.beamer .sp-track.on .n { background: var(--accent-2); color: #111; }
-.beamer .sp-track.on .pt { color: var(--accent-2); }
-.beamer .sp-track.on .eq i { background: linear-gradient(0deg, var(--accent), var(--accent-2)); }
-.beamer .sp-tracks.playing .sp-track.on .eq i { animation: spEq 0.7s ease-in-out infinite alternate; }
-.beamer .sp-tracks:not(.playing) .sp-track.on .eq i { height: 45%; }
-@keyframes spEq { from { height: 15%; } to { height: 100%; } }
-/* Spur, die noch kommt: leuchtet nach Ablauf ihrer Verzögerung auf */
-.beamer .sp-track.later { animation: spOn 0.5s ease-out both; animation-delay: inherit; }
-@keyframes spOn { from { color: rgba(255, 255, 255, 0.45); box-shadow: 0 0.8vh 2vh rgba(0, 0, 0, 0.5); } to { color: #fff; box-shadow: inset 0.8vh 0 0 var(--accent-2), 0 0 2.6vh rgba(255, 194, 61, 0.3), 0 0.8vh 2vh rgba(0, 0, 0, 0.5); } }
-.beamer .sp-status { display: table; margin: 2.4vh auto 0; padding: 1.2vh 1.6vw; background: var(--box); color: #fff; font-size: 2.8vh; box-shadow: inset 0.8vh 0 0 var(--team), 0 0 2.6vh color-mix(in srgb, var(--team) 45%, transparent); }
-.beamer .sp-status b { text-transform: uppercase; }
-.beamer .sp-solve { display: flex; align-items: center; gap: 3vw; width: min(80vw, 140vh); margin: 4vh auto 0; padding: 3vh 2vw; background: var(--box); color: #fff; box-shadow: inset 0 0.8vh 0 var(--accent-2), 0 1.2vh 3vh rgba(0, 0, 0, 0.55); animation: pop 0.6s cubic-bezier(.2,1.5,.4,1) both; }
-.beamer .sp-cover { width: 28vh; height: 28vh; object-fit: cover; flex: none; box-shadow: 0 1vh 3vh rgba(0, 0, 0, 0.6); }
-.beamer .sp-cover.none { display: grid; place-items: center; background: #2b2b2e; font-size: 14vh; color: var(--accent-2); }
-.beamer .sp-solve-tx { display: flex; flex-direction: column; gap: 1vh; }
-.beamer .sp-solve-tx small { font-size: 2.2vh; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; }
-.beamer .sp-solve-tx b { font-size: 7vh; line-height: 1.05; }
-.beamer .sp-solve-tx span { font-size: 3.6vh; color: var(--accent-2); font-weight: 800; }
-.beamer .sp-track.later { animation: spOn 0.5s ease-out both; animation-delay: var(--d, 0s); }
-.beamer .sp-track.later .eq i { animation: spEqLit 0.7s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
-.beamer .sp-track.later .n { animation: spNum 0.3s ease-out both; animation-delay: var(--d, 0s); }
-@keyframes spEqLit { from { height: 15%; background: var(--accent); } to { height: 100%; background: var(--accent-2); } }
-@keyframes spNum { to { background: var(--accent-2); color: #111; } }
