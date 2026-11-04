@@ -24,8 +24,10 @@ npm install
 npm start
 ```
 
-Danach `http://localhost:3000` öffnen. Das Passwort für Moderation/Admin (Regie, Editor,
-iPad Moderation) ist dauerhaft `fabian`. Bei Bedarf überschreibt `QUIZ_ADMIN_PASSWORD=…` es.
+Danach `http://localhost:3000` öffnen. Das Passwort für Moderation/Admin (Regie, Editor)
+ist dauerhaft `fabian`. Bei Bedarf überschreibt `QUIZ_ADMIN_PASSWORD=…` es.
+Das Finale-iPad der Moderation meldet sich auf der Startseite links an („🎤 Moderation (Finale)“,
+Passwort `fabian`) und darf dort nur die eigenen Finalantworten abgeben.
 Teams, Beamer und Moderation müssen im selben Netz den Server erreichen können
 (z. B. `http://<IP-des-Laptops>:3000`).
 

@@ -21,7 +21,6 @@
     </nav>
     <div class="row">
       <a class="btn small ghost" href="beamer.html" target="_blank" rel="noopener" title="Beamer-Ansicht in neuem Fenster – dort „⛶ Vollbild“">Beamer öffnen ↗</a>
-      <a class="btn small ghost" href="host.html" target="_blank" rel="noopener" title="Antwort-iPad der Moderation fürs Finale. Auf dem iPad: Startseite → Passwort → „Als iPad Moderation (Finale) anmelden“">iPad Moderation (Finale) ↗</a>
       <button class="btn small ghost" id="logout">Abmelden</button>
     </div>
   </header>
@@ -29,21 +28,20 @@
     <div id="warning"></div>
     <section id="tab-live" role="tabpanel">
       <div id="run-panel"></div>
-      <!-- Kleine Beamer-Vorschau direkt unter dem Showablauf (fest im HTML, lädt bei Updates nicht neu) -->
-      <section class="card beamer-mini" aria-label="Beamer-Vorschau">
-        <iframe class="preview" src="beamer.html?preview" title="Beamer-Vorschau"></iframe>
-        <div class="beamer-mini-info">
-          <h3>Beamer</h3>
-          <div id="beamer-controls"></div>
-        </div>
-      </section>
       <div class="live-grid">
         <div id="live-left" class="grid" style="align-content:start"></div>
         <div class="grid" style="align-content:start">
+          <!-- Kleine Beamer-Vorschau rechts über der Rangliste (fest im HTML, lädt bei Updates nicht neu) -->
+          <section class="card beamer-mini" aria-label="Beamer-Vorschau">
+            <iframe class="preview" src="beamer.html?preview" title="Beamer-Vorschau"></iframe>
+            <div class="beamer-mini-info">
+              <h3>Beamer</h3>
+              <div id="beamer-controls"></div>
+            </div>
+          </section>
           <div id="live-right" class="grid"></div>
         </div>
       </div>
-      <!-- Spiele direkt aktivieren: ganz unten, nur für Ausnahmen neben dem Showablauf -->
       <div id="live-bottom" class="grid" style="margin-top:16px"></div>
     </section>
     <section id="tab-teams" role="tabpanel" class="hidden"></section>

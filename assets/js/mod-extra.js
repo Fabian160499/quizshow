@@ -17,6 +17,8 @@ const badge = (kind, text) => h('span', { class: `badge ${kind}` }, text);
 const row = (...c) => h('div', { class: 'row', style: { marginTop: '12px' } }, ...c);
 const btn = (cls, label, onclick, disabled = false) => h('button', { class: `btn ${cls}`, onclick, disabled }, label);
 const muted = (t) => h('p', { class: 'muted' }, t);
+// Bedienhinweis: in der Regie standardmäßig eingeklappt („?“ blendet ihn ein).
+const help = (t) => h('p', { class: 'muted help' }, t);
 const lines = (t) => String(t || '').split('\n').map((x) => x.trim()).filter(Boolean);
 const ink = (src) => h('img', { class: 'ink-answer mod', src, alt: 'Handschrift' });
 
@@ -47,8 +49,8 @@ function dumm3(ui, g, st) {
   const q = st.qIndex ?? -1;
   const r = (st.rounds || {})[q];
   const out = [tabs(g.content.questions.map((x, i) => `Frage ${i + 1} (${x.level})`), q, (i) => ui.act('play.open', { qIndex: i }), (i) => st.rounds?.[i]?.evaluated),
-    muted('Jedes Team setzt 1–5 Punkte, jeden Wert genau einmal. Richtig: +Einsatz, falsch: −Einsatz.')];
-  if (q < 0 || !r) return [...out, muted('Frage freigeben.')];
+    help('Jedes Team setzt 1–5 Punkte, jeden Wert genau einmal. Richtig: +Einsatz, falsch: −Einsatz.')];
+  if (q < 0 || !r) return [...out, help('Frage freigeben.')];
   const qq = g.content.questions[q];
   out.push(h('p', { class: 'question', style: { fontSize: '1.3rem' } }, qq.question), optionsList(qq));
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
@@ -70,7 +72,7 @@ function filmab(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.films.map((f, k) => f.title || `Film ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.resolved)];
-  if (i < 0 || !r) return [...out, muted('Film wählen, dann „Abspielen“. Alle Teams dürfen buzzern; falsch sperrt das Team für diesen Film.')];
+  if (i < 0 || !r) return [...out, help('Film wählen, dann „Abspielen“. Alle Teams dürfen buzzern; falsch sperrt das Team für diesen Film.')];
   const f = g.content.films[i];
   out.push(h('p', {}, 'Lösung: ', h('b', {}, f.title), f.aliases ? h('span', { class: 'muted' }, ` (auch: ${f.aliases})`) : null));
   if (!f.clip) out.push(h('p', { class: 'notice warn' }, 'Für diesen Film ist noch kein Ausschnitt hochgeladen (Editor → Spiel bearbeiten).'));
@@ -95,7 +97,7 @@ function weissnicht(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.rounds.map((_, k) => `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.closed)];
-  if (i < 0 || !r) return [...out, muted('Runde öffnen: Bild erscheint, Buzzer sind frei. Wer zuerst buzzert, wählt ein Team, das es angeblich nicht weiß.')];
+  if (i < 0 || !r) return [...out, help('Runde öffnen: Bild erscheint, Buzzer sind frei. Wer zuerst buzzert, wählt ein Team, das es angeblich nicht weiß.')];
   const item = g.content.rounds[i];
   out.push(h('p', {}, item.question || '', ' · Lösung: ', h('b', {}, item.solution || '–')));
   if (!item.image) out.push(h('p', { class: 'notice warn' }, 'Für diese Runde ist noch kein Bild hochgeladen.'));
@@ -114,7 +116,7 @@ function weissnicht2(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.rounds.map((_, k) => `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.evaluated)];
-  if (i < 0 || !r) return [...out, muted('Runde öffnen: alle schreiben; wer abgegeben hat, darf buzzern. Der schnellste schätzt sofort ein – jedes Team, sobald es abgegeben hat.')];
+  if (i < 0 || !r) return [...out, help('Runde öffnen: alle schreiben; wer abgegeben hat, darf buzzern. Der schnellste schätzt sofort ein – jedes Team, sobald es abgegeben hat.')];
   const item = g.content.rounds[i];
   out.push(h('p', {}, item.question || '', ' · Lösung: ', h('b', {}, item.solution || '–')));
   const ids = ui.S.project.teams.map((t) => t.id);
@@ -145,7 +147,7 @@ function konsequenz(ui, g, st) {
   const pv = stages.map((_, k) => (Number.isFinite(nums[k]) ? nums[k] : [5, 4, 3, 2, 1][k]));
   const out = [tabs(g.content.songs.map((s, k) => s.title || `Lied ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.awarded),
     muted(`Staffelung (Vorschlag, im Editor änderbar): ${stages.map((s, k) => `${String(s).replace('.', ',')} s = ${pv[k]}`).join(' · ')}`)];
-  if (i < 0 || !r) return [...out, muted('Lied wählen, dann Stufe für Stufe anspielen. Teams schicken per Buzzer ab, ohne andere zu sperren.')];
+  if (i < 0 || !r) return [...out, help('Lied wählen, dann Stufe für Stufe anspielen. Teams schicken per Buzzer ab, ohne andere zu sperren.')];
   const s = g.content.songs[i];
   out.push(h('p', {}, 'Titel: ', h('b', {}, s.title || '–')));
   if (!s.audio) out.push(h('p', { class: 'notice warn' }, 'Für dieses Lied ist noch keine Datei hochgeladen.'));
@@ -167,7 +169,7 @@ function songsong(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.puzzles.map((_, k) => `Rätsel ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.done)];
-  if (i < 0 || !r) return [...out, muted('Rätsel wählen, Musik starten. Teams schicken per Buzzer ab; geprüft wird in Buzzer-Reihenfolge, Punkt nur für beide Titel.')];
+  if (i < 0 || !r) return [...out, help('Rätsel wählen, Musik starten. Teams schicken per Buzzer ab; geprüft wird in Buzzer-Reihenfolge, Punkt nur für beide Titel.')];
   const p = g.content.puzzles[i];
   out.push(h('p', {}, 'Lösung: ', h('b', {}, p.melody || '–'), ' + ', h('b', {}, p.lyrics || '–')));
   if (!p.audio) out.push(h('p', { class: 'notice warn' }, 'Für dieses Rätsel ist noch keine Datei hochgeladen.'));
@@ -188,12 +190,12 @@ function dgf(ui, g, st) {
   const c = st.catIndex ?? -1;
   const r = (st.rounds || {})[c];
   const out = [tabs(g.content.categories.map((x) => x.name || 'Kategorie'), c, (k) => ui.act('play.open', { catIndex: k }), (k) => st.rounds?.[k]?.done),
-    muted(`Reihum, ${g.content.seconds || 60} s pro Auswahl. Startteam wird je Kategorie ausgelost. Falsch oder Zeit um: raus, Punkte weg. Aussteigen sichert.`)];
+    help(`Reihum, ${g.content.seconds || 60} s pro Auswahl. Startteam wird je Kategorie ausgelost. Falsch oder Zeit um: raus, Punkte weg. Aussteigen sichert.`)];
   const cat = g.content.categories[Math.max(0, c)];
   if (c < 0 || !r) {
     const n = cat ? [lines(cat.right).length, lines(cat.wrong).length] : [0, 0];
     if (cat && (n[0] !== 22 || n[1] !== 3)) out.push(h('p', { class: 'notice warn' }, `„${cat.name}“: ${n[0]} passende und ${n[1]} falsche Begriffe – nötig sind 22 und 3.`));
-    return [...out, muted('Kategorie öffnen: das Startteam wird ausgelost.')];
+    return [...out, help('Kategorie öffnen: das Startteam wird ausgelost.')];
   }
   out.push(h('p', {}, h('b', {}, r.name), ` · ${r.board.filter((b) => b.gone).length} von 22 gefunden`, r.done ? '' : [' · am Zug: ', h('b', {}, ui.teamName(r.order[r.turn])), ' · ', h('b', { 'data-deadline': r.deadline }, '')]));
   out.push(h('div', { class: 'dgf-mod-board' }, r.board.map((b) => h('span', { class: `dgf-chip${b.gone ? ' gone' : ''}${b.wrong ? ' wrong' : ''}`, title: b.wrong ? 'falsch (nur für die Regie)' : '' }, b.text))));
@@ -211,7 +213,7 @@ function dgf(ui, g, st) {
 function zocken(ui, g, st) {
   const removed = st.removed || [];
   const c = st.current;
-  const out = [muted('Feld öffnen → alle buzzern. Richtig: Team sichert oder zockt (wählt selbst ein Feld). Falsch: Ungesichertes weg, Frage bleibt, andere buzzern.')];
+  const out = [help('Feld öffnen → alle buzzern. Richtig: Team sichert oder zockt (wählt selbst ein Feld). Falsch: Ungesichertes weg, Frage bleibt, andere buzzern.')];
   out.push(h('div', { class: 'zock-board mod' }, Array.from({ length: 24 }, (_, i) => h('button', {
     class: `zock-cell${removed.includes(i) ? ' gone' : ''}${c && c.q === i && !c.resolved ? ' now' : ''}`,
     disabled: removed.includes(i) || !!st.decide || !!st.choose,
@@ -240,7 +242,7 @@ function fragen(ui, g, st) {
   const c = st.catIndex ?? -1;
   const r = (st.rounds || {})[c];
   const out = [tabs(g.content.categories.map((x) => x.name || 'Kategorie'), c, (k) => ui.act('play.open', { catIndex: k }), (k) => st.rounds?.[k]?.evaluated)];
-  if (c < 0 || !r) return [...out, muted('Kategorie öffnen: Teams schreiben Frage + Antwort und schicken per Buzzer ab.')];
+  if (c < 0 || !r) return [...out, help('Kategorie öffnen: Teams schreiben Frage + Antwort und schicken per Buzzer ab.')];
   if (!r.published) {
     out.push(h('p', {}, h('b', {}, 'Vorschläge in Buzzer-Reihenfolge'), ' – unzulässig (privat, unklar, falsch) ablehnen, sonst annehmen und veröffentlichen.'));
     out.push(h('ol', { class: 'list' }, r.subs.length ? r.subs.map((s) => h('li', { class: s.status === 'accepted' ? 'active' : '' }, ui.dot(ui.teamColor(s.teamId)),
@@ -274,7 +276,7 @@ function zuweit(ui, g, st) {
   const r = (st.rounds || {})[i];
   const ds = ui.S.datasets || [];
   const out = [tabs(g.content.rounds.map((_, k) => `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.evaluated && !st.rounds?.[k]?.tie)];
-  if (i < 0 || !r) return [...out, muted(`Runde öffnen: Teams wählen zwei Einträge über ein Suchfeld. Bestes Ergebnis ${plus(pvc(g, 'best', 2))}, schlechtestes ${plus(pvc(g, 'worst', -1))}.`)];
+  if (i < 0 || !r) return [...out, help(`Runde öffnen: Teams wählen zwei Einträge über ein Suchfeld. Bestes Ergebnis ${plus(pvc(g, 'best', 2))}, schlechtestes ${plus(pvc(g, 'worst', -1))}.`)];
   const rd = g.content.rounds[i];
   const meta = ds.find((d) => d.name === rd.dataset);
   out.push(h('p', { class: 'question', style: { fontSize: '1.2rem' } }, rd.task), h('p', {}, `${rd.dataset} · ${rd.mode} gewinnt`,
@@ -305,7 +307,7 @@ function zuweit(ui, g, st) {
 function brain(ui, g, st) {
   const out = [];
   const names = { category: 'Kategorie wird vorgestellt (Joker möglich)', question: 'Frage offen – Teams antworten', evaluated: 'Aufgelöst', wheel: 'Glücksrad' };
-  if (st.round < 0 || !st.r) return [muted('12 Runden. Kategorie vorstellen (Joker einsetzen) → Frage → auflösen → richtige Teams buzzern ans Glücksrad.'), row(btn('pink', 'Spiel starten', () => ui.act('play.start')))];
+  if (st.round < 0 || !st.r) return [help('12 Runden. Kategorie vorstellen (Joker einsetzen) → Frage → auflösen → richtige Teams buzzern ans Glücksrad.'), row(btn('pink', 'Spiel starten', () => ui.act('play.start')))];
   const r = st.r;
   const q = g.content.rounds[st.round];
   out.push(h('p', {}, h('b', {}, `Runde ${st.round + 1} von ${g.content.rounds.length}: ${q.category}`), ` · ${names[r.phase]}`));

@@ -79,7 +79,7 @@ function renderAll(force = false) {
   document.getElementById('editor-tabs').classList.toggle('hidden', !inEditor);
   for (const id of ['live', 'teams', 'editor', 'library', 'points']) document.getElementById(`tab-${id}`).classList.toggle('hidden', id !== tab);
   renderWarning();
-  if (tab === 'live') return renderLive();
+  if (tab === 'live') { document.body.classList.remove('drawer-open'); return renderLive(); }
   const builders = { editor: buildEditor, library: buildLibrary };
   renderPanel(tab, builders[tab], force);
 }
@@ -100,8 +100,14 @@ function renderPanel(id, build, force) {
     return;
   }
   const scroll = window.scrollY;
+  const old = panel.querySelector('.drawer');
+  const dScroll = old ? old.scrollTop : 0;
+  const dKey = old?.dataset.key;
   panel.replaceChildren(...build().filter(Boolean));
   window.scrollTo(0, scroll);
+  const dr = panel.querySelector('.drawer');
+  if (dr && dr.dataset.key === dKey) dr.scrollTop = dScroll;
+  document.body.classList.toggle('drawer-open', !!document.querySelector('#tab-editor:not(.hidden) .drawer, #tab-library:not(.hidden) .drawer'));
 }
 
 function renderWarning() {
@@ -230,10 +236,9 @@ function buildRun() {
   const title = h('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center' } },
     h('h3', { style: { margin: 0 } }, 'Showablauf'),
     h('div', { class: 'row', style: { gap: '8px' } },
-      h('button', { class: 'btn ghost', onclick: runCheck, title: 'Prüft alle Spiele: leere Fragen, fehlende Lösungen, fehlende Videos, Bilder und Lieder' }, '✅ Generalprobe-Check'),
-      h('button', { class: 'btn ok', onclick: startShowNow, title: 'Proben und Tests verwerfen, Punkte auf 0 und mit Schritt 1 beginnen' }, '🎬 Show jetzt starten')));
-  const panel = h('section', { class: 'card run-card' }, title, head, strip,
-    h('p', { class: 'muted run-hint' }, 'Tipp: Pfeil rechts, Leertaste oder ein Presenter-Klicker schalten weiter, Pfeil links zurück. Den Ablauf änderst du im Editor unter „Show-Editor“.'));
+      // Nur bis zum Start der echten Show sichtbar (danach „Show neu starten“ ganz unten).
+      S.live.showStarted ? null : h('button', { class: 'btn ok', onclick: startShowNow, title: 'Proben und Tests verwerfen, Punkte auf 0 und mit Schritt 1 beginnen' }, '🎬 Show jetzt starten')));
+  const panel = h('section', { class: 'card run-card' }, title, head, strip);
   // Aktuellen Schritt in der Leiste sichtbar halten – nur die Leiste waagerecht scrollen,
   // nie die ganze Seite (sonst sprang die Regie bei jeder Abgabe nach oben).
   requestAnimationFrame(() => {
@@ -489,16 +494,24 @@ function buildRundownEditor() {
       S.rundownCustom ? h('button', { class: 'btn ghost', onclick: () => confirmAct('Eigene Änderungen am Ablauf verwerfen und den Standardablauf wiederherstellen?', 'rundown.reset') }, 'Standardablauf wiederherstellen') : null));
 }
 
+let helpOn = store('quiz.helpOn') === '1';
 function activeGameOf() {
   return S.project.games.find((g) => g.id === S.live.activeGame) || null;
 }
 
 function buildGameControl() {
   const g = activeGameOf();
-  if (!g) return card('Spielsteuerung', h('p', { class: 'muted' }, 'Kein Spiel aktiv. Der Showablauf aktiviert die Spiele; Ausnahmen ganz unten unter „Spiele (direkt aktivieren)“.'), h('div', { class: 'row' }, undoButton()));
+  if (!g) return card('Spielsteuerung', h('p', { class: 'muted' }, 'Kein Spiel aktiv. Der Showablauf aktiviert die Spiele.'), h('div', { class: 'row' }, undoButton()));
   const st = S.live.games[g.id] || {};
   const pos = S.project.games.indexOf(g) + 1;
-  return h('div', {}, timerBar(), buildPlay({ S, card, dot, act, confirmAct, teamName, teamColor, ask }, g, st, pos));
+  const play = buildPlay({ S, card, dot, act, confirmAct, teamName, teamColor, ask }, g, st, pos);
+  // Bedienhinweise (.help) sind eingeklappt; „?“ im Kartenkopf blendet sie ein.
+  if (play.querySelector('.help')) {
+    play.classList.toggle('help-on', helpOn);
+    const head = play.querySelector('h3');
+    if (head) head.append(h('button', { class: `help-btn${helpOn ? ' on' : ''}`, title: helpOn ? 'Hinweise ausblenden' : 'Hinweise zur Bedienung einblenden', 'aria-label': 'Hinweise', onclick: () => { helpOn = !helpOn; store('quiz.helpOn', helpOn ? '1' : null); renderAll(); } }, '?'));
+  }
+  return h('div', {}, timerBar(), play);
 }
 
 // 10-Sekunden-Timer: Beamer kündigt groß an, dann läuft er auf der Fragenfolie ab.
@@ -507,7 +520,7 @@ function timerBar() {
   const t = S.timer;
   const now = Date.now();
   let status;
-  if (!t) status = h('span', { class: 'muted' }, 'Für die aktuelle Frage: groß ankündigen, 10 s Countdown, danach gesperrt.');
+  if (!t) status = h('span', { class: 'muted' }, '10 s Countdown für die aktuelle Frage');
   else if (t.phase === 'over') status = h('b', { style: { color: 'var(--bad)' } }, 'Zeit abgelaufen – Antworten gesperrt');
   else status = h('span', {}, t.phase === 'announce' ? 'Wird angekündigt … ' : 'Läuft: ', h('b', { 'data-deadline': String(now + t.remainingMs) }, `${Math.ceil(t.remainingMs / 1000)} s`));
   return h('section', { class: 'card timer-bar' },
@@ -522,22 +535,21 @@ function timerBar() {
 const BEAMER_VIEW_LABEL = { start: 'Startbild', video: 'Intro-Video', intro: 'Vorstellung der Teams', pyramid: 'Übersicht Kategorien', pause: 'Pause', title: 'Spieltitel', game: 'Spiel', ranking: 'Rangliste', coin: 'Münzvergabe', stageTitle: 'Gewinnstufe', hosts: 'Moderation am Pult', finaleTitle: 'Finale – Spieltitel', finale: 'Finale', blank: 'Schwarz' };
 function buildBeamerControls() {
   const current = S.live.beamer.view;
-  const status = h('p', { class: 'muted' }, 'Zeigt jetzt: ', h('b', {}, BEAMER_VIEW_LABEL[current] || current),
-    ` · ${S.connections.beamers || 0} Beamer verbunden`);
-  // Adresse für das zweite Gerät an der Leinwand.
+  const n = S.connections.beamers || 0;
+  const status = h('p', { class: 'beamer-status' }, h('span', { class: 'muted' }, 'Zeigt jetzt: '), h('b', {}, BEAMER_VIEW_LABEL[current] || current),
+    n ? null : h('span', { class: 'badge warn' }, 'kein Beamer verbunden'));
+  // Adresse für das Gerät an der Leinwand – nur, solange keiner verbunden ist.
+  if (n || localServer) return [status];
   const url = `${location.origin}${location.pathname.replace(/moderator\.html$/, '')}beamer.html`;
   const local = /^(localhost|127\.|\[::1\])/.test(location.hostname);
-  const second = localServer
-    ? h('p', { class: 'muted beamer-url' }, 'Im Prototyp läuft alles in diesem Browser: Vollbild über „⛶ Beamer im Vollbild“ oben auf der Seite. Für ein zweites Gerät an der Leinwand den Show-Server starten.')
-    : h('div', { class: 'beamer-url' },
-      h('p', { class: 'muted' }, 'Auf dem Gerät an der Leinwand öffnen, „⛶ Vollbild“ tippen:'),
-      h('div', { class: 'row' }, h('code', {}, url),
-        h('button', { class: 'btn small ghost', onclick: () => Promise.resolve(navigator.clipboard?.writeText(url)).then(() => toast('Adresse kopiert', 'info'), () => toast(`Adresse: ${url}`, 'info')) }, 'Kopieren')),
-      local ? h('p', { class: 'notice warn' }, 'Diese Adresse zeigt auf diesen Rechner selbst. Auf dem zweiten Gerät statt „localhost“ die IP-Adresse dieses Rechners im WLAN verwenden, z. B. http://192.168.1.20:3000/beamer.html') : null);
-  return [status, second];
+  return [status, h('div', { class: 'beamer-url' },
+    h('div', { class: 'row' }, h('code', {}, url),
+      h('button', { class: 'btn small ghost', onclick: () => Promise.resolve(navigator.clipboard?.writeText(url)).then(() => toast('Adresse kopiert', 'info'), () => toast(`Adresse: ${url}`, 'info')) }, 'Kopieren')),
+    local ? h('p', { class: 'notice warn' }, 'Auf dem Beamer-Gerät statt „localhost“ die WLAN-IP dieses Rechners verwenden, z. B. http://192.168.1.20:3000/beamer.html') : null)];
 }
 
 // Rangliste in der Regie: Punkte nachträglich von Hand anpassen (wird protokolliert).
+let openTeam = null;
 function buildTeamsLive() {
   const sorted = [...S.project.teams].sort((a, b) => S.totals[b.id] - S.totals[a.id]);
   const adjust = (t, points, reason = 'Manuell in der Regie') => act('points.adjust', { teamId: t.id, points, reason });
@@ -551,15 +563,18 @@ function buildTeamsLive() {
     if (!Number.isInteger(n) || n === 0) return toast('Bitte eine ganze Zahl ungleich 0 eingeben.');
     adjust(t, n, v.reason ? `Regie: ${v.reason}` : undefined);
   };
+  // Kompakt: Punkte-Knöpfe erst nach Antippen eines Teams; Verbindung nur als Warnung.
   return card('Rangliste (nur für dich sichtbar)',
     sorted.length ? h('ul', { class: 'list leader' }, sorted.map((t, i) => {
       const online = S.connections.teams?.[t.id];
-      return h('li', {}, h('b', { class: 'rank-n' }, `${i + 1}.`), dot(t.color), h('span', { class: 'grow' }, t.name),
-        h('span', { class: `badge ${online ? 'ok' : 'warn'}`, title: online ? 'iPad verbunden' : 'iPad nicht verbunden' }, online ? '●' : '○'),
-        h('button', { class: 'btn small ghost pt-btn', 'aria-label': `${t.name}: 1 Punkt abziehen`, onclick: () => adjust(t, -1) }, '−1'),
+      const open = openTeam === t.id;
+      return h('li', { class: `leader-row${open ? ' open' : ''}`, onclick: (ev) => { if (ev.target.closest('button')) return; openTeam = open ? null : t.id; renderAll(); }, title: open ? '' : 'Antippen, um Punkte anzupassen' },
+        h('b', { class: 'rank-n' }, `${i + 1}.`), dot(t.color), h('span', { class: 'grow' }, t.name),
+        online ? null : h('span', { class: 'badge warn', title: 'iPad nicht verbunden' }, '○ offline'),
+        open ? h('button', { class: 'btn small ghost pt-btn', 'aria-label': `${t.name}: 1 Punkt abziehen`, onclick: () => adjust(t, -1) }, '−1') : null,
         h('b', { class: 'pts' }, `${S.totals[t.id]} P.`),
-        h('button', { class: 'btn small ghost pt-btn', 'aria-label': `${t.name}: 1 Punkt dazu`, onclick: () => adjust(t, 1) }, '+1'),
-        h('button', { class: 'btn small ghost pt-btn', title: 'Andere Punktzahl', 'aria-label': `${t.name}: Punkte anpassen`, onclick: () => custom(t) }, '±'));
+        open ? h('button', { class: 'btn small ghost pt-btn', 'aria-label': `${t.name}: 1 Punkt dazu`, onclick: () => adjust(t, 1) }, '+1') : null,
+        open ? h('button', { class: 'btn small ghost pt-btn', title: 'Andere Punktzahl', 'aria-label': `${t.name}: Punkte anpassen`, onclick: () => custom(t) }, '±') : null);
     })) : h('p', { class: 'muted' }, 'Noch keine Teams angelegt.'),
     lastManual());
 }
@@ -574,6 +589,17 @@ function lastManual() {
 
 function buildCoins() {
   const w = S.live.warning;
+  // Groß nur kurz vor und während der Münzvergabe (oder bei Gleichstand), sonst eine Zeile.
+  const steps = S.rundown || [];
+  const cur = S.live.run ?? -1;
+  const near = [steps[cur], steps[cur + 1]].some((x) => x && x.kind === 'coin') || w?.kind === 'coinTie';
+  if (!near && !coinsOpen) {
+    const done = S.live.coins.length;
+    const next = S.coinPositions.find((pos) => !S.live.coins.some((c) => c.position === pos));
+    return h('section', { class: 'card coins-line' }, coinImg(), h('span', { class: 'grow' }, h('b', {}, 'Münzen: '), `${done} von ${S.coinPositions.length} vergeben`,
+      next ? h('span', { class: 'muted' }, ` · nächste nach Spiel ${next}`) : null),
+    h('button', { class: 'btn small ghost', onclick: () => { coinsOpen = true; renderAll(); } }, 'Öffnen'));
+  }
   return card('Münzen',
     h('ul', { class: 'list' }, S.coinPositions.map((pos) => {
       const c = S.live.coins.find((x) => x.position === pos);
@@ -584,8 +610,10 @@ function buildCoins() {
           ? w.teamIds.map((id) => h('button', { class: 'btn small', onclick: () => confirmAct(`${teamName(id)} hat die Schätzfrage gewonnen und bekommt die Münze?`, 'coin.awardTie', { teamId: id }) }, `${teamName(id)} gewinnt Schätzfrage`))
           : h('button', { class: 'btn small', onclick: () => confirmAct(`Münzgewinner nach Position ${pos} aus dem kumulierten Punktestand ermitteln?`, 'coin.determine', { position: pos }) }, 'Gewinner ermitteln'));
     })),
-    h('p', { class: 'muted' }, 'Die Münze erscheint auf dem Beamer beim Schritt „Münzvergabe“ im Showablauf.'));
+    h('p', { class: 'muted' }, 'Die Münze erscheint auf dem Beamer beim Schritt „Münzvergabe“ im Showablauf.'),
+    near ? null : h('button', { class: 'btn small ghost', onclick: () => { coinsOpen = false; renderAll(); } }, 'Einklappen'));
 }
+let coinsOpen = false;
 
 // ---------- Teams ----------
 
@@ -862,7 +890,7 @@ function buildEditor() {
   const check = (label, key) => h('label', { style: { fontWeight: 400 } },
     h('input', { type: 'checkbox', checked: p.settings[key], style: { width: 'auto', marginRight: '8px' }, onchange: (ev) => act('project.update', { settings: { [key]: ev.target.checked } }) }), label);
 
-  if (!p.games.some((g) => g.id === selectedGame)) selectedGame = p.games[0]?.id || null;
+  if (!p.games.some((g) => g.id === selectedGame)) selectedGame = null;
   const sel = p.games.find((g) => g.id === selectedGame);
 
   const showCards = h('div', { class: 'grid two', style: { marginTop: '16px' } },
@@ -885,12 +913,14 @@ function buildEditor() {
     h('button', { role: 'tab', 'aria-selected': String(k === editorSection), onclick: () => { editorSection = k; store('quiz.editorSection', k); renderAll(true); } }, label)));
   const content = {
     teams: () => buildTeams(),
-    games: () => [buildBoard(), sel ? buildGameEditor('game', sel) : null],
+    games: () => [buildBoard(), sel ? drawer(buildGameEditor('game', sel), () => { selectedGame = null; renderAll(true); }, sel.id) : null],
     rundown: () => [buildRundownEditor(), buildStageTitles(), buildIntroVideo(), showCards],
     finale: () => [card('Spieltitel des Finales', h('p', { class: 'muted' }, 'Vor dem Finale zeigt der Beamer eine eigene Spieltitel-Folie. Ist das Lied zu Ende, geht es automatisch ins Finale.'), buildGameIntro({ id: 'finale', title: 'Finale', intro: S.project.finaleIntro }, 'das Finale', (media) => act('finale.setIntro', { media }))), buildFinaleEditor({ ...finaleUi(), reset: !saveState.dirty })],
   }[editorSection]();
   return [
-    h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '12px' } }, h('h2', { style: { margin: 0 } }, 'Show-Editor'), saveIndicator()),
+    h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '12px' } }, h('h2', { style: { margin: 0 } }, 'Show-Editor'),
+      h('div', { class: 'row', style: { gap: '12px', alignItems: 'center' } }, saveIndicator(),
+        h('button', { class: 'btn ghost', onclick: runCheck, title: 'Prüft alle Spiele: leere Fragen, fehlende Lösungen, fehlende Videos, Bilder und Lieder' }, '✅ Generalprobe-Check'))),
     buildShows(),
     nav,
     ...[].concat(content).filter(Boolean),
@@ -937,9 +967,17 @@ async function duplicateShow(s) {
   if (r) toast(`„${v.name || s.name}“ angelegt – unter „Meine Shows“ öffnen`, 'info');
 }
 
+let showsOpen = store('quiz.showsOpen') === '1';
 function buildShows() {
   const running = S.live.activeGame !== null;
-  return card('Meine Shows',
+  const cur = S.shows.find((s) => s.current) || { name: S.project.name };
+  const toggle = h('button', { class: 'btn small ghost', onclick: () => { showsOpen = !showsOpen; store('quiz.showsOpen', showsOpen ? '1' : null); renderAll(true); } }, showsOpen ? 'Einklappen ▴' : `Shows verwalten${S.shows.length > 1 ? ` (${S.shows.length})` : ''} ▾`);
+  if (!showsOpen) {
+    return h('section', { class: 'card shows-line' },
+      h('span', { class: 'grow' }, h('span', { class: 'muted' }, 'Geöffnet: '), h('b', {}, cur.name), cur.date ? h('span', { class: 'muted' }, ` · ${fmtDate(cur.date)}`) : null,
+        h('span', { class: 'muted' }, ` · ${S.project.games.length} Spiele · ${S.project.teams.length} Teams`)), toggle);
+  }
+  return h('section', { class: 'card' }, h('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center' } }, h('h3', { style: { margin: 0 } }, 'Meine Shows'), toggle),
     h('p', { class: 'muted', style: { marginTop: 0 } }, 'Jede Show hat eigene Spiele, Teams und Punkte. Bearbeitet und gespielt wird immer die geöffnete Show.'),
     h('ul', { class: 'list' }, S.shows.map((s) => h('li', { class: s.current ? 'active' : '' },
       h('span', { class: 'grow' }, h('b', {}, s.name), s.date ? h('span', { class: 'muted' }, ` · ${fmtDate(s.date)}`) : null,
@@ -969,7 +1007,7 @@ function buildBoard() {
   const running = S.live.activeGame !== null;
   const slots = Array.from({ length: S.showSize }, (_, i) => (games[i] ? buildSlot(games[i], i, running) : buildEmptySlot(i, running)));
   return card('Spiele der Show',
-    h('p', { class: 'muted' }, 'Ziehe Spiele, um die Reihenfolge zu ändern. „Ersetzen“ schlägt dir andere Spiele aus der Datenbank vor, das Mülleimer-Symbol entfernt ein Spiel. Freie Plätze füllst du mit Spielen aus der Datenbank, auch mehrfach mit demselben Spiel. Nach Platz 4, 6 und 8 gibt es eine Münze.'),
+    h('p', { class: 'muted' }, 'Ziehen ändert die Reihenfolge. Nach Platz 4, 6 und 8 gibt es eine Münze.'),
     running ? h('p', { class: 'notice warn' }, 'Ein Spiel läuft gerade. Der Ablauf lässt sich erst nach dem Beenden ändern.') : null,
     games.length !== S.showSize ? h('p', { class: 'notice warn' }, `Die Show hat ${games.length} von ${S.showSize} Spielen. Vor dem Live-Start müssen alle ${S.showSize} Plätze belegt sein.`) : null,
     h('div', { class: 'board' },
@@ -1007,10 +1045,8 @@ function buildSlot(g, i, running) {
       S.coinPositions.includes(pos) ? h('span', { class: 'badge coin-badge' }, coinImg(), ' danach Münze') : null)),
   h('div', { class: 'slot-actions' },
     h('button', { class: `btn small ${g.id === selectedGame ? 'pink' : 'ghost'}`, onclick: () => { selectedGame = g.id; renderAll(true); } }, 'Bearbeiten'),
-    h('button', { class: 'btn small ghost', disabled: running || g.locked || i === 0 || (i === 1 && S.project.games[0]?.locked), 'aria-label': `${g.title} nach oben`, onclick: () => act('game.moveTo', { gameId: g.id, index: i - 1 }) }, '↑'),
-    h('button', { class: 'btn small ghost', disabled: running || g.locked || i === S.project.games.length - 1, 'aria-label': `${g.title} nach unten`, onclick: () => act('game.moveTo', { gameId: g.id, index: i + 1 }) }, '↓'),
-    h('button', { class: 'btn small ghost', disabled: running, title: 'Durch ein anderes Spiel aus der Datenbank ersetzen', onclick: () => pickFromLibrary(i, g) }, '⇄ Ersetzen'),
-    h('button', { class: 'btn small ghost icon', disabled: running, 'aria-label': `${g.title} entfernen`, title: 'Aus der Show entfernen', onclick: () => removeGame(g) }, trashIcon())));
+    h('button', { class: 'btn small ghost slot-more', disabled: running, title: 'Durch ein anderes Spiel aus der Datenbank ersetzen', onclick: () => pickFromLibrary(i, g) }, '⇄ Ersetzen'),
+    h('button', { class: 'btn small ghost icon slot-more', disabled: running, 'aria-label': `${g.title} entfernen`, title: 'Aus der Show entfernen', onclick: () => removeGame(g) }, trashIcon())));
 }
 
 function buildEmptySlot(i, running) {
@@ -1183,7 +1219,6 @@ function buildLibrary() {
   if (!validFolder(libFolder)) libFolder = 'all';
   const sel = S.library.find((e) => e.id === selectedEntry);
   const q = norm(libSearch.trim());
-  const full = S.project.games.length >= S.showSize;
   // Eine Karte je Spielart, alphabetisch; „… 2.0“ steht so direkt neben dem Original.
   const types = Object.entries(S.types).map(([type, t]) => ({ type, ...t })).sort(byTitle);
   // Beim Suchen wird in allen Ordnern gesucht.
@@ -1211,7 +1246,6 @@ function buildLibrary() {
           h('span', { class: 'lib-actions' },
             h('button', { class: `btn small ${e.id === selectedEntry ? 'pink' : 'ghost'}`, onclick: () => { selectedEntry = e.id; renderAll(true); } }, 'Bearbeiten'),
             h('button', { class: 'btn small ghost', title: 'Kopie mit gleichen Inhalten anlegen', onclick: () => act('library.duplicate', { libraryId: e.id }) }, 'Duplizieren'),
-            h('button', { class: 'btn small ghost', disabled: full || S.live.activeGame !== null, title: full ? 'Die Show ist voll. Zuerst ein Spiel aus der Show entfernen oder im Show-Editor „Ersetzen“ nutzen.' : 'Auf den nächsten freien Platz der Show setzen', onclick: () => act('game.add', { libraryId: e.id }).then((r) => r && toast(`„${e.title}“ in die Show eingesetzt`, 'info')) }, '+ Show'),
             h('button', { class: 'btn small ghost icon', 'aria-label': `${e.title} löschen`, title: 'Aus der Datenbank löschen', onclick: async () => { if (await ask(`„${e.title}“ aus der Datenbank löschen? Spiele, die schon in der Show sind, bleiben erhalten.`, { confirmLabel: 'Löschen', danger: true })) act('library.remove', { libraryId: e.id }); } }, trashIcon())));
       })) : h('p', { class: 'muted' }, 'Noch kein Eintrag – „+ Variante“ legt einen an.'));
   }).filter(Boolean);
@@ -1220,7 +1254,7 @@ function buildLibrary() {
   const title = q ? `Suche: „${libSearch.trim()}“` : libFolder === 'all' ? 'Alle Spiele' : libFolder === 'none' ? 'Ohne Ordner' : folders().find((f) => f.id === libFolder)?.name;
   const view = [
     h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '12px' } }, h('h2', { style: { margin: 0 } }, 'Spiele-Datenbank'), saveIndicator()),
-    sel ? buildGameEditor('library', sel) : null,
+    sel ? drawer(buildGameEditor('library', sel), () => { selectedEntry = null; renderAll(true); }, sel.id) : null,
     h('div', { class: 'lib-layout' },
       buildFolderBar(types),
       h('div', { class: 'lib-main' },
@@ -1261,14 +1295,35 @@ function buildGameEditor(kind, item) {
       ? 'Änderungen gelten nur für diese Show. Der Eintrag in der Datenbank bleibt unverändert.'
       : 'Änderungen gelten für künftige Shows. Spiele, die schon in einer Show sind, bleiben unverändert.'),
     running ? h('p', { class: 'notice warn' }, 'Dieses Spiel läuft gerade. Inhalte erst nach dem Beenden ändern.') : null,
-    kind === 'game' ? titleColorPicker(`Farbe der Spieltitel-Folie für Spiel ${pos}`, item.color, GAME_COLORS[(pos - 1) % GAME_COLORS.length], String(pos), (color) => act('game.setColor', { gameId: item.id, color })) : null,
-    kind === 'game' ? buildGameIntro(item, pos) : buildGameIntro(item, `„${item.title}“`, (media) => act('library.setIntro', { libraryId: item.id, media })),
     item.type === 'zuweit' ? buildDatasetInfo() : null,
     h('fieldset', { disabled: running, class: 'plain' },
       h('label', { for: `${key}-title` }, kind === 'game' ? 'Name des Spiels in dieser Show (erscheint im Spieltitel auf dem Beamer)' : 'Name des Spiels (wird beim Einsetzen in eine Show übernommen)'),
       h('input', { id: `${key}-title`, value: d.title, maxlength: '80', oninput: (ev) => { d.title = ev.target.value; save(); } }),
-      (previewTarget = { key, type: item.type, d }, formFields(type.schema, d.content, save, rerender, key))));
+      (previewTarget = { key, type: item.type, d }, formFields(type.schema.filter((f) => f.key !== 'scoring'), d.content, save, rerender, key))),
+    // Selten geändert: Farbe, Intro-Lied und Punktwerte – eingeklappt unter „Erweitert“.
+    h('details', { class: 'adv', open: advOpen, ontoggle: (ev) => { advOpen = ev.target.open; } },
+      h('summary', {}, 'Erweitert', h('span', { class: 'muted' }, kind === 'game' ? ' · Farbe, Intro-Lied, Punkte' : ' · Intro-Lied, Punkte')),
+      kind === 'game' ? titleColorPicker(`Farbe der Spieltitel-Folie für Spiel ${pos}`, item.color, GAME_COLORS[(pos - 1) % GAME_COLORS.length], String(pos), (color) => act('game.setColor', { gameId: item.id, color })) : null,
+      kind === 'game' ? buildGameIntro(item, pos) : buildGameIntro(item, `„${item.title}“`, (media) => act('library.setIntro', { libraryId: item.id, media })),
+      type.schema.some((f) => f.key === 'scoring') ? h('fieldset', { disabled: running, class: 'plain' }, formFields(type.schema.filter((f) => f.key === 'scoring'), d.content, save, rerender, key)) : null));
 }
+let advOpen = false;
+
+// Bearbeiten als Seitenleiste rechts: die Liste bleibt sichtbar, kein Hin- und Herscrollen.
+function drawer(content, onClose, key) {
+  drawerClose = onClose;
+  return h('div', { class: 'drawer-wrap' },
+    h('div', { class: 'drawer-back', onclick: onClose }),
+    h('aside', { class: 'drawer', role: 'dialog', 'aria-modal': 'true', 'data-key': key },
+      h('div', { class: 'drawer-bar' }, h('button', { class: 'btn small ghost', onclick: onClose }, '✕ Schließen')),
+      content));
+}
+let drawerClose = null;
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape' || !drawerClose || !document.querySelector('.drawer')) return;
+  if (document.querySelector('.modal-backdrop, dialog[open]')) return;
+  drawerClose();
+});
 
 // Beamer-Vorschau im Editor: zeigt eine Frage/Runde so, wie sie auf dem Beamer
 // erscheint – mit den aktuellen (auch noch nicht gespeicherten) Inhalten.

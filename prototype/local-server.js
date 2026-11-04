@@ -119,7 +119,7 @@ export function createLocalServer() {
   }
 
   function viewFor(c) {
-    if (c.role === 'moderator') return game.moderatorView(data, connections());
+    if (c.role === 'moderator' || c.role === 'host') return game.moderatorView(data, connections());
     if (c.role === 'team') return game.teamView(data, c.teamId);
     return game.beamerView(data);
   }
@@ -178,6 +178,9 @@ export function createLocalServer() {
       if (msg.role === 'moderator') {
         if (msg.token !== DEMO_TOKEN) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
         c.role = 'moderator';
+      } else if (msg.role === 'host') {
+        if (msg.token !== DEMO_TOKEN) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
+        c.role = 'host';
       } else if (msg.role === 'team') {
         const team = game.findTeamByCode(data, msg.code);
         if (!team) return send(c, { type: 'auth-failed', message: 'Zugangscode unbekannt.' });
@@ -192,8 +195,9 @@ export function createLocalServer() {
       send(c, { type: 'welcome', role: c.role });
       return broadcast();
     }
-    if (msg.type !== 'action' || !(c.role === 'moderator' || c.role === 'team' || (c.role === 'beamer' && !c.preview))) return;
-    const ctx = { role: c.role, teamId: c.teamId, actor: c.role === 'team' ? `team:${c.teamId}` : c.role, now: Date.now() };
+    if (msg.type !== 'action' || !(c.role === 'moderator' || c.role === 'host' || c.role === 'team' || (c.role === 'beamer' && !c.preview))) return;
+    if (c.role === 'host' && msg.name !== 'finale.modAnswer') return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Diese Aktion ist auf dem Finale-iPad nicht erlaubt.' });
+    const ctx = { role: c.role === 'host' ? 'moderator' : c.role, teamId: c.teamId, actor: c.role === 'team' ? `team:${c.teamId}` : c.role, now: Date.now() };
     const draft = structuredClone(data);
     try {
       const result = game.applyAction(draft, ctx, msg.name, msg.payload, typeof msg.id === 'string' ? msg.id : null);

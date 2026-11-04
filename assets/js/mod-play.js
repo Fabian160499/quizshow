@@ -58,7 +58,7 @@ function leichte5(ui, g, st) {
   const rounds = st.rounds || {};
   const round = rounds[qIndex];
   const out = [tabs(g.content.questions.map((_, i) => `Frage ${i + 1}`), qIndex, (i) => ui.act('play.open', { qIndex: i }), (i) => rounds[i]?.solutionRevealed)];
-  if (qIndex < 0 || !round) return [...out, h('p', { class: 'muted' }, 'Frage freigeben, damit sie auf den Team-iPads erscheint.')];
+  if (qIndex < 0 || !round) return [...out, h('p', { class: 'muted help' }, 'Frage freigeben, damit sie auf den Team-iPads erscheint.')];
   const q = g.content.questions[qIndex];
   out.push(h('p', { class: 'question', style: { fontSize: '1.4rem' } }, q.question));
   out.push(h('p', {}, h('span', { class: 'muted' }, 'Musterlösung (nur für dich): '), h('b', {}, q.solution)));
@@ -89,9 +89,9 @@ function dummes(ui, g, st) {
   const r = rounds[qIndex];
   const out = [
     tabs(g.content.questions.map((_, i) => `Frage ${i + 1}`), qIndex, (i) => ui.act('play.open', { qIndex: i }), (i) => rounds[i]?.evaluated),
-    h('p', { class: 'muted' }, 'Bei jeder Frage darf das Team, das zuerst buzzert, seine Antwort mit einem anderen Team tauschen.'),
+    h('p', { class: 'muted help' }, 'Bei jeder Frage darf das Team, das zuerst buzzert, seine Antwort mit einem anderen Team tauschen.'),
   ];
-  if (qIndex < 0 || !r) return [...out, h('p', { class: 'muted' }, 'Frage freigeben: alle Teams wählen A–D und sperren.')];
+  if (qIndex < 0 || !r) return [...out, h('p', { class: 'muted help' }, 'Frage freigeben: alle Teams wählen A–D und sperren.')];
   const q = g.content.questions[qIndex];
   out.push(h('p', { class: 'question', style: { fontSize: '1.3rem' } }, q.question), optionsList(q));
   const running = r.windowEnds && r.windowEnds > Date.now() && !r.evaluated;
@@ -131,7 +131,7 @@ function land(ui, g, st) {
     tabs(g.content.tasks.map((_, i) => `Aufgabe ${i + 1}`), t, (i) => ui.act('play.open', { taskIndex: i }), (i) => rounds[i]?.showTarget),
     h('p', { class: 'muted' }, `Standard-Karte: ${g.content.map}`),
   ];
-  if (t < 0 || !r) return [...out, h('p', { class: 'muted' }, 'Aufgabe freigeben: Teams setzen einen Punkt auf ihrer Karte.')];
+  if (t < 0 || !r) return [...out, h('p', { class: 'muted help' }, 'Aufgabe freigeben: Teams setzen einen Punkt auf ihrer Karte.')];
   const task = g.content.tasks[t];
   const mapName = ['Welt', 'Europa', 'Deutschland'].includes(task.map) ? task.map : g.content.map;
   out.push(h('p', { class: 'question', style: { fontSize: '1.3rem' } }, task.question), h('p', { class: 'muted' }, `Karte dieser Aufgabe: ${mapName}`));
@@ -198,7 +198,7 @@ function kassenschlager(ui, g, st) {
       st.out?.includes(t.id) ? badge('bad', 'ausgeschieden') : tm?.solved ? badge('ok', '✓ gelöst') : null,
       h('b', {}, `${money} $`), st.converted?.[t.id] ? badge('ok', `= ${pts(st.converted[t.id].points)}`) : null);
   })));
-  if (!m) return [...out, h('p', { class: 'muted' }, 'Film starten: Teams kaufen reihum Hinweise und raten den Titel.')];
+  if (!m) return [...out, h('p', { class: 'muted help' }, 'Film starten: Teams kaufen reihum Hinweise und raten den Titel.')];
   const movie = g.content.movies[i];
   out.push(h('p', {}, h('span', { class: 'muted' }, 'Lösung: '), h('b', {}, movie.title), movie.aliases ? h('span', { class: 'muted' }, ` (auch: ${movie.aliases})`) : null));
   if (m.turn) {
@@ -231,7 +231,7 @@ function trumpf5(ui, g, st) {
   const rounds = st.rounds || {};
   const round = rounds[termIndex];
   const out = [tabs(g.content.terms.map((_, i) => `Begriff ${i + 1}`), termIndex, (i) => ui.act('play.start', { termIndex: i }), (i) => rounds[i]?.resolved)];
-  if (termIndex < 0 || !round) return [...out, h('p', { class: 'muted' }, 'Begriff starten: Teams sehen zuerst nur die Kategorie.')];
+  if (termIndex < 0 || !round) return [...out, h('p', { class: 'muted help' }, 'Begriff starten: Teams sehen zuerst nur die Kategorie.')];
   const term = g.content.terms[termIndex];
   out.push(h('p', {}, h('span', { class: 'muted' }, 'Kategorie: '), h('b', {}, term.category), h('span', { class: 'muted' }, ' · Lösung: '), h('b', {}, term.term)));
   out.push(h('ol', { class: 'list' }, term.hints.map((hint, i) => h('li', { style: { opacity: i < round.hintLevel ? 1 : 0.5 } },
@@ -333,7 +333,7 @@ function nerd(ui, g, st) {
     tabs(g.content.categories.map((cat, i) => (i === 4 ? 'Kategorie 5 ★' : `Kategorie ${i + 1}`)), c, (i) => ui.act('play.open', { catIndex: i }), (i) => rounds[i]?.phase === 'done'),
     h('p', { class: 'muted' }, `Gleichstand-Regel: ${g.content.tieRule}`),
   ];
-  if (c < 0 || !r) return [...out, h('p', { class: 'muted' }, 'Kategorie öffnen: Teams geben geheim ihr Gebot ab.')];
+  if (c < 0 || !r) return [...out, h('p', { class: 'muted help' }, 'Kategorie öffnen: Teams geben geheim ihr Gebot ab.')];
   const cat = g.content.categories[c];
   out.push(h('p', { class: 'question', style: { fontSize: '1.3rem' } }, cat.name || `Kategorie ${c + 1}`));
   const possible = cat.answers.split('\n').map((l) => l.trim()).filter(Boolean).length;
@@ -365,7 +365,7 @@ function nerd(ui, g, st) {
     const kept = a.given.filter((x) => x.kept).length;
     if (kept) out.push(h('p', { class: 'notice' }, `${kept} richtige Antworten des ersten Teams bleiben stehen – ${ui.teamName(a.teamId)} muss nur noch ${a.target - kept} auffüllen.`));
     if (!a.done) {
-      out.push(h('p', { class: 'muted' }, 'Genannte Antwort antippen. Bereits genannte zählen als Fehler.'));
+      out.push(h('p', { class: 'muted help' }, 'Genannte Antwort antippen. Bereits genannte zählen als Fehler.'));
       out.push(h('div', { class: 'row' }, valid.map((v) => btn(`small ${named.includes(v) ? 'cyan' : 'ghost'}`, named.includes(v) ? `✓ ${v}` : v, () => ui.act('play.mark', { answer: v })))));
       out.push(row(btn('bad', '✗ Falsche Antwort', () => ui.act('play.mark', { text: 'Falsche Antwort' })), btn('small ghost', '↶ Letzte Wertung zurück', () => ui.act('play.unmark'), !a.given.length || a.given[a.given.length - 1].kept)));
     }
