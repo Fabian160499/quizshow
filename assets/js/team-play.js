@@ -239,7 +239,9 @@ function kassenschlager(g, ui) {
         const msg = `Möchtest du diesen Hinweis kaufen?\n${x.label} kostet ${x.price} $. Danach habt ihr noch ${g.wallet - x.price} $.`;
         if (await ask(msg, { confirmLabel: 'Ja, kaufen', cancelLabel: 'Abbrechen' })) run(ui.conn, 'play.buy', { hint: i });
       },
-    }, h('span', { class: 'price' }, `${x.price} $`), h('span', { class: 'label' }, `${i + 1}. ${x.label}`), x.bought ? h('span', { class: 'text' }, x.text || '–') : null);
+    }, h('span', { class: 'price' }, `${x.price} $`), h('span', { class: 'label' }, `${i + 1}. ${x.label}`),
+      x.bought && x.photo ? (() => { const im = h('img', { class: 'hint-photo', alt: x.label }); mediaUrl(x.photo.id).then((u) => { if (u) im.src = u; }); return im; })() : null,
+      x.bought && (x.text || !x.photo) ? h('span', { class: 'text' }, x.text || '–') : null);
   })));
   if (g.finished || g.solved) return out;
   if (!g.myTurn) out.push(stateBox('', '⏳', g.turnTeam ? `${g.turnTeam} ist am Zug.` : 'Gleich geht’s weiter.'));

@@ -205,7 +205,7 @@ function kassenschlager(ui, g, st) {
     const tm = m.teams[m.turn.teamId] || { bought: [], answers: [] };
     const phase = { buy: 'kauft einen Hinweis …', answer: 'schreibt eine Antwort …', grading: 'hat geantwortet' }[m.turn.phase];
     out.push(h('p', { class: 'question', style: { fontSize: '1.2rem' } }, `Zyklus ${m.cycle} von 4 · `, h('span', { style: { color: ui.teamColor(m.turn.teamId) } }, ui.teamName(m.turn.teamId)), ` ${phase}`));
-    if (tm.bought.length) out.push(h('p', { class: 'muted' }, 'Gekauft: ', tm.bought.map((b) => MOVIE_HINTS[b][0]).join(', ')));
+    if (tm.bought.length) out.push(h('p', { class: 'muted' }, 'Gekauft: ', tm.bought.map((b) => (g.content.hintNames && g.content.hintNames[b]) || MOVIE_HINTS[b][0]).join(', ')));
     if (m.turn.phase === 'grading') {
       const a = tm.answers[tm.answers.length - 1];
       const forms = [movie.title, ...movie.aliases.split(',')].map(norm).filter(Boolean);

@@ -113,6 +113,110 @@ function top100(ui, g, st) {
   return out;
 }
 
+// Buzzer-Liste mit Reihenfolge und Wertung (Lippen, Jeopardy).
+function buzzList(ui, buzzes, onJudge) {
+  const pending = buzzes.find((b) => b.status === 'pending');
+  return h('ol', { class: 'list' }, buzzes.length ? buzzes.map((b, k) => h('li', { class: b === pending ? 'active' : '' }, ui.dot(ui.teamColor(b.teamId)),
+    h('span', { class: 'grow' }, h('b', {}, `${k + 1}. ${ui.teamName(b.teamId)}`)),
+    b.status === 'correct' ? badge('ok', '✓ richtig') : b.status === 'wrong' ? badge('bad', '✗ falsch – gesperrt') : null,
+    b === pending ? [btn('ok', '✓ Richtig', () => onJudge(true)), btn('bad', '✗ Falsch', () => onJudge(false))] : null)) : h('li', { class: 'muted' }, 'Noch kein Buzzer.'));
+}
+
+// ---------- Es liegt mir auf den Lippen ----------
+function lippen(ui, g, st) {
+  const i = st.index ?? -1;
+  const r = (st.rounds || {})[i];
+  const out = [tabs(g.content.items.map((it, k) => `Aufgabe ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.resolved)];
+  if (i < 0 || !r) return [...out, muted(`Aufgabe öffnen: Bild und Frage erscheinen, alle dürfen buzzern. Richtig ${plus(pvc(g, 'correct'))}, falsch sperrt das Team für diese Aufgabe.`)];
+  const it = g.content.items[i];
+  out.push(h('p', {}, h('b', {}, it.question || '–'), h('br'), 'Lösung: ', h('b', {}, it.answer || '–')));
+  out.push(buzzList(ui, r.buzzes, (c) => ui.act('play.judge', { correct: c })));
+  if (r.resolved) out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(pvc(g, 'correct'))}` : 'Kein Punkt'), badge('', 'Aufgabe beendet – Lösung auf dem Beamer')));
+  else out.push(row(btn('ghost', 'Aufgabe beenden (Lösung zeigen)', () => ui.confirmAct('Aufgabe ohne weitere Antworten beenden und die Lösung zeigen?', 'play.close'), r.buzzes.some((b) => b.status === 'pending'))));
+  return out;
+}
+
+// ---------- Wir sind ein Telepa-Team 2.0 ----------
+function telepa2(ui, g, st) {
+  const i = st.index ?? -1;
+  const r = (st.rounds || {})[i];
+  const out = [tabs(g.content.tasks.map((t, k) => (t.task ? t.task.slice(0, 22) : `Aufgabe ${k + 1}`)), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k] && teamIds(ui).every((id) => st.rounds[k].judged[id] !== undefined))];
+  if (i < 0 || !r) return [...out, muted('Aufgabe öffnen: Spieler 1 schreibt und gibt ab, dann Spieler 2 auf demselben iPad. Erst wenn beide abgegeben haben, siehst du beide Antworten und entscheidest.')];
+  const task = g.content.tasks[i];
+  const points = Number.isFinite(Number(task.points)) && task.points !== null && task.points !== '' ? Number(task.points) : 1;
+  out.push(h('p', {}, h('b', {}, task.task), h('span', { class: 'muted' }, ` · Übereinstimmung ${plus(points)}`)));
+  out.push(h('div', { class: 'tp2-list' }, teamIds(ui).map((id) => {
+    const a = r.answers[id] || {};
+    const j = r.judged[id];
+    const both = a.p1 && a.p2;
+    return h('div', { class: 'tp2-row' }, h('div', { class: 'tp2-name' }, ui.dot(ui.teamColor(id)), h('b', {}, ui.teamName(id)),
+      both ? null : h('span', { class: 'muted' }, ` – ${a.p1 ? 'Spieler 1 fertig, Spieler 2 schreibt' : 'Spieler 1 schreibt'} …`)),
+    // Antworten erst zeigen, wenn beide abgegeben haben.
+      both ? h('div', { class: 'tp2-pair' }, h('figure', {}, h('img', { class: 'ink-answer mod', src: a.p1, alt: 'Antwort Spieler 1' }), h('figcaption', {}, 'Spieler 1')),
+        h('figure', {}, h('img', { class: 'ink-answer mod', src: a.p2, alt: 'Antwort Spieler 2' }), h('figcaption', {}, 'Spieler 2'))) : null,
+      both ? row(btn(j === true ? 'ok' : 'ghost', `✓ Passt (${plus(points)})`, () => ui.act('play.judge', { teamId: id, match: true })),
+        btn(j === false ? 'bad' : 'ghost', '✗ Passt nicht (0)', () => ui.act('play.judge', { teamId: id, match: false })),
+        j === undefined ? h('span', { class: 'muted' }, 'noch nicht gewertet') : badge(j ? 'ok' : 'bad', j ? `gewertet: ${plus(points)}` : 'gewertet: 0')) : null);
+  })));
+  if (r.open) out.push(row(btn('ghost', 'Abgabe schließen', () => ui.confirmAct('Abgabe schließen? Teams, bei denen nicht beide abgegeben haben, können nicht mehr gewertet werden.', 'play.close'))));
+  return out;
+}
+
+// ---------- Jeopardy ----------
+function jeopardy(ui, g, st) {
+  if (!st.started) return [muted('Start: Ein Team wird ausgelost und wählt auf seinem iPad Kategorie und Punkte. Alle buzzern; richtig = Punkte und wählt neu, sonst wird neu ausgelost.'), row(btn('pink', 'Spiel starten (Team auslosen)', () => ui.act('play.start')))];
+  const out = [];
+  const q = st.q;
+  const open = q && !q.resolved;
+  out.push(h('p', {}, st.done ? h('b', {}, 'Alle Fragen gespielt.') : open ? ['Gewählt von ', h('b', {}, ui.teamName(q.by))] : ['Es wählt: ', h('b', {}, ui.teamName(st.picker)), h('span', { class: 'muted' }, ' (auf seinem iPad – oder du wählst unten für das Team)')]));
+  // Spielbrett: gespielte Felder grau mit Gewinner, freie Felder anklickbar (wenn keine Frage offen).
+  out.push(h('div', { class: 'jp-board mod' }, g.content.categories.map((cat, c) => h('div', { class: 'jp-col' }, h('div', { class: 'jp-cat' }, cat.name || `Kategorie ${c + 1}`),
+    [1, 2, 3].map((l) => {
+      const played = st.played[`${c}-${l}`];
+      const cur = q && q.c === c && q.l === l && !q.resolved;
+      return h('button', { class: `jp-cell${played ? ' played' : ''}${cur ? ' cur' : ''}`, disabled: !!played || open || st.done, title: cat[`q${l}`] || '',
+        onclick: () => ui.act('play.pickFor', { c, l }) }, played ? (played.winner ? `✓ ${ui.teamName(played.winner)}` : '–') : String(pvc(g, `level${l}`, l)));
+    })))));
+  if (q) {
+    const cat = g.content.categories[q.c];
+    out.push(h('div', { class: 'sek-q' }, h('small', {}, `${cat.name} · ${plus(pvc(g, `level${q.l}`, q.l))}`), h('b', {}, cat[`q${q.l}`] || '–'), h('span', { class: 'ans' }, `Antwort: ${cat[`a${q.l}`] || '–'}`)));
+    out.push(buzzList(ui, q.buzzes, (c) => ui.act('play.judge', { correct: c })));
+    if (open) out.push(row(btn('ghost', 'Niemand weiß es – Frage beenden, neu auslosen', () => ui.confirmAct('Frage ohne richtige Antwort beenden? Danach wird ein neues Team ausgelost.', 'play.close'), q.buzzes.some((b) => b.status === 'pending'))));
+    else out.push(row(badge(q.winner ? 'ok' : '', q.winner ? `${ui.teamName(q.winner)} ${plus(pvc(g, `level${q.l}`, q.l))} – wählt als Nächstes` : `Niemand richtig – ausgelost: ${ui.teamName(st.picker)}`)));
+  }
+  return out;
+}
+
+// ---------- Lecker Sortierchen ----------
+function lecker(ui, g, st) {
+  const i = st.index ?? -1;
+  const r = (st.rounds || {})[i];
+  const out = [tabs(g.content.rounds.map((rd, k) => (rd.left ? `${rd.left.slice(0, 12)} / ${(rd.right || '').slice(0, 12)}` : `Runde ${k + 1}`)), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.evaluated)];
+  if (i < 0 || !r) return [...out, muted('Runde öffnen: Jedes Team zieht in Ruhe jeden Begriff nach links, rechts oder lässt ihn in der Mitte. Kein Buzzer, keine Zeit. Richtig +1, falsch −1, neutral 0.')];
+  const rd = g.content.rounds[i];
+  const terms = (rd.items || []).filter((it) => (it.term || '').trim());
+  const sideKey = { Links: 'L', Rechts: 'R', Neutral: 'N' };
+  const name = { L: rd.left || 'Links', R: rd.right || 'Rechts', N: 'Neutral' };
+  out.push(h('p', {}, h('b', {}, `◀ ${name.L}`), ' · ', h('b', {}, `${name.R} ▶`), h('span', { class: 'muted' }, ` · ${terms.length} Begriffe`)));
+  const scoreOf = (choice) => {
+    let right = 0, wrong = 0;
+    terms.forEach((it, k) => { const c = choice[k] || 'N'; if (c === 'N') return; if (c === (sideKey[it.side] || 'N')) right++; else wrong++; });
+    return right * pvc(g, 'right', 1) - wrong * pvc(g, 'wrong', 1);
+  };
+  out.push(h('ul', { class: 'list' }, teamIds(ui).map((id) => {
+    const a = r.answers[id];
+    return teamLi(ui, id, a ? ` – abgegeben${r.evaluated ? '' : ' (wird bei der Auswertung gezeigt)'}` : h('span', { class: 'muted' }, ' – sortiert noch'),
+      a && r.evaluated ? badge(scoreOf(a.choice) >= 0 ? 'ok' : 'bad', plus(scoreOf(a.choice))) : null);
+  })));
+  out.push(h('details', {}, h('summary', {}, 'Lösung anzeigen (nur für dich)'), h('ul', { class: 'list' }, terms.map((it) => h('li', {}, `${it.term} → ${name[sideKey[it.side] || 'N']}`)))));
+  const all = teamIds(ui).every((id) => r.answers[id]);
+  if (!r.evaluated) out.push(row(
+    r.open && !all ? btn('ghost', 'Abgabe schließen', () => ui.confirmAct('Abgabe schließen? Teams ohne Abgabe bekommen 0 Punkte.', 'play.close')) : null,
+    btn('pink', 'Auswerten und Punkte vergeben', () => ui.act('play.evaluate'), r.open && !all)));
+  else out.push(row(badge('ok', 'Ausgewertet')));
+  return out;
+}
+
 // ---------- 30 Seconds to Spaß ----------
 // Große Knöpfe „Richtig“/„Falsch“ (auch Tasten J/N bzw. 1/2): ein Tipp wertet die
 // Frage und zeigt sofort die nächste – das Team verliert keine Zeit.
@@ -297,4 +401,4 @@ function hostdu(ui, g, st) {
   return out;
 }
 
-export const MOD_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden };
+export const MOD_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, telepa2, jeopardy, lecker };

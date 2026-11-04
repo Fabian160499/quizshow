@@ -44,6 +44,7 @@ function checkFields(fields, obj, where, out, media) {
 function special(type, content, where, out) {
   const each = (list, label, fn) => (list || []).forEach((x, i) => { const err = fn(x); if (err) out.push({ level: 'fehlt', where: `${where} · ${label} ${i + 1}`, text: err }); });
   if (type === 'brain') { const err = require('./play-brain').slotProblem({ type, content }); if (err) out.push({ level: 'fehlt', where: `${where} · Glücksrad`, text: err }); }
+  if (type === 'lecker') each(content.rounds, 'Runde', (rd) => (!(rd.items || []).some((it) => (it.term || '').trim()) ? 'Keine Begriffe' : null));
   if (type === 'allein') each(content.rounds, 'Kategorie', (rd) => (require('./play-allein').parseList(rd.entries).length < 2 ? 'Liste der richtigen Antworten fehlt' : null));
   if (type === 'star') each(content.puzzles, 'Rätsel', require('./play-star').validate);
   if (type === 'timeline') each(content.rounds, 'Durchgang', require('./play-timeline').validate);
@@ -84,7 +85,9 @@ function checkShow(db, types) {
     if (!t) return;
     if (g.intro) media.push({ id: g.intro.id, type: g.intro.type, where: `${where} · Titel-Song` });
     else out.push({ level: 'hinweis', where, text: 'kein eigener Titel-Song hinterlegt' });
-    checkFields(t.schema, g.content || {}, where, out, media);
+    // Kassenschlager: Hinweis mit Foto braucht keinen Text.
+    const c = g.type === 'kassenschlager' && g.content ? { ...g.content, movies: (g.content.movies || []).map((m) => ({ ...m, hints: (m.hints || []).map((x, i) => (m.hintPhotos && m.hintPhotos[i] && m.hintPhotos[i].photo ? x || 'Foto' : x)) })) } : g.content;
+    checkFields(t.schema, c || {}, where, out, media);
     special(g.type, g.content || {}, where, out);
   });
 

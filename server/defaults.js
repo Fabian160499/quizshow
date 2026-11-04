@@ -93,14 +93,21 @@ const TYPES = {
     playable: true,
     summary: 'Vier Filme, je zehn kaufbare Hinweise, 20 $ Startguthaben.',
     schema: [
+      // Namen der zehn Hinweis-Kategorien – für alle Filme dieses Spiels; Preise bleiben gleich.
+      { key: 'hintNames', label: 'Namen der Hinweis-Kategorien (gelten für alle Filme, Preise bleiben)', type: 'list', min: 10, max: 10, of: 'text', maxLength: 60, fixedOrder: true,
+        itemLabel: (i) => `Kategorie ${i + 1} · ${MOVIE_HINTS[i][1]} $ (Standard: ${MOVIE_HINTS[i][0]})`, defaultItems: MOVIE_HINTS.map(([n]) => n) },
       { key: 'movies', label: 'Filme und Serien', type: 'list', min: 4, max: 4, itemLabel: (i) => `Film ${i + 1}`,
         fields: [
           text('title', 'Titel (Lösung)'),
           text('aliases', 'Auch richtig (Varianten mit Komma trennen)', 300),
-          { key: 'hints', label: 'Hinweise', type: 'list', min: 10, max: 10, itemLabel: (i) => `${i + 1}. ${MOVIE_HINTS[i][0]} · ${MOVIE_HINTS[i][1]} $`, of: 'text', maxLength: 300 },
+          { key: 'hints', label: 'Hinweise (Text – bei einem Foto unten optional, dann als Bildunterschrift)', type: 'list', min: 10, max: 10, itemLabel: (i) => `${i + 1}. ${MOVIE_HINTS[i][0]} · ${MOVIE_HINTS[i][1]} $`, of: 'text', maxLength: 300 },
+          { key: 'hintPhotos', label: 'Foto als Hinweis (optional – statt oder zusätzlich zum Text)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true,
+            itemLabel: (i) => `${i + 1}. ${MOVIE_HINTS[i][0]}`, defaultItems: MOVIE_HINTS.map(() => ({ photo: null })),
+            fields: [{ key: 'photo', label: 'Foto', type: 'media', accept: 'image' }] },
         ] },
     ],
     example: {
+      hintNames: MOVIE_HINTS.map(([n]) => n),
       movies: [
         { title: 'Titanic', aliases: '', hints: ['1997', 'Drama, Romanze', 'James Cameron', 'Leonardo DiCaprio', 'Rose’ Mutter', 'Nordatlantik', '„Ich bin der König der Welt!“', '7,9', '(Bild ergänzen)', 'Ein Liebespaar auf einem Schiff, das nicht ankommt'] },
         { title: 'Findet Nemo', aliases: 'Finding Nemo', hints: ['2003', 'Animation', 'Andrew Stanton', 'Marlin (Stimme)', 'Dorie', 'Great Barrier Reef / Sydney', '„Einfach schwimmen!“', '8,2', '(Bild ergänzen)', 'Ein Vater sucht sein Kind im Meer'] },

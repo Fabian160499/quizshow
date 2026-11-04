@@ -172,7 +172,7 @@ test('Spiele-Datenbank: alle acht Spiele vorhanden, Show frei zusammenstellbar, 
   const { db } = setup();
   assert.deepEqual(db.library.map((e) => e.type).slice(0, 8), ['leichte5', 'dummes', 'land', 'kassenschlager', 'trumpf5', 'musik', 'jauch', 'nerd']);
   // Die neuen Spielarten stehen nur in der Datenbank, nicht in der Show.
-  assert.equal(db.library.length, 28);
+  assert.equal(db.library.length, 32);
   assert.deepEqual(db.project.games.map((g) => g.type), ['leichte5', 'dummes', 'land', 'kassenschlager', 'trumpf5', 'musik', 'jauch', 'nerd']);
   const trumpf = db.library.find((e) => e.type === 'trumpf5');
   assert.throws(() => game.applyAction(db, mod(), 'game.add', { libraryId: trumpf.id }), /schon 8 Spiele/);
@@ -1046,4 +1046,33 @@ test('Finale: das Team mit der 3. Münze steht im Finale, auch wenn vorher ein a
   game.applyAction(db, mod(), 'points.adjust', { teamId: ids[2], points: 10, reason: 'x' });
   game.applyAction(db, mod(), 'coin.determine', { position: 8 }); // 3. Münze an ids[2]
   assert.equal(db.live.finale.teamId, ids[2]);
+});
+
+test('Kassenschlager: Hinweis-Kategorien umbenennbar, Foto als Hinweis erst nach dem Kauf sichtbar', () => {
+  const { db, ids } = setup(2);
+  const [a, b] = ids;
+  const g = db.project.games.find((x) => x.type === 'kassenschlager');
+  const content = structuredClone(g.content);
+  delete content.hintNames; // alter Stand ohne die neuen Felder
+  content.movies.forEach((m) => delete m.hintPhotos);
+  activate(db, 'kassenschlager', content);
+  assert.ok(game.teamView(db, a)); // lädt ohne Fehler
+  const c2 = structuredClone(db.project.games.find((x) => x.type === 'kassenschlager').content);
+  assert.equal(c2.hintNames.length, 10);
+  assert.equal(c2.movies[0].hintPhotos.length, 10);
+  c2.hintNames[8] = 'Szenenfoto';
+  c2.movies[0].hints[8] = '';
+  c2.movies[0].hintPhotos[8] = { photo: { id: 'media_bbbbbbbbbbbb22', type: 'image/jpeg', name: 'szene.jpg', size: 1 } };
+  game.applyAction(db, mod(), 'show.activate', { gameId: null });
+  activate(db, 'kassenschlager', c2);
+  game.applyAction(db, mod(), 'play.startMovie', { movieIndex: 0 });
+  assert.equal(game.teamView(db, a).play.hints[8].label, 'Szenenfoto');
+  assert.equal(game.teamView(db, a).play.hints[8].photo, null); // noch nicht gekauft
+  game.applyAction(db, team(a), 'play.buy', { hint: 8 });
+  assert.equal(game.teamView(db, a).play.hints[8].photo.id, 'media_bbbbbbbbbbbb22');
+  assert.equal(game.teamView(db, b).play.hints[8].photo, null);
+  assert.ok(game.referencedMedia(db).has('media_bbbbbbbbbbbb22'));
+  // Generalprobe: Hinweis mit Foto ohne Text gilt nicht als leer.
+  const rep = JSON.stringify(require('../server/check').checkShow(db, require('../server/defaults').TYPES));
+  assert.ok(!/9\. Verpixeltes[^"]*","text":"ist leer/.test(rep));
 });

@@ -2,7 +2,8 @@
 // Große Touchflächen; Eingabe, Ändern, verbindliches Absenden und Sperre sind
 // klar getrennt. Die Sichten kommen gefiltert vom Server.
 
-import { h, run, mediaUrl } from './client.js';
+import { h, run, mediaUrl, ask, toast } from './client.js';
+import { inkPad } from './ink.js';
 import { hpBar } from './neu-beamer.js';
 
 // Punktwerte aus dem Editor (über den Server), sonst Standard.
@@ -194,6 +195,119 @@ function top100(g, ui) {
   return out;
 }
 
+// ---------- Es liegt mir auf den Lippen ----------
+// Bildausschnitt: vergrößert um den eingestellten Mittelpunkt (wie auf dem Beamer).
+export function cropImg(m, crop, cls) {
+  const el = img(m, cls);
+  const c = crop || { zoom: 1, x: 50, y: 50 };
+  Object.assign(el.style, { transformOrigin: `${c.x}% ${c.y}%`, transform: `scale(${c.zoom})`, objectPosition: `${c.x}% ${c.y}%` });
+  return h('div', { class: `${cls}-box` }, el);
+}
+function lippen(g, ui) {
+  const out = [muted(`Aufgabe ${g.index + 1} von ${g.count}`), g.image ? cropImg(g.image, g.crop, 'lip-img') : null, question(g.question)];
+  if (g.resolved) {
+    out.push(g.answer ? h('p', { class: 'question' }, `Lösung: ${g.answer}`) : null);
+    out.push(g.won ? stateBox('ok', '★', `Richtig! ${plus(pv(g, 'correct'))}`) : g.ownStatus === 'wrong' ? stateBox('bad', '✗', 'Leider daneben') : stateBox('', '■', 'Aufgabe beendet'));
+    return out;
+  }
+  if (g.answering) return [...out, stateBox('ok', '🎤', 'Ihr seid dran – sagt laut eure Antwort!')];
+  if (g.locked) return [...out, stateBox('bad', '✗', 'Falsch – für diese Aufgabe gesperrt')];
+  if (g.someoneAnswering) out.push(stateBox('', '⏳', 'Ein anderes Team antwortet …'));
+  out.push(buzzButton('Buzzer', g.canBuzz, (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.buzz'); }));
+  return out;
+}
+
+// ---------- Wir sind ein Telepa-Team 2.0 ----------
+// Ein iPad, zwei Personen nacheinander: Spieler 1 schreibt und gibt ab, das Feld ist
+// danach leer und zeigt die Antwort nie wieder; dann ist Spieler 2 dran.
+const telReady = {};
+function telepa2(g, ui) {
+  const out = [muted(`Aufgabe ${g.index + 1} von ${g.count} · bei Übereinstimmung ${plus(g.points)}`), question(g.task)];
+  if (g.judged !== null) return [...out, g.judged ? stateBox('ok', '★', `Ihr seid ein Telepa-Team! ${plus(g.points)}`) : stateBox('bad', '✗', 'Leider nicht übereinstimmend – 0 Punkte')];
+  if (g.p1Done && g.p2Done) return [...out, stateBox('', '🔒', 'Beide haben abgegeben – die Moderation vergleicht eure Antworten.')];
+  if (!g.open) return [...out, stateBox('', '🔒', 'Abgabe geschlossen')];
+  if (!g.p1Done) {
+    out.push(stateBox('ok', '1️⃣', 'Spieler 1 schreibt – Spieler 2 schaut bitte weg!'));
+    out.push(inkPad({ draftKey: `tp2.${g.index}.p1`, label: 'Antwort Spieler 1', button: 'Abgeben – weiter an Spieler 2', ask, toast, onSubmit: (ink) => run(ui.conn, 'play.submit', { ink, player: 1 }) }));
+    return out;
+  }
+  const key = `${g.index}`;
+  if (!telReady[key]) {
+    const wrap = h('div', {});
+    out.push(stateBox('', '🔁', 'Spieler 1 hat abgegeben. Gebt das iPad jetzt an Spieler 2.'),
+      h('button', { class: 'btn pink huge', style: { width: '100%' }, onclick: () => { telReady[key] = true; wrap.replaceWith(...telepa2(g, ui).filter(Boolean)); } }, 'Spieler 2 ist bereit'));
+    wrap.append(...out.filter(Boolean));
+    return [wrap];
+  }
+  out.push(stateBox('ok', '2️⃣', 'Spieler 2 schreibt.'));
+  out.push(inkPad({ draftKey: `tp2.${g.index}.p2`, label: 'Antwort Spieler 2', button: 'Abgeben', ask, toast, onSubmit: (ink) => run(ui.conn, 'play.submit', { ink, player: 2 }) }));
+  return out;
+}
+
+// ---------- Jeopardy ----------
+function jeopardy(g, ui) {
+  if (g.waiting) return wait('Jeopardy', 'Gleich wird ausgelost, welches Team zuerst wählt.');
+  const q = g.question;
+  const open = q && !q.resolved;
+  if (open) {
+    const out = [muted(`${q.cat} · ${plus(q.points)}`), question(q.text)];
+    if (g.answering) return [...out, stateBox('ok', '🎤', 'Ihr seid dran – sagt laut eure Antwort!')];
+    if (g.locked) return [...out, stateBox('bad', '✗', 'Falsch – für diese Frage gesperrt')];
+    if (g.someoneAnswering) out.push(stateBox('', '⏳', 'Ein anderes Team antwortet …'));
+    out.push(buzzButton('Buzzer', g.canBuzz, (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.buzz'); }));
+    return out;
+  }
+  const out = [];
+  if (q && q.resolved) out.push(stateBox(q.won ? 'ok' : '', q.won ? '★' : '■', `${q.cat} (${plus(q.points)}): ${q.answer || '–'}${q.won ? ` – richtig, ${plus(q.points)}!` : ''}`));
+  if (g.done) return [...out, stateBox('ok', '🏁', 'Alle Fragen sind gespielt.')];
+  out.push(g.myPick ? stateBox('ok', '👉', 'Ihr wählt! Tippt auf eine Kategorie und Punktzahl.') : stateBox('', '⏳', `${ui.teamName(g.picker)} wählt die nächste Frage …`));
+  out.push(h('div', { class: 'jp-board' }, g.board.map((cat, c) => h('div', { class: 'jp-col' }, h('div', { class: 'jp-cat' }, cat.name),
+    cat.cells.map((cell) => h('button', { class: `jp-cell${cell.played ? ' played' : ''}`, disabled: !g.myPick || cell.played, onclick: (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.pick', { c, l: cell.l }); } }, cell.played ? '' : String(cell.points)))))));
+  return out;
+}
+
+// ---------- Lecker Sortierchen ----------
+// Drei Spalten: links · Mitte (neutral) · rechts. Begriffe mit dem Finger ziehen;
+// was in der Mitte bleibt, ist neutral. Abgabe erst per Knopf, vorher alles änderbar.
+const leckDraft = {};
+function lecker(g, ui) {
+  const out = [muted(`Runde ${g.index + 1} von ${g.count} · richtig +1, falsch −1, in der Mitte lassen = 0`)];
+  const colName = { L: g.left, N: 'Neutral', R: g.right };
+  if (g.evaluated) {
+    if (g.result) out.push(stateBox(g.result.points > 0 ? 'ok' : g.result.points < 0 ? 'bad' : '', '★', `${g.result.right} richtig, ${g.result.wrong} falsch = ${plus(g.result.points)}`));
+    out.push(h('ul', { class: 'lk-res' }, g.terms.map((t, k) => {
+      const mine = g.choice ? g.choice[k] : 'N';
+      const ok = mine === 'N' ? 'neutral' : mine === g.solution[k] ? 'ok' : 'bad';
+      return h('li', { class: ok }, h('b', {}, t), h('span', {}, `richtig: ${colName[g.solution[k]]}`), h('span', {}, mine === 'N' ? 'ihr: neutral (0)' : `ihr: ${colName[mine]} (${ok === 'ok' ? '+1' : '−1'})`));
+    })));
+    return out;
+  }
+  if (g.submitted) {
+    out.push(stateBox('', '🔒', 'Abgegeben – wartet auf die Auflösung'));
+    return [...out, board(g.choice, false)];
+  }
+  if (!g.open) return [...out, stateBox('', '🔒', 'Abgabe geschlossen')];
+  const d = (leckDraft[g.index] ||= g.terms.map(() => 'N'));
+  const box = h('div', {});
+  function board(choice, live) {
+    const col = (side) => h('div', { class: `lk-col ${side}`, 'data-drop': side },
+      h('div', { class: 'lk-head' }, colName[side]),
+      h('div', { class: 'lk-list' }, g.terms.map((t, k) => (choice[k] === side ? (() => {
+        const el = h('div', { class: 'lk-card' }, t);
+        if (live) draggable(el, k, (key, target) => { d[Number(key)] = target; draw(); }, null);
+        return el;
+      })() : null)).filter(Boolean)));
+    return h('div', { class: 'lk-board' }, col('L'), col('N'), col('R'));
+  }
+  const draw = () => {
+    box.replaceChildren(muted('Zieht jeden Begriff mit dem Finger nach links oder rechts – oder lasst ihn in der Mitte. Ohne Zeitdruck.'), board(d, true),
+      h('button', { class: 'btn pink huge', style: { width: '100%', marginTop: '12px' }, onclick: async (ev) => { ev.currentTarget.disabled = true; if (await run(ui.conn, 'play.submit', { choice: d })) delete leckDraft[g.index]; else ev.currentTarget.disabled = false; } }, 'Abgeben (verbindlich)'));
+  };
+  draw();
+  out.push(box);
+  return out;
+}
+
 // ---------- 30 Seconds to Spaß ----------
 function sekunden(g, ui) {
   const out = [muted(`Durchgang ${g.index + 1} von ${g.count} · Zielzeit ${g.seconds} Sekunden · Toleranz ± ${String(g.tol).replace('.', ',')} Sekunden`)];
@@ -354,4 +468,4 @@ function hostdu(g, ui) {
   return out;
 }
 
-export const TEAM_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden };
+export const TEAM_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, telepa2, jeopardy, lecker };

@@ -33,6 +33,10 @@ const PLAY = {
   top100: require('./play-top100'),
   allein: require('./play-allein'),
   sekunden: require('./play-sekunden'),
+  lippen: require('./play-lippen'),
+  telepa2: require('./play-telepa2'),
+  jeopardy: require('./play-jeopardy'),
+  lecker: require('./play-lecker'),
   star: require('./play-star'),
   timeline: require('./play-timeline'),
   chat: require('./play-chat'),
@@ -564,6 +568,7 @@ const PREVIEW_STEPS = {
   fragen: (i) => [['open', { catIndex: i }]],
   zocken: (i) => [['open', { q: i }]],
   brain: () => [['start'], ['showQuestion']],
+  jeopardy: () => [['start']],
 };
 function previewBeamer(db, ctx, p) {
   const type = p.type;

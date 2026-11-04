@@ -360,6 +360,80 @@ const EXTRA_TYPES = {
     example: { rounds: [{ category: '', source: '', period: '', asOf: '', entries: '' }] },
   },
 
+  lippen: {
+    title: 'Es liegt mir auf den Lippen',
+    playable: true,
+    summary: 'Stark vergrößerte Lippen eines Schauspielers plus Frage. Wer zuerst buzzert, antwortet mündlich; richtig 1 Punkt, falsch sperrt das Team für diese Aufgabe.',
+    schema: [
+      { key: 'items', label: 'Aufgaben', type: 'list', min: 1, max: 30, itemLabel: (i) => `Aufgabe ${i + 1}`, addLabel: 'Aufgabe hinzufügen',
+        fields: [
+          media('image', 'Foto (am besten schon auf den Mund zugeschnitten)', 'image'),
+          num('zoom', 'Vergrößerung auf dem Beamer (1 = ganzes Bild, z. B. 3 = dreifach)', 1, 10, 0.5),
+          num('fx', 'Ausschnitt waagerecht: Mund-Mitte in Prozent von links (0–100, leer = 50)', 0, 100),
+          num('fy', 'Ausschnitt senkrecht: Mund-Mitte in Prozent von oben (0–100, leer = 50)', 0, 100),
+          text('question', 'Frage / Aufgabe (sehen alle)', 200),
+          text('answer', 'Richtige Antwort (nur für die Moderation)', 160),
+        ] },
+    ],
+    example: { items: [{ image: null, zoom: 1, fx: null, fy: null, question: 'Wessen Lippen sind das?', answer: '' }] },
+  },
+
+  telepa2: {
+    title: 'Wir sind ein Telepa-Team 2.0',
+    playable: true,
+    summary: 'Zwei Personen pro Team schreiben nacheinander auf demselben iPad mit dem Apple Pencil eine Antwort – ohne die andere zu sehen. Die Moderation entscheidet, ob beide übereinstimmen.',
+    schema: [
+      { key: 'tasks', label: 'Aufgaben', type: 'list', min: 1, max: 30, itemLabel: (i) => `Aufgabe ${i + 1}`, addLabel: 'Aufgabe hinzufügen',
+        fields: [area('task', 'Aufgabe / Frage', 300), num('points', 'Punkte bei Übereinstimmung', -100, 1000)] },
+    ],
+    example: { tasks: [{ task: 'Nennt ein rotes Obst.', points: 1 }, { task: 'Zeichnet ein Haustier.', points: 1 }, { task: 'Nennt ein Land in Südamerika.', points: 2 }, { task: 'Zeichnet etwas, das man am Strand findet.', points: 2 }, { task: 'Nennt einen berühmten Maler.', points: 3 }] },
+  },
+
+  jeopardy: {
+    title: 'Jeopardy',
+    playable: true,
+    summary: '5 Kategorien mit je 3 Fragen (1, 2, 3 Punkte). Ein ausgelostes Team wählt, alle buzzern; wer richtig antwortet, wählt als Nächstes.',
+    schema: [
+      { key: 'categories', label: 'Kategorien', type: 'list', min: 5, max: 5, fixedOrder: true, itemLabel: (i) => `Kategorie ${i + 1}`,
+        fields: [
+          text('name', 'Name der Kategorie', 60),
+          text('q1', 'Frage für 1 Punkt', 300), text('a1', 'Antwort (1 Punkt)', 160),
+          text('q2', 'Frage für 2 Punkte', 300), text('a2', 'Antwort (2 Punkte)', 160),
+          text('q3', 'Frage für 3 Punkte', 300), text('a3', 'Antwort (3 Punkte)', 160),
+        ] },
+    ],
+    example: { categories: [
+        { name: 'Geografie', q1: 'Wie heißt die Hauptstadt von Italien?', a1: 'Rom', q2: 'Welcher Fluss fließt durch Wien?', a2: 'Donau', q3: 'Wie heißt der höchste Berg Afrikas?', a3: 'Kilimandscharo' },
+        { name: 'Musik', q1: 'Wie viele Saiten hat eine normale Gitarre?', a1: '6', q2: 'Aus welchem Land kommt die Band ABBA?', a2: 'Schweden', q3: 'Wer komponierte die „Kleine Nachtmusik“?', a3: 'Mozart' },
+        { name: 'Film', q1: 'Wie heißt der Zauberschüler mit der Blitznarbe auf der Stirn?', a1: 'Harry Potter', q2: 'Welcher Fisch wird in „Findet Nemo“ gesucht?', a2: 'Nemo', q3: 'Wer führte Regie bei „Titanic“ (1997)?', a3: 'James Cameron' },
+        { name: 'Tiere', q1: 'Welches ist das größte Landtier?', a1: 'Afrikanischer Elefant', q2: 'Wie viele Herzen hat ein Oktopus?', a2: '3', q3: 'Wie heißt das schnellste Landtier?', a3: 'Gepard' },
+        { name: 'Wissenschaft', q1: 'Was ist H₂O?', a1: 'Wasser', q2: 'Wie viele Planeten hat unser Sonnensystem?', a2: '8', q3: 'Welches Element hat das Zeichen Fe?', a3: 'Eisen' },
+      ] },
+  },
+
+  lecker: {
+    title: 'Lecker Sortierchen',
+    playable: true,
+    summary: 'Begriffe in der Mitte, links und rechts zwei Ziele. Jedes Team zieht in Ruhe zu: richtig +1, falsch −1, neutral immer 0.',
+    schema: [
+      { key: 'rounds', label: 'Runden', type: 'list', min: 1, max: 50, itemLabel: (i) => `Runde ${i + 1}`, addLabel: 'Runde hinzufügen',
+        fields: [
+          text('left', 'Bezeichnung links (z. B. „Hauptstadt“)', 60),
+          text('right', 'Bezeichnung rechts (z. B. „Keine Hauptstadt“)', 60),
+          { key: 'items', label: 'Begriffe (in dieser Reihenfolge in der Mitte)', type: 'list', min: 1, max: 60, itemLabel: (i) => `Begriff ${i + 1}`, addLabel: 'Begriff hinzufügen',
+            fields: [text('term', 'Begriff', 80), { key: 'side', label: 'Richtige Zuordnung', type: 'select', options: ['Links', 'Rechts', 'Neutral'] }] },
+        ] },
+    ],
+    example: { rounds: [
+        { left: 'Hauptstadt', right: 'Keine Hauptstadt', items: [{ term: 'Canberra', side: 'Links' }, { term: 'Sydney', side: 'Rechts' }, { term: 'Ottawa', side: 'Links' }, { term: 'Toronto', side: 'Rechts' }, { term: 'Bern', side: 'Links' }, { term: 'Zürich', side: 'Rechts' }, { term: 'Ankara', side: 'Links' }, { term: 'Istanbul', side: 'Rechts' }] },
+        { left: 'Säugetier', right: 'Kein Säugetier', items: [{ term: 'Wal', side: 'Links' }, { term: 'Hai', side: 'Rechts' }, { term: 'Fledermaus', side: 'Links' }, { term: 'Pinguin', side: 'Rechts' }, { term: 'Delfin', side: 'Links' }, { term: 'Krokodil', side: 'Rechts' }, { term: 'Schnabeltier', side: 'Links' }] },
+        { left: 'Planet', right: 'Kein Planet', items: [{ term: 'Mars', side: 'Links' }, { term: 'Pluto', side: 'Rechts' }, { term: 'Venus', side: 'Links' }, { term: 'Mond', side: 'Rechts' }, { term: 'Neptun', side: 'Links' }, { term: 'Sonne', side: 'Rechts' }] },
+        { left: 'Fluss in Deutschland', right: 'Fluss nicht in Deutschland', items: [{ term: 'Elbe', side: 'Links' }, { term: 'Themse', side: 'Rechts' }, { term: 'Mosel', side: 'Links' }, { term: 'Seine', side: 'Rechts' }, { term: 'Weser', side: 'Links' }, { term: 'Wolga', side: 'Rechts' }] },
+        { left: 'Edelgas', right: 'Kein Edelgas', items: [{ term: 'Helium', side: 'Links' }, { term: 'Sauerstoff', side: 'Rechts' }, { term: 'Neon', side: 'Links' }, { term: 'Stickstoff', side: 'Rechts' }, { term: 'Argon', side: 'Links' }, { term: 'Wasserstoff', side: 'Rechts' }] },
+        { left: 'Vor 1900 erfunden', right: 'Nach 1900 erfunden', items: [{ term: 'Telefon', side: 'Links' }, { term: 'Smartphone', side: 'Rechts' }, { term: 'Glühbirne', side: 'Links' }, { term: 'Internet', side: 'Rechts' }, { term: 'Automobil', side: 'Links' }, { term: 'Mikrowelle', side: 'Rechts' }] },
+      ] },
+  },
+
   sekunden: {
     title: '30 Seconds to Spaß',
     playable: true,
@@ -513,6 +587,6 @@ const EXTRA_TYPES = {
 };
 
 // Reihenfolge in der Spiele-Datenbank.
-const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden'];
+const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'lippen', 'telepa2', 'jeopardy', 'lecker'];
 
 module.exports = { EXTRA_TYPES, EXTRA_ORDER, WHEEL, WHEEL_SLOTS, migrateBrainContent };
