@@ -1538,6 +1538,29 @@ function beamerView(db) {
   return view;
 }
 
+// Finale-iPad der Moderation: nur Showname, Finalfrage und Spielstand – keine
+// Zugangscodes, keine Lösungen, keine Editor-Daten.
+function hostView(db) {
+  const f = FINALE.moderatorView(db) || {};
+  const st = f.state;
+  const round = st && st.round ? { ...st.round, answer: undefined, solution: st.round.revealed ? st.round.solution : null } : null;
+  return { role: 'host', project: { name: db.project.name }, finale: { state: st ? { ...st, round } : null } };
+}
+
+// Bandbreite sparen: Teile, die sich selten oder nie ändern (Editor-Bauplan, Vergleichs-
+// Datenbank, Spiele-Datenbank), bekommt jede Regie-Verbindung nur, wenn sie neu oder
+// geändert sind. Der Browser behält sonst seine letzte Fassung.
+const CACHED_KEYS = ['types', 'datasets', 'library', 'libraryFolders', 'libraryFolderOf'];
+function trimForConnection(view, cache) {
+  const out = { ...view, unchanged: [] };
+  for (const k of CACHED_KEYS) {
+    if (!(k in view)) continue;
+    const text = JSON.stringify(view[k]);
+    if (cache[k] === text) { delete out[k]; out.unchanged.push(k); } else cache[k] = text;
+  }
+  return out;
+}
+
 function moderatorView(db, connections) {
   return {
     role: 'moderator',
@@ -1570,6 +1593,8 @@ function moderatorView(db, connections) {
 }
 
 module.exports = {
+  hostView,
+  trimForConnection,
   QuizError,
   referencedMedia,
   tick,

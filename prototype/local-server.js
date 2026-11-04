@@ -119,7 +119,8 @@ export function createLocalServer() {
   }
 
   function viewFor(c) {
-    if (c.role === 'moderator' || c.role === 'host') return game.moderatorView(data, connections());
+    if (c.role === 'moderator') return game.trimForConnection(game.moderatorView(data, connections()), (c.cache ||= {}));
+    if (c.role === 'host') return game.hostView(data);
     if (c.role === 'team') return game.teamView(data, c.teamId);
     return game.beamerView(data);
   }

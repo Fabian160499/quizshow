@@ -285,7 +285,8 @@ function connections() {
 
 function viewFor(c) {
   const db = store.data;
-  if (c.role === 'moderator' || c.role === 'host') return game.moderatorView(db, connections());
+  if (c.role === 'moderator') return game.trimForConnection(game.moderatorView(db, connections()), (c.cache ||= {}));
+  if (c.role === 'host') return game.hostView(db);
   if (c.role === 'team') return game.teamView(db, c.teamId);
   return game.beamerView(db);
 }
