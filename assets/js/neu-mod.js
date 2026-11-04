@@ -149,7 +149,7 @@ function telepa2(ui, g, st) {
     const a = r.answers[id] || {};
     const j = r.judged[id];
     const both = a.p1 && a.p2;
-    return h('div', { class: 'tp2-row' }, h('div', { class: 'tp2-name' }, ui.dot(ui.teamColor(id)), h('b', {}, ui.teamName(id)),
+    return h('div', { class: `tp2-row${r.cur === id && !r.overview ? ' cur' : ''}` }, h('div', { class: 'tp2-name' }, ui.dot(ui.teamColor(id)), h('b', {}, ui.teamName(id)), r.cur === id && !r.overview ? badge('ok', 'gerade auf dem Beamer') : null,
       both ? null : h('span', { class: 'muted' }, ` – ${a.p1 ? 'Spieler 1 fertig, Spieler 2 schreibt' : 'Spieler 1 schreibt'} …`)),
     // Antworten erst zeigen, wenn beide abgegeben haben.
       both ? h('div', { class: 'tp2-pair' }, h('figure', {}, h('img', { class: 'ink-answer mod', src: a.p1, alt: 'Antwort Spieler 1' }), h('figcaption', {}, 'Spieler 1')),
@@ -158,6 +158,16 @@ function telepa2(ui, g, st) {
         btn(j === false ? 'bad' : 'ghost', '✗ Passt nicht (0)', () => ui.act('play.judge', { teamId: id, match: false })),
         j === undefined ? h('span', { class: 'muted' }, 'noch nicht gewertet') : badge(j ? 'ok' : 'bad', j ? `gewertet: ${plus(points)}` : 'gewertet: 0')) : null);
   })));
+  // Auflösung auf dem Beamer: Team für Team, per „Weiter“.
+  const ready = teamIds(ui).filter((id) => r.answers[id]?.p1 && r.answers[id]?.p2);
+  const shown = r.shown || [];
+  const nextId = ready.find((id) => !shown.includes(id));
+  const missing = teamIds(ui).length - ready.length;
+  const goNext = () => (r.open && missing ? ui.confirmAct(`Abgabe schließen und Auflösung starten? ${missing} ${missing === 1 ? 'Team hat' : 'Teams haben'} noch nicht fertig abgegeben.`, 'play.next') : ui.act('play.next'));
+  const label = nextId ? `${shown.length ? 'Weiter' : 'Auflösung starten'}: ${ui.teamName(nextId)} zeigen ▶` : 'Übersicht aller Teams zeigen ▶';
+  out.push(h('div', { class: 'tp2-reveal' },
+    h('span', {}, 'Beamer: ', h('b', {}, r.overview ? 'Übersicht' : r.cur ? ui.teamName(r.cur) : 'noch keine Auflösung'), shown.length ? h('span', { class: 'muted' }, ` · ${shown.length} von ${ready.length} aufgelöst`) : null),
+    r.overview ? null : btn('pink', label, goNext, !ready.length)));
   if (r.open) out.push(row(btn('ghost', 'Abgabe schließen', () => ui.confirmAct('Abgabe schließen? Teams, bei denen nicht beide abgegeben haben, können nicht mehr gewertet werden.', 'play.close'))));
   return out;
 }

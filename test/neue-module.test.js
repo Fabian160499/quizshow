@@ -673,9 +673,11 @@ const IMG = { id: 'media_aaaaaaaaaaaa11', type: 'image/png', name: 'mund.png', s
 test('Es liegt mir auf den Lippen: Buzzer sperrt die anderen, falsch sperrt das Team, Lösung erst am Ende, einmal gewertet', () => {
   const { db, ids } = setup(3);
   const [A, B, C] = ids;
-  use(db, 'lippen', { items: [{ image: IMG, zoom: 3, fx: 50, fy: 70, question: 'Wessen Lippen?', answer: 'Angelina Jolie' }, { image: IMG, zoom: 2, fx: null, fy: null, question: 'Und diese?', answer: 'Mick Jagger' }] });
+  use(db, 'lippen', { items: [{ image: IMG, reveal: { ...IMG, id: 'media_cccccccccccc33' }, zoom: 3, fx: 50, fy: 70, question: 'Wessen Lippen?', answer: 'Angelina Jolie' }, { image: IMG, zoom: 2, fx: null, fy: null, question: 'Und diese?', answer: 'Mick Jagger' }] });
   act(db, mod(), 'open', { index: 0 });
   assert.ok(!JSON.stringify(bv(db)).includes('Jolie'));
+  assert.equal(bv(db).reveal, null); // Auflösungsfoto erst am Ende
+  assert.ok(!JSON.stringify(tv(db, A)).includes('media_cccccccccccc33'));
   assert.ok(!JSON.stringify(tv(db, A)).includes('Jolie'));
   assert.equal(bv(db).crop.zoom, 3);
   act(db, team(A), 'buzz');
@@ -690,6 +692,8 @@ test('Es liegt mir auf den Lippen: Buzzer sperrt die anderen, falsch sperrt das 
   assert.throws(() => act(db, mod(), 'judge', { correct: true }), /kein Team/); // doppelt geklickt
   assert.equal(pts(db, C), 1);
   assert.equal(bv(db).answer, 'Angelina Jolie');
+  assert.equal(bv(db).reveal.id, 'media_cccccccccccc33');
+  assert.equal(tv(db, A).reveal.id, 'media_cccccccccccc33');
   assert.deepEqual(bv(db).buzzOrder.map((b) => b.teamId), [A, C]);
   // Alle falsch; danach Lösung sichtbar, keine Punkte.
   act(db, mod(), 'open', { index: 1 });
@@ -699,7 +703,7 @@ test('Es liegt mir auf den Lippen: Buzzer sperrt die anderen, falsch sperrt das 
   assert.equal(pts(db, A) + pts(db, B), 0);
 });
 
-test('Wir sind ein Telepa-Team 2.0: nacheinander auf einem iPad, nichts sichtbar vor der Wertung, Punkte je Aufgabe, nur einmal gebucht', () => {
+test('Wir sind ein Telepa-Team 2.0: nacheinander auf einem iPad, nichts sichtbar vor der Auflösung, Teams nacheinander aufgelöst, Punkte je Aufgabe, nur einmal gebucht', () => {
   const { db, ids } = setup(2);
   const [A, B] = ids;
   use(db, 'telepa2', { tasks: [{ task: 'Nennt ein rotes Obst.', points: 3 }] });
@@ -720,8 +724,28 @@ test('Wir sind ein Telepa-Team 2.0: nacheinander auf einem iPad, nichts sichtbar
   assert.equal(pts(db, A), 3);
   act(db, mod(), 'judge', { teamId: A, match: false }); // Korrektur
   assert.equal(pts(db, A), 0);
-  assert.equal(bv(db).teams.find((t) => t.teamId === A).inks.length, 2);
-  assert.equal(bv(db).teams.find((t) => t.teamId === B).inks, null);
+  // Noch nicht aufgelöst: Beamer zeigt nichts, iPad kein Ergebnis.
+  assert.equal(bv(db).teams.find((t) => t.teamId === A).inks, null);
+  assert.equal(tv(db, A).judged, null);
+  act(db, team(B), 'submit', { ink: INK, player: 1 });
+  act(db, team(B), 'submit', { ink: INK, player: 2 });
+  // Nacheinander: erst A, dann B, dann Übersicht.
+  act(db, mod(), 'next');
+  let v = bv(db);
+  assert.equal(v.cur, A);
+  assert.equal(v.teams.find((t) => t.teamId === A).inks.length, 2);
+  assert.equal(v.teams.find((t) => t.teamId === A).judged, false);
+  assert.equal(v.teams.find((t) => t.teamId === B).inks, null);
+  assert.equal(tv(db, A).judged, false);
+  assert.equal(tv(db, B).judged, null);
+  assert.throws(() => act(db, team(A), 'submit', { ink: INK, player: 1 }), /geschlossen/);
+  act(db, mod(), 'next');
+  v = bv(db);
+  assert.equal(v.cur, B);
+  assert.equal(v.teams.find((t) => t.teamId === B).inks.length, 2);
+  act(db, mod(), 'next');
+  assert.equal(bv(db).overview, true);
+  assert.equal(bv(db).cur, null);
 });
 
 test('Jeopardy: Auslosen, wählen, Buzzer, gespielte Felder gesperrt, Gewinner wählt, sonst neu auslosen', () => {

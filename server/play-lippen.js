@@ -94,6 +94,7 @@ module.exports = {
       someoneAnswering: !!pending && pending.teamId !== teamId,
       won: r.resolved ? r.winner === teamId : null,
       answer: r.resolved ? it.answer || '' : null,
+      reveal: r.resolved && it.reveal ? { id: it.reveal.id, type: it.reveal.type } : null,
     };
   },
 
@@ -113,6 +114,8 @@ module.exports = {
       resolved: r.resolved,
       winner: r.winner,
       answer: r.resolved ? it.answer || '' : null,
+      // Auflösungsfoto (ganzer Schauspieler) erst nach dem Ende der Aufgabe.
+      reveal: r.resolved && it.reveal ? { id: it.reveal.id, type: it.reveal.type } : null,
     };
   },
 };

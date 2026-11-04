@@ -2046,6 +2046,8 @@ details.item.drop-here { outline: 2px dashed var(--accent-2, #ffc23d); outline-o
 .beamer .lip-img-box { width: min(86vw, 150vh); height: 44vh; aspect-ratio: auto; margin: 0 auto 1.6vh; border-radius: 0; box-shadow: inset 0 0 0 0.4vh rgba(255, 255, 255, 0.15), 0 1.2vh 3vh rgba(0, 0, 0, 0.6); }
 .tp2-list { display: grid; gap: 14px; margin-top: 10px; }
 .tp2-row { padding: 10px 12px; border-radius: 12px; background: #1c1c26; }
+.tp2-row.cur { box-shadow: inset 4px 0 0 var(--pink, #ff3d9a); }
+.tp2-reveal { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: #24243a; }
 .tp2-name { display: flex; align-items: center; gap: 8px; }
 .tp2-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
 .tp2-pair figure { margin: 0; }
@@ -2098,3 +2100,21 @@ details.item.drop-here { outline: 2px dashed var(--accent-2, #ffc23d); outline-o
 .beamer .lk-sum { font-size: 2vh; opacity: 0.85; }
 
 .paywall .hint .hint-photo { display: block; width: 100%; max-height: 220px; object-fit: contain; margin-top: 6px; border-radius: 8px; background: #000; }
+
+.lip-full-box { display: flex; justify-content: center; margin: 8px 0; }
+.lip-full-box img { max-width: 100%; max-height: 360px; object-fit: contain; border-radius: 12px; background: #000; }
+.beamer .lip-reveal { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.4vw; width: min(90vw, 160vh); margin: 0 auto; align-items: stretch; }
+.beamer .lip-reveal .lip-img-box { width: 100%; height: 52vh; margin: 0; }
+.beamer .lip-full-box { margin: 0; height: 52vh; background: var(--box); box-shadow: inset 0 0.8vh 0 var(--accent-2), 0 1.2vh 3vh rgba(0, 0, 0, 0.6); animation: pop 0.6s cubic-bezier(.2,1.5,.4,1) both; }
+.beamer .lip-full-box img { width: 100%; height: 100%; max-height: none; object-fit: contain; border-radius: 0; background: transparent; }
+
+.beamer .tp2-solo { width: min(86vw, 150vh); margin: 2vh auto 0; background: var(--box); color: #fff; padding: 1.4vh 1.4vw 1.8vh; box-shadow: inset 0.8vh 0 0 var(--team), 0 1vh 3vh rgba(0, 0, 0, 0.55); animation: rise 0.45s ease-out both; }
+.beamer .tp2-solo.ok { box-shadow: inset 0.8vh 0 0 var(--team), 0 0 4vh rgba(43, 217, 107, 0.5); }
+.beamer .tp2-solo.bad { box-shadow: inset 0.8vh 0 0 var(--team), 0 0 4vh rgba(255, 77, 94, 0.4); }
+.beamer .tp2-solo .hd { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; font-size: 4vh; text-transform: uppercase; margin-bottom: 1.2vh; }
+.beamer .tp2-solo .hd b { font-size: 5vh; animation: rise 0.35s ease-out both; }
+.beamer .tp2-solo.ok .hd b { color: var(--ok); } .beamer .tp2-solo.bad .hd b { color: var(--bad); }
+.beamer .tp2-solo .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4vw; }
+.beamer .tp2-solo figure { margin: 0; }
+.beamer .tp2-solo .ink-answer { width: 100%; height: 42vh; object-fit: contain; background: #2b2b2e; }
+.beamer .tp2-solo figcaption { text-align: center; font-size: 2.2vh; opacity: 0.7; margin-top: 0.6vh; }

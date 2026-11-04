@@ -150,6 +150,12 @@ const buzzRow = (v, teamOf) => (v.buzzOrder.length ? h('div', { class: 'nb-buzzl
 // ---------- Es liegt mir auf den Lippen ----------
 function lippen(v, teamOf) {
   if (v.waiting) return waitTitle('Es liegt mir auf den Lippen', 'Wessen Lippen sind das?');
+  // Auflösung mit Foto: Lippen und ganzer Schauspieler nebeneinander, darunter die Antwort.
+  if (v.resolved && v.reveal) {
+    return [h('div', { class: 'lip-reveal' }, v.image ? cropImg(v.image, v.crop, 'lip-img') : null, h('div', { class: 'lip-full-box' }, img(v.reveal, 'lip-full'))),
+      h('div', { class: 'solution', style: { marginTop: '1.4vh' } }, `${v.answer || '–'}${v.winner ? ` · ${teamOf(v.winner).name} ${plus(pv(v, 'correct'))}` : ''}`),
+      buzzRow(v, teamOf)];
+  }
   return [v.image ? cropImg(v.image, v.crop, 'lip-img') : null, banner(v.question, 'compact slim'),
     v.resolved ? h('div', { class: 'solution', style: { marginTop: '1.4vh' } }, `${v.answer || '–'}${v.winner ? ` · ${teamOf(v.winner).name} ${plus(pv(v, 'correct'))}` : ''}`) : null,
     buzzRow(v, teamOf) || (v.resolved ? null : sub('Wer es weiß, buzzert!', { marginTop: '1.4vh' }))];
@@ -158,9 +164,12 @@ function lippen(v, teamOf) {
 // ---------- Wir sind ein Telepa-Team 2.0 ----------
 function telepa2(v, teamOf) {
   if (v.waiting) return waitTitle('Wir sind ein Telepa-Team 2.0', 'Zwei Köpfe, ein Gedanke?');
-  const judged = v.teams.filter((t) => t.judged !== null);
+  const shown = v.teams.filter((t) => t.shown);
   const out = [banner(v.task, 'compact slim'), h('div', { class: 'nb-al-count' }, h('b', {}, plus(v.points)), h('span', {}, 'bei Übereinstimmung'))];
-  if (!judged.length) {
+  const verdict = (t) => (t.judged === null ? '?' : t.judged ? `✓ ${plus(v.points)}` : '✗ 0');
+  const cls = (t) => (t.judged === null ? '' : t.judged ? 'ok' : 'bad');
+  const inks = (t) => (t.inks || []).map((src) => (src ? h('img', { class: 'ink-answer', src, alt: '' }) : h('div', { class: 'ink-answer' })));
+  if (!shown.length) {
     out.push(h('div', { class: 'nb-status' }, v.teams.map((t) => {
       const tm = teamOf(t.teamId);
       const done = t.p1 && t.p2;
@@ -169,15 +178,23 @@ function telepa2(v, teamOf) {
     })));
     return out;
   }
-  // Nach der Wertung: beide Antworten nebeneinander mit „passt“ / „passt nicht“.
-  out.push(h('div', { class: 'tp2-grid' }, judged.map((t, n) => {
+  // Auflösung nacheinander: nur das aktuelle Team groß.
+  const cur = v.cur && v.teams.find((t) => t.teamId === v.cur);
+  if (cur && !v.overview) {
+    const tm = teamOf(cur.teamId);
+    out.push(h('div', { class: `tp2-solo ${cls(cur)}`, '--team': tm.color },
+      h('div', { class: 'hd' }, h('span', {}, tm.name), h('b', {}, cur.judged === null ? '' : verdict(cur))),
+      h('div', { class: 'pair' }, inks(cur).map((el, n) => h('figure', {}, el, h('figcaption', {}, `Spieler ${n + 1}`))))));
+    out.push(sub(`Team ${v.shownCount} von ${v.revealCount}`, { marginTop: '1vh' }));
+    return out;
+  }
+  // Übersicht nach dem letzten Team: alle nebeneinander.
+  out.push(h('div', { class: 'tp2-grid' }, shown.map((t, n) => {
     const tm = teamOf(t.teamId);
-    return h('div', { class: `tp2-card ${t.judged ? 'ok' : 'bad'}`, '--team': tm.color, style: { animationDelay: `${0.2 * n}s` } },
-      h('div', { class: 'hd' }, h('span', {}, tm.name), h('b', {}, t.judged ? `✓ ${plus(v.points)}` : '✗ 0')),
-      h('div', { class: 'pair' }, (t.inks || []).map((src) => (src ? h('img', { class: 'ink-answer', src, alt: '' }) : h('div', { class: 'ink-answer' })))));
+    return h('div', { class: `tp2-card ${cls(t)}`, '--team': tm.color, style: { animationDelay: `${0.12 * n}s` } },
+      h('div', { class: 'hd' }, h('span', {}, tm.name), h('b', {}, verdict(t))),
+      h('div', { class: 'pair' }, inks(t)));
   })));
-  const waiting = v.teams.filter((t) => t.judged === null).length;
-  if (waiting) out.push(sub(`Noch ${waiting} ${waiting === 1 ? 'Team' : 'Teams'} offen`, { marginTop: '1vh' }));
   return out;
 }
 
