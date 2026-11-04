@@ -2039,3 +2039,62 @@ details.item.drop-here { outline: 2px dashed var(--accent-2, #ffc23d); outline-o
 .beamer .sek-o b { font-size: 2.6vh; color: var(--accent-2); }
 .beamer .sek-o.turn { box-shadow: inset 0.5vh 0 0 var(--team), 0 0 0 0.3vh var(--team), 0 0 2.6vh color-mix(in srgb, var(--team) 50%, transparent); }
 .beamer .sek-o.fail b { color: var(--bad); }
+
+/* ===== Lippen, Telepa 2.0, Jeopardy, Lecker Sortierchen ===== */
+.lip-img-box { position: relative; overflow: hidden; width: 100%; aspect-ratio: 16 / 7; margin: 8px 0 10px; border-radius: 12px; background: #000; }
+.lip-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.beamer .lip-img-box { width: min(86vw, 150vh); height: 44vh; aspect-ratio: auto; margin: 0 auto 1.6vh; border-radius: 0; box-shadow: inset 0 0 0 0.4vh rgba(255, 255, 255, 0.15), 0 1.2vh 3vh rgba(0, 0, 0, 0.6); }
+.tp2-list { display: grid; gap: 14px; margin-top: 10px; }
+.tp2-row { padding: 10px 12px; border-radius: 12px; background: #1c1c26; }
+.tp2-name { display: flex; align-items: center; gap: 8px; }
+.tp2-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.tp2-pair figure { margin: 0; }
+.tp2-pair img { width: 100%; height: auto; }
+.tp2-pair figcaption { font-size: 0.85rem; opacity: 0.7; text-align: center; }
+.beamer .tp2-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(30vw, 56vh), 1fr)); gap: 1.4vh 1.4vw; width: min(94vw, 170vh); margin: 1.6vh auto 0; }
+.beamer .tp2-card { background: var(--box); color: #fff; padding: 1vh 1vw 1.2vh; box-shadow: inset 0.6vh 0 0 var(--team), 0 0.8vh 2vh rgba(0, 0, 0, 0.5); animation: rise 0.45s ease-out both; }
+.beamer .tp2-card.ok { box-shadow: inset 0.6vh 0 0 var(--team), 0 0 2.6vh rgba(43, 217, 107, 0.45); }
+.beamer .tp2-card .hd { display: flex; justify-content: space-between; font-weight: 800; font-size: 2.4vh; text-transform: uppercase; margin-bottom: 0.8vh; }
+.beamer .tp2-card.ok .hd b { color: var(--ok); } .beamer .tp2-card.bad .hd b { color: var(--bad); }
+.beamer .tp2-card .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8vw; }
+.beamer .tp2-card .ink-answer { width: 100%; height: 14vh; object-fit: contain; background: #2b2b2e; }
+.jp-board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.jp-col { display: grid; gap: 8px; align-content: start; }
+.jp-cat { min-height: 56px; display: grid; place-items: center; padding: 6px; text-align: center; font-weight: 800; background: #2b2b38; border-radius: 8px; font-size: 0.95rem; }
+.jp-cell { min-height: 64px; border: 0; border-radius: 8px; background: #1f2a6b; color: #ffc23d; font-size: 1.7rem; font-weight: 900; cursor: pointer; }
+.jp-cell:disabled { cursor: default; }
+.jp-cell.played { background: #1a1a22; color: rgba(255, 255, 255, 0.45); font-size: 0.85rem; font-weight: 700; }
+.jp-cell.cur { outline: 3px solid var(--accent-2, #ffc23d); }
+.jp-board.mod .jp-cell { min-height: 48px; font-size: 1.3rem; }
+.beamer .jp-board.beam { width: min(94vw, 165vh); gap: 0.8vw; margin: 2vh auto 0; }
+.beamer .jp-board.beam .jp-col { gap: 0.8vh; }
+.beamer .jp-board.beam .jp-cat { min-height: 9vh; border-radius: 0; background: var(--box); color: #fff; font-size: 2.6vh; text-transform: uppercase; box-shadow: inset 0 0.6vh 0 var(--accent), 0 0.8vh 2vh rgba(0, 0, 0, 0.5); }
+.beamer .jp-board.beam .jp-cell { display: grid; place-items: center; min-height: 11vh; border-radius: 0; background: #23233a; font-size: 6vh; box-shadow: 0 0.8vh 2vh rgba(0, 0, 0, 0.5); animation: pop 0.4s ease-out both; }
+.beamer .jp-board.beam .jp-cell.played { background: #19191c; font-size: 2vh; text-transform: uppercase; box-shadow: inset 0 -0.6vh 0 var(--team); }
+.beamer .jp-qhead { display: flex; justify-content: center; gap: 1.4vw; margin-top: 2vh; }
+.beamer .jp-qhead span, .beamer .jp-qhead b { padding: 1vh 1.6vw; background: var(--box); color: #fff; font-size: 3vh; text-transform: uppercase; box-shadow: 0 0.6vh 1.6vh rgba(0, 0, 0, 0.45); }
+.beamer .jp-qhead b { color: var(--accent-2); }
+.beamer .jp-last { display: flex; flex-direction: column; align-items: center; gap: 0.5vh; width: min(84vw, 150vh); margin: 1vh auto 0; padding: 1.4vh 2vw; background: var(--box); color: #fff; box-shadow: inset 0 -0.6vh 0 var(--ok), 0 0.8vh 2vh rgba(0, 0, 0, 0.5); }
+.beamer .jp-last small { font-size: 2vh; opacity: 0.8; } .beamer .jp-last b { font-size: 4vh; } .beamer .jp-last span { font-size: 2.4vh; color: var(--accent-2); font-weight: 800; }
+.lk-board { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+.lk-col { min-height: 320px; border-radius: 12px; padding: 8px; background: #1b1b24; border: 2px dashed rgba(255, 255, 255, 0.14); }
+.lk-col.L { border-color: rgba(0, 209, 255, 0.5); } .lk-col.R { border-color: rgba(255, 45, 138, 0.5); }
+.lk-col.over { background: rgba(255, 194, 61, 0.12); }
+.lk-head { text-align: center; font-weight: 900; margin-bottom: 8px; font-size: 1rem; }
+.lk-col.L .lk-head { color: #4fd8ff; } .lk-col.R .lk-head { color: #ff6fae; } .lk-col.N .lk-head { color: rgba(255, 255, 255, 0.7); }
+.lk-list { display: grid; gap: 8px; }
+.lk-card { padding: 12px 8px; border-radius: 10px; background: #2d2d38; text-align: center; font-weight: 700; cursor: grab; user-select: none; -webkit-user-select: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35); }
+.lk-res { list-style: none; padding: 0; display: grid; gap: 6px; }
+.lk-res li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 8px 12px; border-radius: 10px; background: #1f1f28; border-left: 6px solid #666; }
+.lk-res li.ok { border-left-color: var(--ok); } .lk-res li.bad { border-left-color: var(--bad); }
+.beamer .lk-beam { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.4vw; width: min(94vw, 165vh); margin: 2vh auto 0; }
+.beamer .lk-bcol .hd { padding: 1.2vh 1vw; background: var(--box); color: #fff; text-align: center; font-weight: 900; font-size: 3vh; text-transform: uppercase; box-shadow: 0 0.8vh 2vh rgba(0, 0, 0, 0.5); }
+.beamer .lk-bcol.L .hd { box-shadow: inset 0 -0.6vh 0 #00d1ff, 0 0.8vh 2vh rgba(0, 0, 0, 0.5); }
+.beamer .lk-bcol.R .hd { box-shadow: inset 0 -0.6vh 0 var(--accent), 0 0.8vh 2vh rgba(0, 0, 0, 0.5); }
+.beamer .lk-bcol .bd { display: grid; gap: 0.8vh; margin-top: 1vh; min-height: 20vh; }
+.beamer .lk-term { padding: 1vh 1vw; background: #26262b; color: #fff; text-align: center; font-weight: 800; font-size: 2.8vh; box-shadow: 0 0.6vh 1.6vh rgba(0, 0, 0, 0.5); animation: rise 0.4s ease-out both; }
+.beamer .lk-bcol.L .lk-term.solved { box-shadow: inset 0.6vh 0 0 #00d1ff, 0 0.6vh 1.6vh rgba(0, 0, 0, 0.5); }
+.beamer .lk-bcol.R .lk-term.solved { box-shadow: inset -0.6vh 0 0 var(--accent), 0 0.6vh 1.6vh rgba(0, 0, 0, 0.5); }
+.beamer .lk-sum { font-size: 2vh; opacity: 0.85; }
+
+.paywall .hint .hint-photo { display: block; width: 100%; max-height: 220px; object-fit: contain; margin-top: 6px; border-radius: 8px; background: #000; }

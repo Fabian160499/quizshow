@@ -35,7 +35,7 @@ const pts = (db, id) => totals(db)[id] || 0;
 
 test('Neue Module stehen nur in der Datenbank, nicht automatisch in der Show', () => {
   const db = game.createState();
-  for (const t of ['sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden']) {
+  for (const t of ['sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'lippen', 'telepa2', 'jeopardy', 'lecker']) {
     assert.ok(db.library.some((e) => e.type === t), t);
     assert.ok(!db.project.games.some((g) => g.type === t), t);
   }
@@ -665,4 +665,148 @@ test('30 Seconds to Spaß: reihum, gleiche Blöcke, Stopp im Zeitfenster behält
   act(db, mod(), 'mark', { correct: true });
   act(db, team(ids[1], B + 100000 + 32500), 'buzz'); // 32,5 s – außerhalb ± 2
   assert.equal(pts(db, ids[1]), 2);
+});
+
+const INK = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+const IMG = { id: 'media_aaaaaaaaaaaa11', type: 'image/png', name: 'mund.png', size: 1 };
+
+test('Es liegt mir auf den Lippen: Buzzer sperrt die anderen, falsch sperrt das Team, Lösung erst am Ende, einmal gewertet', () => {
+  const { db, ids } = setup(3);
+  const [A, B, C] = ids;
+  use(db, 'lippen', { items: [{ image: IMG, zoom: 3, fx: 50, fy: 70, question: 'Wessen Lippen?', answer: 'Angelina Jolie' }, { image: IMG, zoom: 2, fx: null, fy: null, question: 'Und diese?', answer: 'Mick Jagger' }] });
+  act(db, mod(), 'open', { index: 0 });
+  assert.ok(!JSON.stringify(bv(db)).includes('Jolie'));
+  assert.ok(!JSON.stringify(tv(db, A)).includes('Jolie'));
+  assert.equal(bv(db).crop.zoom, 3);
+  act(db, team(A), 'buzz');
+  assert.throws(() => act(db, team(B), 'buzz'), /anderes Team/);
+  assert.equal(tv(db, B).canBuzz, false);
+  act(db, mod(), 'judge', { correct: false });
+  assert.equal(pts(db, A), 0); // kein Abzug
+  assert.throws(() => act(db, team(A), 'buzz'), /gesperrt|bereits/);
+  assert.equal(tv(db, B).canBuzz, true);
+  act(db, team(C), 'buzz');
+  act(db, mod(), 'judge', { correct: true });
+  assert.throws(() => act(db, mod(), 'judge', { correct: true }), /kein Team/); // doppelt geklickt
+  assert.equal(pts(db, C), 1);
+  assert.equal(bv(db).answer, 'Angelina Jolie');
+  assert.deepEqual(bv(db).buzzOrder.map((b) => b.teamId), [A, C]);
+  // Alle falsch; danach Lösung sichtbar, keine Punkte.
+  act(db, mod(), 'open', { index: 1 });
+  for (const id of ids) { act(db, team(id), 'buzz'); act(db, mod(), 'judge', { correct: false }); }
+  assert.equal(bv(db).resolved, true);
+  assert.equal(bv(db).answer, 'Mick Jagger');
+  assert.equal(pts(db, A) + pts(db, B), 0);
+});
+
+test('Wir sind ein Telepa-Team 2.0: nacheinander auf einem iPad, nichts sichtbar vor der Wertung, Punkte je Aufgabe, nur einmal gebucht', () => {
+  const { db, ids } = setup(2);
+  const [A, B] = ids;
+  use(db, 'telepa2', { tasks: [{ task: 'Nennt ein rotes Obst.', points: 3 }] });
+  act(db, mod(), 'open', { index: 0 });
+  assert.throws(() => act(db, team(A), 'submit', { ink: INK, player: 2 }), /Erst gibt Spieler 1/);
+  act(db, team(A), 'submit', { ink: INK, player: 1 });
+  assert.throws(() => act(db, team(A), 'submit', { ink: INK, player: 1 }), /schon abgegeben/);
+  // iPad zeigt nie die Antwort, Beamer auch nicht.
+  assert.ok(!JSON.stringify(tv(db, A)).includes('data:image'));
+  assert.ok(!JSON.stringify(bv(db)).includes('data:image'));
+  assert.equal(tv(db, A).p1Done, true);
+  assert.throws(() => act(db, mod(), 'judge', { teamId: A, match: true }), /beide/);
+  act(db, team(A), 'submit', { ink: INK, player: 2 });
+  assert.ok(!JSON.stringify(tv(db, A)).includes('data:image'));
+  assert.ok(!JSON.stringify(bv(db)).includes('data:image'));
+  act(db, mod(), 'judge', { teamId: A, match: true });
+  act(db, mod(), 'judge', { teamId: A, match: true }); // doppelt geklickt
+  assert.equal(pts(db, A), 3);
+  act(db, mod(), 'judge', { teamId: A, match: false }); // Korrektur
+  assert.equal(pts(db, A), 0);
+  assert.equal(bv(db).teams.find((t) => t.teamId === A).inks.length, 2);
+  assert.equal(bv(db).teams.find((t) => t.teamId === B).inks, null);
+});
+
+test('Jeopardy: Auslosen, wählen, Buzzer, gespielte Felder gesperrt, Gewinner wählt, sonst neu auslosen', () => {
+  const { db, ids } = setup(3);
+  const [A, B, C] = ids;
+  const g = use(db, 'jeopardy');
+  const core = require('../server/core');
+  const real = core.randomInt;
+  core.randomInt = () => 1;
+  try { act(db, mod(), 'start'); } finally { core.randomInt = real; }
+  const st = db.live.games[g.id];
+  assert.equal(st.picker, B);
+  assert.throws(() => act(db, team(A), 'pick', { c: 0, l: 2 }), /anderes Team/);
+  act(db, team(B), 'pick', { c: 0, l: 2 });
+  assert.ok(!JSON.stringify(bv(db)).includes(g.content.categories[0].a2));
+  assert.throws(() => act(db, team(B), 'pick', { c: 1, l: 1 }), /aktuelle Frage/);
+  act(db, team(A), 'buzz');
+  assert.throws(() => act(db, team(C), 'buzz'), /anderes Team/);
+  act(db, mod(), 'judge', { correct: false });
+  act(db, team(C), 'buzz');
+  act(db, mod(), 'judge', { correct: true });
+  assert.equal(pts(db, C), 2);
+  assert.equal(pts(db, A), 0);
+  assert.equal(st.picker, C); // Gewinner wählt
+  assert.equal(bv(db).question.answer, g.content.categories[0].a2);
+  assert.throws(() => act(db, team(C), 'pick', { c: 0, l: 2 }), /schon gespielt/);
+  assert.equal(bv(db).board[0].cells[1].played, true);
+  // Niemand buzzert: Moderation beendet, neues Team wird ausgelost.
+  act(db, team(C), 'pick', { c: 1, l: 3 });
+  core.randomInt = () => 0;
+  try { act(db, mod(), 'close'); } finally { core.randomInt = real; }
+  assert.equal(st.picker, A);
+  // Alle falsch: neu auslosen, keine Punkte.
+  act(db, team(A), 'pick', { c: 2, l: 1 });
+  core.randomInt = () => 2;
+  try { for (const id of ids) { act(db, team(id), 'buzz'); act(db, mod(), 'judge', { correct: false }); } } finally { core.randomInt = real; }
+  assert.equal(st.picker, C);
+  assert.equal(pts(db, A) + pts(db, B), 0);
+  assert.equal(pts(db, C), 2);
+  assert.equal(Object.keys(st.played).length, 3);
+});
+
+test('Lecker Sortierchen: richtig +1, falsch −1, neutral nie ein Fehler; Runden und Begriffe frei', () => {
+  const { db, ids } = setup(3);
+  const [A, B, C] = ids;
+  use(db, 'lecker', { rounds: [
+    { left: 'Hauptstadt', right: 'Keine Hauptstadt', items: [{ term: 'Bern', side: 'Links' }, { term: 'Zürich', side: 'Rechts' }, { term: 'Ankara', side: 'Links' }, { term: 'Istanbul', side: 'Rechts' }] },
+    { left: 'A', right: 'B', items: [{ term: 'x', side: 'Neutral' }] },
+    { left: 'C', right: 'D', items: Array.from({ length: 12 }, (_, i) => ({ term: `T${i}`, side: 'Links' })) },
+  ] });
+  act(db, mod(), 'open', { index: 0 });
+  assert.equal(tv(db, A).terms.length, 4);
+  assert.throws(() => act(db, team(A), 'submit', { choice: ['L', 'R'] }), /Ungültige/);
+  act(db, team(A), 'submit', { choice: ['L', 'R', 'L', 'R'] }); // alles richtig
+  act(db, team(B), 'submit', { choice: ['R', 'L', 'N', 'N'] }); // 2 falsch, 2 neutral
+  act(db, team(C), 'submit', { choice: ['N', 'N', 'N', 'N'] }); // alles neutral
+  assert.ok(!JSON.stringify(bv(db)).includes('"solution":['));
+  act(db, mod(), 'evaluate');
+  assert.equal(pts(db, A), 4);
+  assert.equal(pts(db, B), -2);
+  assert.equal(pts(db, C), 0);
+  assert.throws(() => act(db, mod(), 'evaluate'), /Schon/);
+  assert.equal(pts(db, A), 4);
+  // Neutral als richtige Lösung: links/rechts falsch (−1), neutral 0.
+  act(db, mod(), 'open', { index: 1 });
+  act(db, team(A), 'submit', { choice: ['L'] });
+  act(db, team(B), 'submit', { choice: ['N'] });
+  act(db, mod(), 'close');
+  act(db, mod(), 'evaluate');
+  assert.equal(pts(db, A), 3);
+  assert.equal(pts(db, B), -2);
+  act(db, mod(), 'open', { index: 2 });
+  assert.equal(tv(db, A).terms.length, 12);
+});
+
+test('Neue Spiele: Inhalte bleiben nach Speichern und Neuladen erhalten', () => {
+  const { db } = setup(2);
+  const lib = db.library.find((e) => e.type === 'lecker');
+  const content = structuredClone(lib.content);
+  content.rounds[0].left = 'Meine Seite';
+  content.rounds.push({ left: 'X', right: 'Y', items: [{ term: 'z', side: 'Rechts' }] });
+  game.applyAction(db, mod(), 'library.update', { libraryId: lib.id, content });
+  const reloaded = game.migrate(JSON.parse(JSON.stringify(db)));
+  const c = reloaded.library.find((e) => e.type === 'lecker').content;
+  assert.equal(c.rounds[0].left, 'Meine Seite');
+  assert.equal(c.rounds.length, 7);
+  assert.ok(!db.project.games.some((g) => ['lippen', 'telepa2', 'jeopardy', 'lecker'].includes(g.type)));
 });

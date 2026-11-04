@@ -7,6 +7,8 @@
 const { fail, log, effect, teamName, teamIds, bookTarget, cleanText, cleanInk } = require('./core');
 const { pv } = require('./scoring');
 const { MOVIE_HINTS } = require('./defaults');
+// Name der Hinweis-Kategorie: im Editor umbenennbar, sonst Standard.
+const hintName = (game, i) => ((game.content.hintNames && String(game.content.hintNames[i] || '').trim()) || MOVIE_HINTS[i][0]);
 
 const START_MONEY = 20;
 const REWARD = 5;
@@ -97,7 +99,7 @@ module.exports = {
       st.wallet[ctx.teamId] -= price;
       tm.bought.push(i);
       m.turn.phase = 'answer';
-      log(db, ctx, 'kauf', `${teamName(db, ctx.teamId)} kauft Hinweis ${i + 1} (${MOVIE_HINTS[i][0]}) für ${price} $`);
+      log(db, ctx, 'kauf', `${teamName(db, ctx.teamId)} kauft Hinweis ${i + 1} (${hintName(game, i)}) für ${price} $`);
     },
 
     answer(db, ctx, game, st, p) {
@@ -200,11 +202,16 @@ module.exports = {
       phase: myTurn ? m.turn.phase : null,
       maxBuys: MAX_BUYS,
       boughtCount: tm.bought.length,
-      hints: MOVIE_HINTS.map(([label, price], i) => ({
-        label, price,
-        bought: tm.bought.includes(i),
-        text: tm.bought.includes(i) ? content.hints[i] : null,
-      })),
+      hints: MOVIE_HINTS.map(([, price], i) => {
+        const photo = content.hintPhotos && content.hintPhotos[i] && content.hintPhotos[i].photo;
+        return {
+          label: hintName(game, i), price,
+          bought: tm.bought.includes(i),
+          text: tm.bought.includes(i) ? content.hints[i] : null,
+          // Foto erst nach dem Kauf (vorher nicht einmal der Verweis).
+          photo: tm.bought.includes(i) && photo ? { id: photo.id, type: photo.type } : null,
+        };
+      }),
       solved: tm.solved,
       lastAnswer: answer ? { text: answer.text, ink: answer.ink || null, grade: answer.grade } : null,
     };

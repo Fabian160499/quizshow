@@ -134,6 +134,86 @@ function top100(v, teamOf) {
   return [...head, board];
 }
 
+// Bildausschnitt wie im Editor eingestellt (vergrößert um die Mund-Mitte).
+function cropImg(m, crop, cls) {
+  const el = img(m, cls);
+  const c = crop || { zoom: 1, x: 50, y: 50 };
+  Object.assign(el.style, { transformOrigin: `${c.x}% ${c.y}%`, transform: `scale(${c.zoom})`, objectPosition: `${c.x}% ${c.y}%` });
+  return h('div', { class: `${cls}-box` }, el);
+}
+const buzzRow = (v, teamOf) => (v.buzzOrder.length ? h('div', { class: 'nb-buzzline' }, h('span', { class: 'lbl' }, '🔔 Buzzer'), v.buzzOrder.map((b, k) => {
+  const t = teamOf(b.teamId);
+  return h('div', { class: `nb-bz${b.status === 'correct' ? ' ok win' : b.status === 'wrong' ? ' bad' : ''}`, '--team': t.color }, h('b', { class: 'k' }, `${k + 1}.`), h('span', {}, t.name),
+    h('small', {}, b.status === 'pending' ? 'antwortet …' : b.status === 'correct' ? '✓' : '✗ gesperrt'));
+})) : null);
+
+// ---------- Es liegt mir auf den Lippen ----------
+function lippen(v, teamOf) {
+  if (v.waiting) return waitTitle('Es liegt mir auf den Lippen', 'Wessen Lippen sind das?');
+  return [v.image ? cropImg(v.image, v.crop, 'lip-img') : null, banner(v.question, 'compact slim'),
+    v.resolved ? h('div', { class: 'solution', style: { marginTop: '1.4vh' } }, `${v.answer || '–'}${v.winner ? ` · ${teamOf(v.winner).name} ${plus(pv(v, 'correct'))}` : ''}`) : null,
+    buzzRow(v, teamOf) || (v.resolved ? null : sub('Wer es weiß, buzzert!', { marginTop: '1.4vh' }))];
+}
+
+// ---------- Wir sind ein Telepa-Team 2.0 ----------
+function telepa2(v, teamOf) {
+  if (v.waiting) return waitTitle('Wir sind ein Telepa-Team 2.0', 'Zwei Köpfe, ein Gedanke?');
+  const judged = v.teams.filter((t) => t.judged !== null);
+  const out = [banner(v.task, 'compact slim'), h('div', { class: 'nb-al-count' }, h('b', {}, plus(v.points)), h('span', {}, 'bei Übereinstimmung'))];
+  if (!judged.length) {
+    out.push(h('div', { class: 'nb-status' }, v.teams.map((t) => {
+      const tm = teamOf(t.teamId);
+      const done = t.p1 && t.p2;
+      return h('div', { class: `nb-st${done ? ' done' : ''}`, '--team': tm.color }, h('span', { class: 'nm' }, tm.name), h('b', { class: 'ic' }, done ? '✓' : '…'),
+        h('small', {}, done ? 'beide fertig' : t.p1 ? 'Spieler 2 schreibt' : 'Spieler 1 schreibt'));
+    })));
+    return out;
+  }
+  // Nach der Wertung: beide Antworten nebeneinander mit „passt“ / „passt nicht“.
+  out.push(h('div', { class: 'tp2-grid' }, judged.map((t, n) => {
+    const tm = teamOf(t.teamId);
+    return h('div', { class: `tp2-card ${t.judged ? 'ok' : 'bad'}`, '--team': tm.color, style: { animationDelay: `${0.2 * n}s` } },
+      h('div', { class: 'hd' }, h('span', {}, tm.name), h('b', {}, t.judged ? `✓ ${plus(v.points)}` : '✗ 0')),
+      h('div', { class: 'pair' }, (t.inks || []).map((src) => (src ? h('img', { class: 'ink-answer', src, alt: '' }) : h('div', { class: 'ink-answer' })))));
+  })));
+  const waiting = v.teams.filter((t) => t.judged === null).length;
+  if (waiting) out.push(sub(`Noch ${waiting} ${waiting === 1 ? 'Team' : 'Teams'} offen`, { marginTop: '1vh' }));
+  return out;
+}
+
+// ---------- Jeopardy ----------
+function jeopardy(v, teamOf) {
+  if (v.waiting) return waitTitle('Jeopardy', 'Fünf Kategorien, drei Stufen – wer richtig liegt, wählt weiter.');
+  const q = v.question;
+  if (q && !q.resolved) {
+    return [h('div', { class: 'jp-qhead' }, h('span', {}, q.cat), h('b', {}, plus(q.points))), h('div', { class: 'sek-qbox' }, h('b', {}, q.text)),
+      buzzRow(v, teamOf) || sub('Wer es weiß, buzzert!', { marginTop: '2vh' })];
+  }
+  const board = h('div', { class: 'jp-board beam' }, v.board.map((cat) => h('div', { class: 'jp-col' }, h('div', { class: 'jp-cat' }, cat.name),
+    cat.cells.map((cell) => h('div', { class: `jp-cell${cell.played ? ' played' : ''}`, '--team': cell.winner ? teamOf(cell.winner).color : 'transparent' },
+      cell.played ? (cell.winner ? teamOf(cell.winner).name : '–') : String(cell.points))))));
+  const out = [board];
+  if (q && q.resolved) out.unshift(h('div', { class: 'jp-last' }, h('small', {}, `${q.cat} · ${plus(q.points)}: ${q.text}`), h('b', {}, q.answer || '–'),
+    h('span', {}, q.winner ? `${teamOf(q.winner).name} ${plus(q.points)}` : 'Niemand richtig')));
+  if (!v.done && v.picker) out.push(h('div', { class: 'sp-status', '--team': teamOf(v.picker).color }, h('b', {}, teamOf(v.picker).name), q && !q.winner ? ' ist ausgelost und wählt' : ' wählt die nächste Frage'));
+  if (v.done) out.push(h('div', { class: 'solution', style: { marginTop: '2vh' } }, 'Alle Fragen gespielt!'));
+  return out;
+}
+
+// ---------- Lecker Sortierchen ----------
+function lecker(v, teamOf) {
+  if (v.waiting) return waitTitle('Lecker Sortierchen', 'Links, rechts – oder lieber neutral?');
+  const col = (side, title, terms) => h('div', { class: `lk-bcol ${side}` }, h('div', { class: 'hd' }, title), h('div', { class: 'bd' }, terms));
+  if (!v.evaluated) {
+    return [h('div', { class: 'lk-beam' }, col('L', `◀ ${v.left}`, []), col('N', 'Begriffe', v.terms.map((t, i) => h('div', { class: 'lk-term', style: { animationDelay: `${0.08 * i}s` } }, t))), col('R', `${v.right} ▶`, [])),
+      teamStatus(v.teamIds, v.submitted || [], teamOf, 'sortiert')];
+  }
+  const at = (side) => v.terms.map((t, i) => (v.solution[i] === side ? h('div', { class: 'lk-term solved', style: { animationDelay: `${0.12 * i}s` } }, t) : null)).filter(Boolean);
+  return [h('div', { class: 'lk-beam' }, col('L', `◀ ${v.left}`, at('L')), col('N', 'Neutral', at('N')), col('R', `${v.right} ▶`, at('R'))),
+    h('div', { class: 'nb-sort-results' }, v.results.sort((a, b) => b.points - a.points).map((r, n) => h('div', { class: 'nb-sort-res', '--team': teamOf(r.teamId).color, style: { animationDelay: `${1 + 0.15 * n}s` } },
+      h('span', { class: 'nm' }, teamOf(r.teamId).name), h('span', { class: 'lk-sum' }, `${r.right} richtig · ${r.wrong} falsch`), h('b', { class: 'p' }, plus(r.points)))))];
+}
+
 // ---------- 30 Seconds to Spaß ----------
 function sekunden(v, teamOf) {
   if (v.waiting) return waitTitle('30 Seconds to Spaß', `${v.seconds || 30} Sekunden – ohne Uhr. Wer zu früh oder zu spät stoppt, verliert alles.`);
@@ -277,4 +357,4 @@ function hostdu(v, teamOf) {
   return out;
 }
 
-export const BEAMER_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden };
+export const BEAMER_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, telepa2, jeopardy, lecker };
