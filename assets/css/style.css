@@ -260,10 +260,72 @@ details.item summary { cursor: pointer; padding: 4px 0; overflow-wrap: anywhere;
 
 /* Auswahl aus der Datenbank */
 .modal.wide { width: min(760px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; gap: 12px; }
-.pick-list { overflow: auto; display: grid; gap: 14px; }
-.pick-group h4 { margin: 0 0 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.lib-grid { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
-@media (max-width: 420px) { .lib-grid { grid-template-columns: 1fr; } }
+.pick-list { overflow: auto; display: grid; gap: 16px; padding-right: 4px; }
+.pick-group h4 { margin: 0 0 8px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #a9a9c0); }
+.modal.wide.pick-modal { width: min(980px, 100%); height: min(820px, calc(100vh - 32px)); }
+.pick-tools, .lib-tools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.lib-tools { margin: 16px 0 12px; }
+.pick-search { flex: 1 1 260px; min-width: 0; font-size: 1rem; padding: 10px 14px; border-radius: 10px; }
+.pick-toggle { white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem; cursor: pointer; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.pick-card { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 12px 14px; border: 1px solid transparent; border-radius: 12px; background: var(--surface-2); color: inherit; font: inherit; cursor: pointer; transition: border-color 0.15s, transform 0.15s, background 0.15s; }
+.pick-card:hover:not(:disabled), .pick-card:focus-visible { border-color: var(--accent, #ff3d9a); transform: translateY(-1px); background: #313570; outline: none; }
+.pick-card.current { opacity: 0.55; cursor: default; }
+.pick-card.used:not(:hover) { opacity: 0.8; }
+.pk-head { display: flex; flex-direction: column; gap: 2px; }
+.ec-title { font-size: 1rem; line-height: 1.25; }
+.ec-kind { font-size: 0.78rem; opacity: 0.7; }
+.pk-sum { font-size: 0.85rem; opacity: 0.75; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pk-tags { margin-top: auto; display: flex; gap: 6px; }
+.tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); white-space: nowrap; }
+.tag.used { background: rgba(255, 196, 0, 0.16); color: #ffd25e; }
+.tag.cur { background: rgba(255, 61, 154, 0.2); color: #ff8cc4; }
+.tag.free { background: rgba(43, 217, 107, 0.12); color: #7ee8a6; }
+.lib-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-items: start; }
+.lib-layout { display: grid; grid-template-columns: 250px 1fr; gap: 16px; align-items: start; margin-top: 16px; }
+@media (max-width: 860px) { .lib-layout { grid-template-columns: 1fr; } }
+.lib-folders { position: sticky; top: 12px; padding: 14px; }
+.lib-folders-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.fold-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.fold { display: flex; align-items: center; gap: 4px; border-radius: 10px; border: 2px dashed transparent; transition: background 0.15s, border-color 0.15s; }
+.fold:hover { background: rgba(255, 255, 255, 0.05); }
+.fold.on { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+.fold.over { border-color: var(--accent); background: rgba(255, 45, 138, 0.14); }
+body.dragging-type .fold:not(.on) { border-color: rgba(255, 255, 255, 0.14); }
+.fold-btn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 8px 8px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fold-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.fold .n, .fchip .n { font-size: 0.75rem; font-weight: 700; opacity: 0.65; background: rgba(255, 255, 255, 0.08); padding: 1px 7px; border-radius: 999px; }
+.fold-tools { display: none; gap: 2px; padding-right: 4px; }
+.fold:hover .fold-tools, .fold.on .fold-tools { display: inline-flex; }
+.fold-mini { background: none; border: 0; color: inherit; opacity: 0.6; cursor: pointer; padding: 4px; font-size: 0.85rem; border-radius: 6px; }
+.fold-mini:hover { opacity: 1; background: rgba(255, 255, 255, 0.1); }
+.fold-input { flex: 1; margin: 4px; padding: 6px 8px; border-radius: 8px; font: inherit; }
+.fold-hint { font-size: 0.78rem; margin: 12px 0 0; line-height: 1.4; }
+.lib-main { min-width: 0; }
+.lib-main .lib-tools { margin: 0 0 12px; }
+.lib-title { margin: 0; flex: 1 1 auto; font-size: 1.15rem; }
+.lib-empty { padding: 30px; text-align: center; border: 2px dashed rgba(255, 255, 255, 0.12); border-radius: 12px; }
+.lib-empty.over { border-color: var(--accent); }
+.lib-group { cursor: default; }
+.lib-group.dragging { opacity: 0.4; }
+.lib-grip { cursor: grab; opacity: 0.45; font-size: 1.1rem; padding: 0 2px; user-select: none; }
+.lib-group:hover .lib-grip { opacity: 0.9; }
+.lib-head h3 { flex: 1; }
+.pk-folder { font-size: 0.75rem; opacity: 0.6; }
+.folder-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.12); background: transparent; color: inherit; font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.fchip:hover { border-color: rgba(255, 255, 255, 0.3); }
+.fchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fchip.on .n { background: rgba(0, 0, 0, 0.2); opacity: 0.9; }
+.lib-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lib-head h3 { margin: 0; font-size: 1.1rem; }
+.lib-sum { margin: 6px 0 10px; font-size: 0.88rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lib-entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lib-entries li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); }
+.lib-entries li.active { box-shadow: inset 3px 0 0 var(--accent, #ff3d9a); }
+.lib-name { flex: 1 1 160px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; text-align: left; background: none; border: 0; color: inherit; font: inherit; padding: 0; cursor: pointer; }
+.lib-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 460px) { .lib-grid, .pick-grid { grid-template-columns: 1fr; } }
 
 /* ---------- Spiele 2, 3, 4, 6, 7, 8 ---------- */
 

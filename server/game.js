@@ -138,6 +138,28 @@ function newProject(library, name = 'Wer stiehlt uns die Show') {
   };
 }
 
+// Ordner der Spiele-Datenbank: Jede Spielart liegt in höchstens einem Ordner
+// (alle Varianten einer Spielart gehören dazu). Die Ordner sind frei benennbar.
+const DEFAULT_FOLDERS = [
+  ['Startspiele', ['leichte5', 'dummes', 'dumm3']],
+  ['Musik', ['musik', 'songsong', 'konsequenz']],
+  ['Film & Promis', ['kassenschlager', 'filmab', 'lippen', 'star', 'chat']],
+  ['Wissen & Schätzen', ['jauch', 'land', 'zuweit', 'gier', 'top100', 'timeline', 'sortieren', 'nerd', 'trumpf5', 'sekunden', 'weissnicht', 'weissnicht2']],
+  ['Brett & Risiko', ['brain', 'zocken', 'jeopardy', 'dgf']],
+  ['Teamspiele', ['allein', 'telepa2', 'fragen', 'hostdu', 'lecker']],
+];
+function defaultFolders() {
+  const folders = DEFAULT_FOLDERS.map(([name], i) => ({ id: `folder_std${i + 1}`, name }));
+  const folderOf = {};
+  DEFAULT_FOLDERS.forEach(([, types], i) => types.forEach((t) => { if (TYPES[t]) folderOf[t] = folders[i].id; }));
+  return { folders, folderOf };
+}
+function findFolder(db, id) {
+  const f = (db.libraryFolders || []).find((x) => x.id === id);
+  if (!f) fail('Ordner nicht gefunden.');
+  return f;
+}
+
 function createState(now = Date.now()) {
   // Die Datenbank enthält alle Spielarten; die neue Show nur die acht Standardspiele.
   const library = LIBRARY_ORDER.map((type) => libraryEntry(type, now));
@@ -145,6 +167,7 @@ function createState(now = Date.now()) {
     version: STATE_VERSION,
     library,
     libraryTypesAdded: [...EXTRA_ORDER],
+    ...(() => { const d = defaultFolders(); return { libraryFolders: d.folders, libraryFolderOf: d.folderOf }; })(),
     project: newProject(library),
     live: freshLive(),
     ledger: [],
@@ -190,6 +213,13 @@ function migrate(db) {
       if (!db.library.some((e) => e.type === type)) db.library.push(libraryEntry(type, Date.now()));
       db.libraryTypesAdded.push(type);
     }
+    // Ordner der Spiele-Datenbank einmalig mit Vorschlag anlegen.
+    if (!Array.isArray(db.libraryFolders)) {
+      const d = defaultFolders();
+      db.libraryFolders = d.folders;
+      db.libraryFolderOf = d.folderOf;
+    }
+    db.libraryFolderOf = db.libraryFolderOf || {};
     // Neue Folie „Moderation am Pult“ nach den Gewinnstufen 2 und 3 – einmalig auch in eigene Abläufe.
     for (const pr of [db.project, ...db.shows.map((x) => x.project)]) addHostsSteps(pr);
     for (const sh of db.shows) {
@@ -832,6 +862,46 @@ const moderatorActions = {
     log(db, ctx, 'datenbank', `„${entry.title}“ gespeichert (Version ${entry.version})`);
   },
 
+  // ----- Ordner der Spiele-Datenbank -----
+  'folder.add'(db, ctx, p) {
+    if (db.libraryFolders.length >= 30) fail('Höchstens 30 Ordner.');
+    const name = cleanText(p.name, 40) || 'Neuer Ordner';
+    const f = { id: newId('folder'), name };
+    db.libraryFolders.push(f);
+    log(db, ctx, 'datenbank', `Ordner „${name}“ angelegt`);
+    return { created: f.id, data: { created: f.id } };
+  },
+  'folder.rename'(db, ctx, p) {
+    const f = findFolder(db, p.folderId);
+    const name = cleanText(p.name, 40);
+    if (!name) fail('Bitte einen Namen eingeben.');
+    const old = f.name;
+    f.name = name;
+    log(db, ctx, 'datenbank', `Ordner „${old}“ heißt jetzt „${name}“`);
+  },
+  // Ordner löschen: die Spiele darin landen unter „Ohne Ordner“ (nichts wird gelöscht).
+  'folder.remove'(db, ctx, p) {
+    const f = findFolder(db, p.folderId);
+    db.libraryFolders = db.libraryFolders.filter((x) => x.id !== f.id);
+    for (const [t, id] of Object.entries(db.libraryFolderOf)) if (id === f.id) delete db.libraryFolderOf[t];
+    log(db, ctx, 'datenbank', `Ordner „${f.name}“ gelöscht (Spiele bleiben erhalten)`);
+  },
+  'folder.move'(db, ctx, p) {
+    const f = findFolder(db, p.folderId);
+    const list = db.libraryFolders.filter((x) => x.id !== f.id);
+    const i = Math.max(0, Math.min(list.length, Number(p.index) || 0));
+    list.splice(i, 0, f);
+    db.libraryFolders = list;
+  },
+  // Spielart (mit allen Varianten) in einen Ordner legen; folderId null = ohne Ordner.
+  'folder.assign'(db, ctx, p) {
+    if (!TYPES[p.type]) fail('Unbekannter Spieltyp.');
+    if (p.folderId === null || p.folderId === undefined) { delete db.libraryFolderOf[p.type]; return; }
+    const f = findFolder(db, p.folderId);
+    db.libraryFolderOf[p.type] = f.id;
+    log(db, ctx, 'datenbank', `„${TYPES[p.type].title}“ in Ordner „${f.name}“ gelegt`);
+  },
+
   'library.remove'(db, ctx, p) {
     const entry = findEntry(db, p.libraryId);
     db.library = db.library.filter((e) => e.id !== entry.id);
@@ -1373,7 +1443,7 @@ function beamerView(db) {
       if (avatar && (b.view === 'intro' || b.view === 'coin')) out.avatar = avatar;
       return out;
     }),
-    settings: { reducedMotion: pr.settings.reducedMotion, sound: pr.settings.sound, titleDurationSec: pr.settings.titleDurationSec, fxVolume: pr.settings.fxVolume ?? 80, musicVolume: pr.settings.musicVolume ?? 80 },
+    settings: { reducedMotion: pr.settings.reducedMotion, sound: pr.settings.sound, titleDurationSec: pr.settings.titleDurationSec, fxVolume: 100, musicVolume: 100 }, // volle Lautstärke (Regler in der Regie entfernt)
     view: b.view,
     effect: db.live.effect,
     game: gameHeader(db),
@@ -1416,6 +1486,8 @@ function moderatorView(db, connections) {
     project: db.project,
     shows: showList(db),
     library: db.library,
+    libraryFolders: db.libraryFolders || [],
+    libraryFolderOf: db.libraryFolderOf || {},
     types: publicTypes(),
     // Vergleichs-Datenbanken für „Das geht mir zu weit“ (zum Prüfen im Editor).
     datasets: DATASETS.map((d) => ({ name: d.name, kind: d.kind, unit: d.unit, source: d.source, asOf: d.asOf, method: d.method, fixHelp: d.fixHelp, entries: d.entries })),
