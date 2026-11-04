@@ -13,6 +13,8 @@ const badge = (kind, text) => h('span', { class: `badge ${kind}` }, text);
 const row = (...c) => h('div', { class: 'row', style: { marginTop: '12px' } }, ...c);
 const btn = (cls, label, onclick, disabled = false) => h('button', { class: `btn ${cls}`, onclick, disabled }, label);
 const muted = (t) => h('p', { class: 'muted' }, t);
+// Bedienhinweis: in der Regie standardmäßig eingeklappt („?“ blendet ihn ein).
+const help = (t) => h('p', { class: 'muted help' }, t);
 const fmtNum = (n) => (n === null || n === undefined ? '–' : Number(n).toLocaleString('de-DE'));
 const teamLi = (ui, id, ...rest) => h('li', {}, ui.dot(ui.teamColor(id)), h('span', { class: 'grow' }, h('b', {}, ui.teamName(id)), rest[0] ?? null), ...rest.slice(1));
 function tabs(items, current, onPick, done = () => false) {
@@ -26,7 +28,7 @@ function sortieren(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.tasks.map((t, k) => t.category ? t.category.slice(0, 24) : `Aufgabe ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.evaluated)];
-  if (i < 0 || !r) return [...out, muted('Aufgabe öffnen: alle Teams sortieren gleichzeitig fünf Karten. Kein Timer. Je Element am richtigen Platz 1 Punkt.')];
+  if (i < 0 || !r) return [...out, help('Aufgabe öffnen: alle Teams sortieren gleichzeitig fünf Karten. Kein Timer. Je Element am richtigen Platz 1 Punkt.')];
   const task = g.content.tasks[i];
   out.push(h('p', {}, h('b', {}, task.category)), h('ol', { class: 'list' }, task.items.map((it) => h('li', {}, h('span', { class: 'grow' }, it.label || '(Bild)'), it.info ? badge('', it.info) : null))));
   const score = (o) => o.reduce((s, k, p) => s + (k === p ? 1 : 0), 0);
@@ -52,7 +54,7 @@ function gier(ui, g, st) {
   out.push(h('ul', { class: 'list' }, teamIds(ui).map((id) => teamLi(ui, id, ` – Gier-Guthaben ${fmtNum(T[id] ? T[id].balance : 100)}`,
     T[id] && T[id].outRound !== null && T[id].outRound !== undefined ? badge('bad', `raus nach Frage ${T[id].outRound + 1}`) : badge('ok', 'dabei'),
     r && r.answers[id] !== undefined ? badge('', `Schätzung ${fmtNum(r.answers[id].value)}${r.answers[id].grace ? ' (Nachfrist)' : ''}`) : null))));
-  if (i < 0 || !r) return [...out, muted('Frage öffnen: der 60-Sekunden-Countdown startet sofort. Danach kannst du 10 Sekunden Nachfrist für offene Teams freigeben.')];
+  if (i < 0 || !r) return [...out, help('Frage öffnen: der 60-Sekunden-Countdown startet sofort. Danach kannst du 10 Sekunden Nachfrist für offene Teams freigeben.')];
   const q = g.content.questions[i];
   out.push(h('p', {}, q.question, ' · Lösung: ', h('b', {}, `${fmtNum(q.answer)} ${q.unit || ''}`)));
   const isOut = (id) => T[id] && T[id].outRound !== null && T[id].outRound !== undefined;
@@ -84,7 +86,7 @@ function top100(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.rounds.map((rd, k) => rd.category ? rd.category.slice(0, 24) : `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.evaluated)];
-  if (i < 0 || !r) return [...out, muted('Runde öffnen: jedes Team nennt einen Eintrag. Rang 1–20 = 1, 21–40 = 2, 41–60 = 3, 61–80 = 4, 81–100 = 5 Punkte.')];
+  if (i < 0 || !r) return [...out, help('Runde öffnen: jedes Team nennt einen Eintrag. Rang 1–20 = 1, 21–40 = 2, 41–60 = 3, 61–80 = 4, 81–100 = 5 Punkte.')];
   const rd = g.content.rounds[i];
   const list = parseList(rd.entries);
   out.push(h('p', {}, h('b', {}, rd.category), h('br'), h('span', { class: 'muted' }, `Quelle: ${rd.source || '–'} · ${rd.period || ''} ${rd.asOf || ''} · ${list.length} Einträge`)));
@@ -127,7 +129,7 @@ function lippen(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.items.map((it, k) => `Aufgabe ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.resolved)];
-  if (i < 0 || !r) return [...out, muted(`Aufgabe öffnen: Bild und Frage erscheinen, alle dürfen buzzern. Richtig ${plus(pvc(g, 'correct'))}, falsch sperrt das Team für diese Aufgabe.`)];
+  if (i < 0 || !r) return [...out, help(`Aufgabe öffnen: Bild und Frage erscheinen, alle dürfen buzzern. Richtig ${plus(pvc(g, 'correct'))}, falsch sperrt das Team für diese Aufgabe.`)];
   const it = g.content.items[i];
   out.push(h('p', {}, h('b', {}, it.question || '–'), h('br'), 'Lösung: ', h('b', {}, it.answer || '–')));
   out.push(buzzList(ui, r.buzzes, (c) => ui.act('play.judge', { correct: c })));
@@ -141,7 +143,7 @@ function telepa2(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.tasks.map((t, k) => (t.task ? t.task.slice(0, 22) : `Aufgabe ${k + 1}`)), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k] && teamIds(ui).every((id) => st.rounds[k].judged[id] !== undefined))];
-  if (i < 0 || !r) return [...out, muted('Aufgabe öffnen: Spieler 1 schreibt und gibt ab, dann Spieler 2 auf demselben iPad. Erst wenn beide abgegeben haben, siehst du beide Antworten und entscheidest.')];
+  if (i < 0 || !r) return [...out, help('Aufgabe öffnen: Spieler 1 schreibt und gibt ab, dann Spieler 2 auf demselben iPad. Erst wenn beide abgegeben haben, siehst du beide Antworten und entscheidest.')];
   const task = g.content.tasks[i];
   const points = Number.isFinite(Number(task.points)) && task.points !== null && task.points !== '' ? Number(task.points) : 1;
   out.push(h('p', {}, h('b', {}, task.task), h('span', { class: 'muted' }, ` · Übereinstimmung ${plus(points)}`)));
@@ -174,7 +176,7 @@ function telepa2(ui, g, st) {
 
 // ---------- Jeopardy ----------
 function jeopardy(ui, g, st) {
-  if (!st.started) return [muted('Start: Ein Team wird ausgelost und wählt auf seinem iPad Kategorie und Punkte. Alle buzzern; richtig = Punkte und wählt neu, sonst wird neu ausgelost.'), row(btn('pink', 'Spiel starten (Team auslosen)', () => ui.act('play.start')))];
+  if (!st.started) return [help('Start: Ein Team wird ausgelost und wählt auf seinem iPad Kategorie und Punkte. Alle buzzern; richtig = Punkte und wählt neu, sonst wird neu ausgelost.'), row(btn('pink', 'Spiel starten (Team auslosen)', () => ui.act('play.start')))];
   const out = [];
   const q = st.q;
   const open = q && !q.resolved;
@@ -202,7 +204,7 @@ function lecker(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.rounds.map((rd, k) => (rd.left ? `${rd.left.slice(0, 12)} / ${(rd.right || '').slice(0, 12)}` : `Runde ${k + 1}`)), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.evaluated)];
-  if (i < 0 || !r) return [...out, muted('Runde öffnen: Jedes Team zieht in Ruhe jeden Begriff nach links, rechts oder lässt ihn in der Mitte. Kein Buzzer, keine Zeit. Richtig +1, falsch −1, neutral 0.')];
+  if (i < 0 || !r) return [...out, help('Runde öffnen: Jedes Team zieht in Ruhe jeden Begriff nach links, rechts oder lässt ihn in der Mitte. Kein Buzzer, keine Zeit. Richtig +1, falsch −1, neutral 0.')];
   const rd = g.content.rounds[i];
   const terms = (rd.items || []).filter((it) => (it.term || '').trim());
   const sideKey = { Links: 'L', Rechts: 'R', Neutral: 'N' };
@@ -235,7 +237,7 @@ function sekunden(ui, g, st) {
   const d = st.index ?? -1;
   const r = (st.rounds || {})[d];
   const out = [tabs(['Durchgang 1', 'Durchgang 2'], d, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.done)];
-  if (d < 0 || !r) return [...out, muted('Durchgang öffnen: Das Startteam wird ausgelost, dann reihum. Das Team startet mit dem Buzzer, du wertest jede Antwort mit einem Tipp, das Team stoppt selbst nach gefühlt 30 Sekunden.')];
+  if (d < 0 || !r) return [...out, help('Durchgang öffnen: Das Startteam wird ausgelost, dann reihum. Das Team startet mit dem Buzzer, du wertest jede Antwort mit einem Tipp, das Team stoppt selbst nach gefühlt 30 Sekunden.')];
   const id = r.done ? null : r.order[r.turn];
   const t = id ? r.turns[id] || { phase: 'ready', marks: [] } : null;
   const tol = Number(d === 0 ? g.content.tol1 : g.content.tol2) || (d === 0 ? 4 : 2);
@@ -288,7 +290,7 @@ function allein(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.rounds.map((rd, k) => rd.category ? rd.category.slice(0, 24) : `Kategorie ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.evaluated)];
-  if (i < 0 || !r) return [...out, muted(`Kategorie öffnen: jedes Team nennt eine Antwort. Nur richtige Antworten, die kein anderes Team genannt hat, bringen ${plus(pvc(g, 'correct'))}.`)];
+  if (i < 0 || !r) return [...out, help(`Kategorie öffnen: jedes Team nennt eine Antwort. Nur richtige Antworten, die kein anderes Team genannt hat, bringen ${plus(pvc(g, 'correct'))}.`)];
   const rd = g.content.rounds[i];
   const list = alleinList(rd.entries);
   out.push(h('p', {}, h('b', {}, rd.category), h('span', { class: 'muted' }, ` · ${list.length} richtige Antworten`)));
@@ -327,7 +329,7 @@ function star(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.puzzles.map((p, k) => p.center ? p.center.slice(0, 20) : `Rätsel ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.resolved)];
-  if (i < 0 || !r) return [...out, muted(`Rätsel öffnen: Teams wählen den falschen Begriff und buzzern. Schnellstes Team mit richtiger Wahl ${plus(pvc(g, 'correct'))}.`)];
+  if (i < 0 || !r) return [...out, help(`Rätsel öffnen: Teams wählen den falschen Begriff und buzzern. Schnellstes Team mit richtiger Wahl ${plus(pvc(g, 'correct'))}.`)];
   const pz = g.content.puzzles[i];
   const w = Number(String(pz.wrong).replace(/\D/g, '')) - 1;
   out.push(h('p', {}, h('b', {}, pz.center), ' · falsch ist: ', h('b', {}, pz.terms[w] || '–')));
@@ -343,7 +345,7 @@ function timeline(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.rounds.map((rd, k) => rd.category ? rd.category.slice(0, 24) : `Durchgang ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.done)];
-  if (i < 0 || !r) return [...out, muted(`Durchgang starten: Startteam wird ausgelost, dann reihum. Richtig ${plus(pvc(g, 'correct'))}, falsch = Durchgangspunkte weg und raus, Aussteigen behält die Punkte.`)];
+  if (i < 0 || !r) return [...out, help(`Durchgang starten: Startteam wird ausgelost, dann reihum. Richtig ${plus(pvc(g, 'correct'))}, falsch = Durchgangspunkte weg und raus, Aussteigen behält die Punkte.`)];
   const rd = g.content.rounds[i];
   out.push(h('p', {}, h('b', {}, rd.category), ` · Startteam (ausgelost): ${ui.teamName(r.startTeam)}`));
   out.push(h('ul', { class: 'list' }, r.order.map((id) => teamLi(ui, id, ` – ${pts(r.teams[id].points)}`,
@@ -359,7 +361,7 @@ function chat(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.chats.map((c, k) => `Chat ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.resolved)];
-  if (i < 0 || !r) return [...out, muted('Chat öffnen, dann Nachricht für Nachricht aufdecken. Buzzer ab Nachricht 1. Falsch = Team für diesen Chat gesperrt.')];
+  if (i < 0 || !r) return [...out, help('Chat öffnen, dann Nachricht für Nachricht aufdecken. Buzzer ab Nachricht 1. Falsch = Team für diesen Chat gesperrt.')];
   const c = g.content.chats[i];
   out.push(h('p', {}, 'Gesucht: ', h('b', {}, c.person), ` · ${r.shown} von 8 Nachrichten aufgedeckt`));
   if (r.shown < 8) out.push(h('p', { class: 'muted' }, `Nächste: „${c.messages[r.shown].text}“`));
@@ -380,7 +382,7 @@ function hostdu(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
   const out = [tabs(g.content.questions.map((_, k) => `Frage ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.phase === 'revealed')];
-  if (i < 0 || !r) return [...out, muted('Frage öffnen: alle Teams reichen eine Antwort ein. Erst wenn alle eingereicht haben, werden die Optionen gebildet.')];
+  if (i < 0 || !r) return [...out, help('Frage öffnen: alle Teams reichen eine Antwort ein. Erst wenn alle eingereicht haben, werden die Optionen gebildet.')];
   const q = g.content.questions[i];
   out.push(h('p', {}, q.question, ' · richtig: ', h('b', {}, q.answer)));
   if (r.phase === 'submit') {

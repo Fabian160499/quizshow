@@ -1193,6 +1193,7 @@ const moderatorActions = {
   'live.startShow'(db, ctx) {
     db.live = freshLive();
     db.live.session = ctx.now;
+    db.live.showStarted = true; // „Show jetzt starten“ wird danach in der Regie ausgeblendet
     db.ledger = [];
     const key = showKey(db);
     for (let i = UNDO_STACK.length - 1; i >= 0; i--) if (UNDO_STACK[i].project === key) UNDO_STACK.splice(i, 1);

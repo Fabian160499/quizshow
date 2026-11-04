@@ -38,10 +38,12 @@
         </p>
         <div id="team-list" class="team-pick" role="group" aria-label="Team auswählen"></div>
         <p id="no-teams" class="muted hidden">Die Moderation hat noch keine Teams angelegt.</p>
+        <div class="team-pick host-pick"><button type="button" id="host-pick" class="btn ghost" aria-pressed="false" style="border-left: 10px solid #7fc8bd">🎤 Moderation (Finale)</button></div>
         <form id="team-form">
-          <label for="code">Team-Zugangscode</label>
+          <label for="code" id="code-label">Team-Zugangscode</label>
+          <p id="team-error" class="notice bad hidden" role="alert"></p>
           <input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="numeric" placeholder="z. B. 4821" required>
-          <p style="margin-top:14px"><button class="btn pink huge" type="submit" style="width:100%">Beitreten</button></p>
+          <p style="margin-top:14px"><button class="btn pink huge" id="team-submit" type="submit" style="width:100%">Beitreten</button></p>
         </form>
       </article>
 
@@ -53,7 +55,6 @@
           <input id="pw" name="pw" type="password" autocomplete="current-password" required>
           <p id="mod-error" class="notice bad hidden" role="alert"></p>
           <p style="margin-top:14px"><button class="btn cyan huge" type="submit" style="width:100%">Anmelden</button></p>
-          <p style="margin-top:10px"><button class="btn ghost" type="submit" name="target" value="host" style="width:100%">Als iPad Moderation (Finale) anmelden</button></p>
         </form>
         <p class="muted" style="margin-top:18px">
           Beamer/Publikum: <a href="beamer.html">Beamer-Ansicht öffnen</a> (zeigt nur freigegebene Inhalte).
@@ -71,6 +72,26 @@
     const codeInput = document.getElementById('code');
     let selectedTeam = null;
 
+    // Finale-iPad der Moderation: gleiche Stelle wie die Teams, Passwort statt Code.
+    const hostPick = document.getElementById('host-pick');
+    let hostMode = false;
+    function setHostMode(on) {
+      hostMode = on;
+      hostPick.setAttribute('aria-pressed', String(on));
+      if (on) { selectedTeam = null; teamList.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); }
+      document.getElementById('code-label').textContent = on ? 'Passwort der Moderation' : 'Team-Zugangscode';
+      codeInput.type = on ? 'password' : 'text';
+      codeInput.inputMode = on ? 'text' : 'numeric';
+      codeInput.autocapitalize = on ? 'off' : 'characters';
+      codeInput.placeholder = on ? 'Passwort' : 'z. B. 4821';
+      document.getElementById('team-submit').textContent = on ? 'Zum Finale-iPad' : 'Beitreten';
+      codeInput.value = '';
+      document.getElementById('team-error').classList.add('hidden');
+      codeInput.focus();
+    }
+    hostPick.addEventListener('click', () => setHostMode(!hostMode));
+    if (new URLSearchParams(location.search).get('next') === 'host') setHostMode(true);
+
     async function loadTeams() {
       try {
         const res = await fetch('api/teams', { cache: 'no-store' });
@@ -79,6 +100,7 @@
         teamList.replaceChildren(...teams.map((t) => h('button', {
           type: 'button', class: 'btn ghost', 'aria-pressed': 'false', style: { borderLeft: `10px solid ${t.color}` },
           onclick: (ev) => {
+            if (hostMode) setHostMode(false);
             selectedTeam = t;
             teamList.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
             ev.currentTarget.setAttribute('aria-pressed', 'true');
@@ -91,8 +113,23 @@
       }
     }
 
-    document.getElementById('team-form').addEventListener('submit', (ev) => {
+    document.getElementById('team-form').addEventListener('submit', async (ev) => {
       ev.preventDefault();
+      if (hostMode) {
+        const err = document.getElementById('team-error');
+        err.classList.add('hidden');
+        try {
+          const res = await fetch('api/host-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: codeInput.value }) });
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error || 'Anmeldung fehlgeschlagen.');
+          store('quiz.hostToken', body.token);
+          location.href = 'host.html';
+        } catch (e) {
+          err.textContent = e.message === 'Failed to fetch' ? 'Server nicht erreichbar.' : e.message;
+          err.classList.remove('hidden');
+        }
+        return;
+      }
       const code = codeInput.value.trim().toUpperCase();
       if (!code) return;
       location.href = `team.html?code=${encodeURIComponent(code)}${selectedTeam ? `&expect=${encodeURIComponent(selectedTeam.id)}` : ''}`;
@@ -110,8 +147,7 @@
         const body = await res.json();
         if (!res.ok) throw new Error(body.error || 'Anmeldung fehlgeschlagen.');
         store('quiz.modToken', body.token);
-        const toHost = (ev.submitter && ev.submitter.value === 'host') || new URLSearchParams(location.search).get('next') === 'host';
-        location.href = toHost ? 'host.html' : 'moderator.html';
+        location.href = 'moderator.html';
       } catch (e) {
         err.textContent = e.message === 'Failed to fetch' ? 'Server nicht erreichbar.' : e.message;
         err.classList.remove('hidden');

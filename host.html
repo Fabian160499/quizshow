@@ -25,18 +25,19 @@
     import { stateBox } from './assets/js/team-play.js';
 
     const main = document.getElementById('main');
-    const token = store('quiz.modToken') || localServer?.demoToken;
+    // Anmeldung auf der Startseite (links, „Moderation (Finale)“ mit Passwort).
+    const token = store('quiz.hostToken') || localServer?.demoToken;
     if (!token) {
-      main.replaceChildren(h('div', { class: 'wait' }, h('p', { class: 'big' }, 'Bitte zuerst als Moderation anmelden'),
+      main.replaceChildren(h('div', { class: 'wait' }, h('p', { class: 'big' }, 'Bitte zuerst auf der Startseite anmelden'),
         h('p', {}, h('a', { class: 'btn pink', href: 'index.html?next=host' }, 'Zur Anmeldung'))));
     }
 
     let pad = { key: null, el: null };
     let lastKey = null;
     const conn = token ? connect({
-      hello: () => ({ role: 'moderator', token }),
+      hello: () => ({ role: 'host', token }),
       onState: (s) => render(s),
-      onAuthFailed: () => { store('quiz.modToken', null); location.href = 'index.html?next=host'; },
+      onAuthFailed: () => { store('quiz.hostToken', null); location.href = 'index.html?next=host'; },
     }) : null;
 
     const wait = (big, small) => h('div', { class: 'wait' }, h('p', { class: 'big' }, big), small ? h('p', { class: 'muted' }, small) : null);

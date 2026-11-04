@@ -55,11 +55,17 @@ function checkPassword(pw) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-function validSession(token) {
+// Sitzungen der Regie; „host“-Sitzungen (Finale-iPad der Moderation, Passwort „fabian“)
+// gelten nur für die Finale-Seite, nie für Regie, Editor oder Uploads.
+function validSession(token, allowHost = false) {
   if (typeof token !== 'string') return false;
   const s = store.data.auth.sessions[token];
-  return !!s && s.expires > Date.now();
+  if (!s || s.expires <= Date.now()) return false;
+  return s.scope === 'host' ? allowHost : true;
 }
+const HOST_PASSWORD = 'fabian';
+// Was das Finale-iPad der Moderation darf: nur die eigene Finalantwort abgeben.
+const HOST_ACTIONS = new Set(['finale.modAnswer']);
 
 // Einfache Bremse gegen Passwort-Raten: höchstens 10 Fehlversuche pro 10 Minuten und Adresse.
 const failedLogins = new Map();
@@ -224,6 +230,23 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { token });
     }
 
+    // Finale-iPad der Moderation: eigenes, einfaches Passwort, nur für host.html.
+    if (req.method === 'POST' && url.pathname === '/api/host-login') {
+      const ip = req.socket.remoteAddress;
+      if (loginBlocked(ip)) return sendJson(res, 429, { error: 'Zu viele Fehlversuche. Bitte später erneut versuchen.' });
+      const body = await readBody(req);
+      if (String(body.password || '').trim().toLowerCase() !== HOST_PASSWORD) {
+        failedLogins.get(ip).push(Date.now());
+        return sendJson(res, 401, { error: 'Passwort ist falsch.' });
+      }
+      const token = crypto.randomBytes(24).toString('hex');
+      const sessions = store.data.auth.sessions;
+      for (const [k, s] of Object.entries(sessions)) if (s.expires < Date.now()) delete sessions[k];
+      sessions[token] = { expires: Date.now() + SESSION_TTL_MS, scope: 'host' };
+      store.save();
+      return sendJson(res, 200, { token });
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/logout') {
       const body = await readBody(req);
       if (typeof body.token === 'string') delete store.data.auth.sessions[body.token];
@@ -262,7 +285,7 @@ function connections() {
 
 function viewFor(c) {
   const db = store.data;
-  if (c.role === 'moderator') return game.moderatorView(db, connections());
+  if (c.role === 'moderator' || c.role === 'host') return game.moderatorView(db, connections());
   if (c.role === 'team') return game.teamView(db, c.teamId);
   return game.beamerView(db);
 }
@@ -311,6 +334,9 @@ function handleHello(c, msg) {
   if (msg.role === 'moderator') {
     if (!validSession(msg.token)) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
     c.role = 'moderator';
+  } else if (msg.role === 'host') {
+    if (!validSession(msg.token, true)) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
+    c.role = 'host';
   } else if (msg.role === 'team') {
     const team = game.findTeamByCode(store.data, msg.code);
     if (!team) return send(c, { type: 'auth-failed', message: 'Zugangscode unbekannt.' });
@@ -327,11 +353,12 @@ function handleHello(c, msg) {
 }
 
 function handleAction(c, msg) {
-  if (c.role === 'moderator' && !validSession(c.token)) {
+  if ((c.role === 'moderator' && !validSession(c.token)) || (c.role === 'host' && !validSession(c.token, true))) {
     return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Sitzung abgelaufen. Bitte neu anmelden.' });
   }
+  if (c.role === 'host' && !HOST_ACTIONS.has(msg.name)) return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Diese Aktion ist auf dem Finale-iPad nicht erlaubt.' });
   const ctx = {
-    role: c.role,
+    role: c.role === 'host' ? 'moderator' : c.role,
     teamId: c.teamId,
     actor: c.role === 'team' ? `team:${c.teamId}` : c.role,
     now: Date.now(),
@@ -371,7 +398,7 @@ wss.on('connection', (ws) => {
       c.token = msg.token;
       return handleHello(c, msg);
     }
-    if (msg.type === 'action' && (c.role === 'moderator' || c.role === 'team' || (c.role === 'beamer' && !c.preview))) return handleAction(c, msg);
+    if (msg.type === 'action' && (c.role === 'moderator' || c.role === 'host' || c.role === 'team' || (c.role === 'beamer' && !c.preview))) return handleAction(c, msg);
   });
   ws.on('close', () => {
     clients.delete(c);
