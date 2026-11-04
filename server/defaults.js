@@ -94,14 +94,14 @@ const TYPES = {
     summary: 'Vier Filme, je zehn kaufbare Hinweise, 20 $ Startguthaben.',
     schema: [
       // Namen der zehn Hinweis-Kategorien – für alle Filme dieses Spiels; Preise bleiben gleich.
-      { key: 'hintCats', label: 'Hinweis-Kategorien: Name und Preis (gelten für alle Filme dieses Spiels)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true,
-        itemLabel: (i) => `Kategorie ${i + 1} (Standard: ${MOVIE_HINTS[i][0]} · ${MOVIE_HINTS[i][1]} $)`, defaultItems: MOVIE_HINTS.map(([name, price]) => ({ name, price })),
+      { key: 'hintCats', label: 'Hinweis-Kategorien: Name und Preis (gelten für alle Filme dieses Spiels)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true, noSummary: true,
+        itemLabel: (i) => `Kategorie ${i + 1}`, defaultItems: MOVIE_HINTS.map(([name, price]) => ({ name, price })),
         fields: [text('name', 'Name', 60), { key: 'price', label: 'Preis in $', type: 'number', min: 0, max: 100, step: 1 }] },
       { key: 'movies', label: 'Filme und Serien', type: 'list', min: 4, max: 4, itemLabel: (i) => `Film ${i + 1}`,
         fields: [
           text('title', 'Titel (Lösung)'),
           text('aliases', 'Auch richtig (Varianten mit Komma trennen)', 300),
-          { key: 'hints', label: 'Hinweise (Text – bei einem Foto unten optional, dann als Bildunterschrift)', type: 'list', min: 10, max: 10, itemLabel: (i) => `Hinweis ${i + 1} (Kategorie ${i + 1}, Standard: ${MOVIE_HINTS[i][0]})`, of: 'text', maxLength: 300 },
+          { key: 'hints', label: 'Hinweise (Text – bei einem Foto unten optional, dann als Bildunterschrift)', type: 'list', min: 10, max: 10, itemLabel: (i) => `Hinweis ${i + 1} (Kategorie ${i + 1})`, of: 'text', maxLength: 300 },
           { key: 'hintPhotos', label: 'Foto als Hinweis (optional – statt oder zusätzlich zum Text)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true,
             itemLabel: (i) => `Foto zu Hinweis ${i + 1}`, defaultItems: MOVIE_HINTS.map(() => ({ photo: null })),
             fields: [{ key: 'photo', label: 'Foto', type: 'media', accept: 'image' }] },

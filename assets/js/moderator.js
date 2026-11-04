@@ -1503,7 +1503,7 @@ function formField(f, holder, k, save, rerender, id) {
         const openKey = `${id}-${i}`;
         const isOpen = ITEM_OPEN.has(openKey) ? ITEM_OPEN.get(openKey) : arr.length <= 3;
         return h('details', { class: 'item', open: isOpen, ontoggle: (ev) => ITEM_OPEN.set(openKey, ev.target.open), ...dragAttrs(i) },
-          h('summary', {}, moveBtns(i), h('b', {}, label), h('span', { class: 'muted' }, ` · ${preview.slice(0, 60)}`)),
+          h('summary', {}, moveBtns(i), h('b', {}, label), f.noSummary ? null : h('span', { class: 'muted' }, ` · ${preview.slice(0, 60)}`)),
           h('div', { class: 'item-body' },
             previewTarget && !f.noPreview && id === `${previewTarget.key}-${f.key}` ? previewButton(previewTarget, i, label) : null,
             formFields(f.fields, item, save, rerender, `${id}-${i}`), remove ? h('div', { style: { marginTop: '8px' } }, remove) : null));
