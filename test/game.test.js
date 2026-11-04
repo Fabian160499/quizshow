@@ -1188,25 +1188,27 @@ test('Die leichten 5: alle Antworten auf einmal groß zeigen, in Team-Reihenfolg
   assert.equal(game.beamerView(db).gameView.answers.length, 0);
 });
 
-test('Die leichten 5: Wertung verdeckt, Auflösen erst falsche, dann ein richtiges, dann übrige richtige', () => {
+test('Die leichten 5: Auflösung einzeln nacheinander – erst falsche, dann ein richtiges, dann übrige richtige', () => {
   const { db, ids } = setup(5);
   game.applyAction(db, mod(), 'show.activate', { gameId: gid(db, 'leichte5') });
   game.applyAction(db, mod(), 'play.open', { qIndex: 0 });
   ids.forEach((id, i) => game.applyAction(db, team(id), 'play.submit', { text: `A${i}` }));
-  game.applyAction(db, mod(), 'play.showAll', {});
   game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
   const marks = [true, false, true, false, true];
   assert.throws(() => game.applyAction(db, mod(), 'play.revealNext'), /bewerten/);
   ids.forEach((id, i) => game.applyAction(db, mod(), 'play.grade', { teamId: id, correct: marks[i] }));
-  const grades = () => game.beamerView(db).gameView.answers.map((a) => a.grade);
-  assert.deepEqual(grades(), [null, null, null, null, null]);
-  assert.equal(game.teamView(db, ids[0]).play.answer.grade, null);
-  game.applyAction(db, mod(), 'play.revealNext');
-  assert.deepEqual(grades(), [null, false, null, false, null]);
-  game.applyAction(db, mod(), 'play.revealNext');
-  assert.deepEqual(grades(), [true, false, null, false, null]);
-  assert.equal(game.teamView(db, ids[0]).play.answer.grade, true);
-  game.applyAction(db, mod(), 'play.revealNext');
-  assert.deepEqual(grades(), [true, false, true, false, true]);
-  assert.throws(() => game.applyAction(db, mod(), 'play.revealNext'), /aufgelöst/);
+  const shown = () => game.beamerView(db).gameView.answers.map((a) => [ids.indexOf(a.teamId), a.grade]);
+  const next = () => game.applyAction(db, mod(), 'play.revealNext');
+  assert.equal(game.teamView(db, ids[1]).play.answer.grade, null);
+  next(); assert.deepEqual(shown(), [[1, null]]);
+  next(); assert.deepEqual(shown(), [[1, false]]);
+  assert.equal(game.teamView(db, ids[1]).play.answer.grade, false);
+  next(); assert.deepEqual(shown(), [[3, null]]);
+  next(); assert.deepEqual(shown(), [[3, false]]);
+  next(); assert.deepEqual(shown(), [[0, null]]);
+  next(); assert.deepEqual(shown(), [[0, true]]);
+  next(); assert.deepEqual(shown(), [[2, null], [4, null]]);
+  next(); assert.deepEqual(shown(), [[2, true], [4, true]]);
+  next(); assert.equal(shown().length, 5);
+  assert.throws(next, /aufgelöst/);
 });

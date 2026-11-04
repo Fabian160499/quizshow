@@ -67,25 +67,41 @@ module.exports = {
       // Wertung bleibt verdeckt, bis sie aufgelöst wird; nur eine spätere Korrektur ist sofort sichtbar.
       if (ans.onBeamer && ans.revealed) effect(db, correct ? 'correct' : 'wrong');
     },
-    // Auflösen Schritt für Schritt: 1) alle falschen, 2) ein richtiges, 3) alle übrigen richtigen.
+    // Auflösung nacheinander, ein Knopf „Weiter“: Jede Antwort erscheint einzeln groß
+    // (noch ohne Wertung), der nächste Druck zeigt ✗ bzw. ✓ mit Ton. Reihenfolge:
+    // zuerst jedes falsche Team einzeln, dann ein richtiges, dann alle übrigen richtigen
+    // zusammen. Danach eine Übersicht aller Teams.
     revealNext(db, ctx, game, st) {
       const r = round(st, st.qIndex);
       const order = db.project.teams.map((t) => [t.id, r.answers[t.id]]).filter(([, a]) => a);
       if (!order.length) fail('Noch hat kein Team abgegeben.');
-      const ungraded = order.filter(([, a]) => a.grade === null).length;
-      if (ungraded) fail(`Erst alle abgegebenen Antworten bewerten (${ungraded} offen).`);
-      r.open = false;
-      for (const [, a] of order) a.onBeamer = true;
-      const wrong = order.filter(([, a]) => a.grade === false && !a.revealed);
-      const right = order.filter(([, a]) => a.grade === true && !a.revealed);
-      const rightShown = order.some(([, a]) => a.grade === true && a.revealed);
-      let step;
-      if (wrong.length) { step = wrong; effect(db, 'wrong'); }
-      else if (right.length && !rightShown) { step = right.slice(0, 1); effect(db, 'correct'); }
-      else if (right.length) { step = right; effect(db, 'correct'); }
-      else fail('Alles ist schon aufgelöst.');
-      for (const [, a] of step) a.revealed = true;
-      log(db, ctx, 'beamer', `Auflösung: ${step.map(([id]) => teamName(db, id)).join(', ')} ${step[0][1].grade ? 'richtig' : 'falsch'}`);
+      if (!r.rv) {
+        const ungraded = order.filter(([, a]) => a.grade === null).length;
+        if (ungraded) fail(`Erst alle abgegebenen Antworten bewerten (${ungraded} offen).`);
+        const wrong = order.filter(([, a]) => a.grade === false).map(([id]) => [id]);
+        const right = order.filter(([, a]) => a.grade === true).map(([id]) => id);
+        const groups = [...wrong];
+        if (right.length) groups.push([right[0]]);
+        if (right.length > 1) groups.push(right.slice(1));
+        r.open = false;
+        r.rv = { groups, g: 0, verdict: false, done: false };
+        log(db, ctx, 'beamer', 'Auflösung gestartet');
+        return;
+      }
+      const rv = r.rv;
+      if (rv.done) fail('Alles ist schon aufgelöst.');
+      if (!rv.verdict) {
+        rv.verdict = true;
+        const ids = rv.groups[rv.g];
+        for (const id of ids) if (r.answers[id]) r.answers[id].revealed = true;
+        const ok = r.answers[ids[0]]?.grade === true;
+        effect(db, ok ? 'correct' : 'wrong');
+        log(db, ctx, 'beamer', `Auflösung: ${ids.map((id) => teamName(db, id)).join(', ')} ${ok ? 'richtig' : 'falsch'}`);
+        return;
+      }
+      if (rv.g + 1 < rv.groups.length) { rv.g += 1; rv.verdict = false; return; }
+      rv.done = true; // Übersicht aller Teams mit Wertung
+      for (const [, a] of order) a.revealed = true;
     },
     revealSolution(db, ctx, game, st) {
       const r = round(st, st.qIndex);
@@ -94,6 +110,7 @@ module.exports = {
       r.open = false;
       r.solutionRevealed = true;
       for (const a of Object.values(r.answers)) a.revealed = true;
+      if (r.rv) r.rv.done = true;
       log(db, ctx, 'ablauf', `Lösung zu Frage ${st.qIndex + 1} gezeigt, Abgabe geschlossen`);
     },
   },
@@ -125,7 +142,16 @@ module.exports = {
       submittedCount: Object.keys(r.answers).length,
       teamCount: db.project.teams.length,
       // In Team-Reihenfolge, damit jedes Team seinen festen Platz nebeneinander hat.
-      answers: db.project.teams.map((t) => [t.id, r.answers[t.id]]).filter(([, a]) => a && a.onBeamer).map(([teamId, a]) => ({ teamId, text: a.text, ink: a.ink || null, grade: a.revealed ? a.grade : null })),
+      answers: (() => {
+        const pick = (ids) => ids.map((id) => [id, r.answers[id]]).filter(([, a]) => a);
+        const rv = r.rv;
+        // Während der Auflösung: nur das aktuelle Team (bzw. die übrigen richtigen zusammen).
+        const list = rv && !rv.done ? pick(rv.groups[rv.g] || [])
+          : rv && rv.done ? pick(db.project.teams.map((t) => t.id))
+            : db.project.teams.map((t) => [t.id, r.answers[t.id]]).filter(([, a]) => a && a.onBeamer);
+        return list.map(([teamId, a]) => ({ teamId, text: a.text, ink: a.ink || null, grade: a.revealed ? a.grade : null }));
+      })(),
+      reveal: r.rv ? { step: r.rv.done ? r.rv.groups.length : r.rv.g + 1, of: r.rv.groups.length, done: r.rv.done } : null,
       solution: r.solutionRevealed ? game.content.questions[st.qIndex].solution : null,
     };
   },
