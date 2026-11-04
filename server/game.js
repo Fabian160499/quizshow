@@ -10,11 +10,12 @@ const { MOVIE_HINTS } = require('./defaults');
 const { TYPES, DEFAULT_ORDER, LIBRARY_ORDER, EXTRA_ORDER, COIN_POSITIONS, SHOW_SIZE, TEAM_COLORS, publicTypes } = require('./defaults');
 const { checkShow } = require('./check');
 const { scoringOf } = require('./scoring');
-const { QuizError, fail, newId, log, effect, teamName, totals, cleanText, cleanImage, TIMER } = require('./core');
+const { QuizError, fail, newId, log, effect, teamName, teamIds, totals, cleanText, cleanImage, TIMER } = require('./core');
 
 // Ablauf der einzelnen Spiele. Jedes Modul liefert init, Team- und
 // Moderationsaktionen sowie die Sichten für Teams und Beamer.
 const FINALE = require('./finale');
+const { FLOW, COLLECT } = require('./flow');
 
 const PLAY = {
   leichte5: require('./play-leichte5'),
@@ -300,6 +301,26 @@ function position(db, game) {
   return db.project.games.indexOf(game) + 1;
 }
 
+// Nächster Spielschritt für „Weiter“ (siehe server/flow.js), nur auf einer „Spiel spielen“-Folie.
+function gameFlow(db, now = Date.now()) {
+  const cur = rundown(db)[db.live.run ?? -1];
+  if (!cur || cur.kind !== 'game') return null;
+  const game = activeGame(db);
+  if (!game || !FLOW[game.type]) return null;
+  return FLOW[game.type](db, game, gameState(db, game), now) || null;
+}
+// Teams ohne Abgabe nach dem Schließen (für die Nachfrist-Knöpfe in der Regie).
+function lateCandidates(db) {
+  const game = activeGame(db);
+  const col = game && COLLECT[game.type];
+  if (!col) return null;
+  const r = col.round(gameState(db, game));
+  if (!r || col.isOpen(r) || col.done(r)) return null;
+  const e = col.entries(r);
+  const missing = teamIds(db).filter((id) => !e[id]);
+  return missing.length ? { missing, granted: r.late || [] } : null;
+}
+
 function activeGame(db) {
   const id = db.live.activeGame;
   return id ? db.project.games.find((g) => g.id === id) || null : null;
@@ -316,6 +337,42 @@ function playAction(db, ctx, name, payload) {
   const game = activeGame(db);
   if (!game) fail('Gerade ist kein Spiel aktiv.');
   const mod = PLAY[game.type];
+  const col = COLLECT[game.type];
+  const st0 = gameState(db, game);
+  const r0 = col ? col.round(st0) : null;
+  // Nachfrist: einzelnem Team nach dem Schließen der Abgabe noch eine Abgabe erlauben.
+  if (ctx.role === 'moderator' && name === 'allowLate' && col && !(mod.mod && mod.mod.allowLate)) {
+    if (!r0 || col.done(r0)) fail('Für diese Runde gibt es keine Nachfrist mehr.');
+    if (!teamIds(db).includes(payload.teamId)) fail('Team nicht gefunden.');
+    if (col.entries(r0)[payload.teamId]) fail('Dieses Team hat schon abgegeben.');
+    r0.late = [...new Set([...(r0.late || []), payload.teamId])];
+    log(db, ctx, 'ablauf', `Nachfrist: ${teamName(db, payload.teamId)} darf noch abgeben`);
+    return {};
+  }
+  // Team mit Nachfrist: Abgabe kurz wieder öffnen, danach sofort wieder schließen.
+  const lateFor = ctx.role === 'team' && r0 && !col.isOpen(r0) && !col.done(r0) && (r0.late || []).includes(ctx.teamId);
+  if (lateFor) col.reopen(r0);
+  let result;
+  try {
+    result = runPlay(db, ctx, game, mod, name, payload);
+  } finally {
+    if (lateFor) {
+      col.close(r0);
+      if (col.entries(r0)[ctx.teamId]) r0.late = r0.late.filter((id) => id !== ctx.teamId);
+    }
+  }
+  // Automatisch schließen, sobald alle Teams abgegeben haben.
+  if (ctx.role === 'team' && col) {
+    const r = col.round(gameState(db, game));
+    if (r && col.isOpen(r) && !col.done(r) && teamIds(db).every((id) => col.entries(r)[id])) {
+      col.close(r);
+      log(db, ctx, 'ablauf', 'Alle Teams haben abgegeben – Abgabe automatisch geschlossen');
+    }
+  }
+  return result;
+}
+
+function runPlay(db, ctx, game, mod, name, payload) {
   const table = ctx.role === 'moderator' ? mod.mod : ctx.role === 'team' ? mod.team : null;
   const fn = table && Object.prototype.hasOwnProperty.call(table, name) ? table[name] : null;
   if (!fn) fail('Diese Aktion passt nicht zum aktiven Spiel.');
@@ -1197,6 +1254,14 @@ const moderatorActions = {
     return runStep(db, ctx, Number(p.index));
   },
   'run.next'(db, ctx) {
+    // Auf einer Spiel-Folie macht „Weiter“ zuerst den nächsten Schritt im Spiel.
+    const f = gameFlow(db, ctx.now);
+    if (f && f.wait) fail(f.wait);
+    if (f && f.action) {
+      const res = playAction(db, ctx, f.action, f.payload || {}) || {};
+      if (TIMER_RESET.has(f.action)) delete db.live.timer;
+      return res;
+    }
     const cur = rundown(db)[db.live.run ?? -1];
     // Nichts vergessen: Nach einer Münzvergabe erst weiter, wenn die Münze vergeben ist.
     if (cur && cur.kind === 'coin' && !db.live.coins.some((c) => c.position === cur.pos)) {
@@ -1562,8 +1627,12 @@ function trimForConnection(view, cache) {
 }
 
 function moderatorView(db, connections) {
+  const f = gameFlow(db);
   return {
     role: 'moderator',
+    // „Weiter“ im Spiel: Beschriftung oder Sperrgrund; Nachfrist-Kandidaten.
+    flow: f ? { label: f.label || null, wait: f.wait || null } : null,
+    late: lateCandidates(db),
     project: db.project,
     shows: showList(db),
     library: db.library,

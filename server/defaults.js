@@ -195,12 +195,12 @@ const TYPES = {
     playable: true,
     summary: 'Geheime Gebote, wie viele Antworten ein Team zu einer Kategorie nennen kann.',
     schema: [
-      { key: 'tieRule', label: 'Gleich hohe Höchstgebote', type: 'select', options: ['Moderation entscheidet per Stichentscheid, wer beginnt', 'Gleich hohes Gebot gilt als zweithöchstes Team'] },
+      { key: 'tieRule', label: 'Gleich hohe Höchstgebote', type: 'select', options: ['Teams wählen „Starten“ oder „Nachziehen“, bei gleicher Wahl Münzwurf', 'Gleich hohes Gebot gilt als zweithöchstes Team'] },
       { key: 'categories', label: 'Kategorien', type: 'list', min: 5, max: 5, itemLabel: (i) => (i === 4 ? 'Kategorie 5 · großer Höhepunkt' : `Kategorie ${i + 1}`),
         fields: [text('name', 'Kategorie', 120), area('answers', 'Gültige Antworten (eine pro Zeile, Varianten mit / trennen)', 6000, { rows: 6 })] },
     ],
     example: {
-      tieRule: 'Moderation entscheidet per Stichentscheid, wer beginnt',
+      tieRule: 'Teams wählen „Starten“ oder „Nachziehen“, bei gleicher Wahl Münzwurf',
       categories: [
         { name: 'Figuren aus Super Mario', answers: 'Mario\nLuigi\nPeach / Prinzessin Peach\nToad\nYoshi\nBowser\nWario\nWaluigi\nDaisy\nDonkey Kong' },
         { name: 'Länder, die auf „-stan“ enden', answers: 'Afghanistan\nPakistan\nKasachstan\nUsbekistan\nTurkmenistan\nKirgisistan / Kirgistan\nTadschikistan' },

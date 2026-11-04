@@ -4,7 +4,7 @@
 // ein Team nennen kann. Das höchste Gebot spielt (3 Fehler erlaubt bis zum
 // Scheitern), danach höchstens das zweithöchste Team (2. Fehler = Scheitern).
 
-const { fail, log, effect, teamName, teamIds, bookTarget, cleanText, cleanInk } = require('./core');
+const { fail, log, effect, teamName, teamIds, bookTarget, cleanText, cleanInk, randomInt } = require('./core');
 const { pv } = require('./scoring');
 
 const MAX_BID = 99;
@@ -44,7 +44,32 @@ function startAttempt(db, ctx, r, which, teamId) {
   log(db, ctx, 'ablauf', `${teamName(db, teamId)} versucht ${target} Antworten (${which === 'first' ? 'erster' : 'zweiter'} Versuch)`);
 }
 
+// Gleichstand um den ersten Versuch: Die Teams wählen auf dem iPad „Starten“ oder
+// „Nachziehen“. Wählt genau ein Team „Starten“, beginnt es. Sonst entscheidet ein
+// animierter Münzwurf auf dem Beamer (Seiten mit Name und Farbe der Teams).
+// Wer nachzieht, bekommt – falls nötig – den zweiten Versuch.
+function settleTie(db, ctx, r) {
+  const ids = r.choose.teamIds;
+  const prefs = r.choose.prefs || {};
+  if (!ids.every((id) => prefs[id])) return;
+  const starters = ids.filter((id) => prefs[id] === 'start');
+  const pool = starters.length === 1 ? starters : starters.length ? starters : ids;
+  if (pool.length === 1) {
+    r.follow = ids.filter((id) => id !== pool[0]);
+    log(db, ctx, 'gebot', `Gleichstand: ${teamName(db, pool[0])} startet, ${r.follow.map((id) => teamName(db, id)).join(', ')} zieht nach`);
+    startAttempt(db, ctx, r, 'first', pool[0]);
+    return;
+  }
+  const winner = pool[randomInt(pool.length)];
+  r.coin = { teams: pool, winner, done: false };
+  log(db, ctx, 'gebot', `Gleichstand: gleiche Wahl – Münzwurf zwischen ${pool.map((id) => teamName(db, id)).join(', ')}`);
+  effect(db, 'coin');
+}
+
 function startSecond(db, ctx, game, r) {
+  // Team, das beim Gleichstand „Nachziehen“ gewählt hat (bzw. die Münze verloren hat).
+  const follow = (r.follow || []).filter((id) => id !== r.first.teamId);
+  if (follow.length === 1) { startAttempt(db, ctx, r, 'second', follow[0]); return; }
   const tieAsSecond = TIE_SECOND.test(game.content.tieRule);
   // Gleich hohe Höchstgebote zählen nur bei entsprechender Regel als zweithöchstes Team.
   const exclude = [r.first.teamId, ...(tieAsSecond ? [] : Object.keys(r.bids).filter((id) => r.bids[id] === r.first.bid))];
@@ -95,7 +120,9 @@ function publicRound(db, game, st, r) {
     bidCount: Object.keys(r.bids).length,
     teamCount: db.project.teams.length,
     bids: r.phase === 'bidding' ? null : Object.entries(r.bids).map(([teamId, bid]) => ({ teamId, bid })).sort((x, y) => y.bid - x.bid),
-    choose: r.choose,
+    // Wer schon gewählt hat (nicht was), damit niemand nachziehen kann.
+    choose: r.choose ? { which: r.choose.which, teamIds: r.choose.teamIds, picked: Object.keys(r.choose.prefs || {}) } : null,
+    coin: r.coin ? { teams: r.coin.teams, winner: r.coin.winner, done: r.coin.done } : null,
     attempt: attemptView(r),
     results: r.results,
   };
@@ -117,6 +144,18 @@ module.exports = {
     },
     // Notizen (Apple Pencil) während der Gebotsphase – nur für das eigene Team
     // sichtbar; danach als Hilfe beim Antworten, aber nicht mehr änderbar.
+    // Gleichstand: „Starten“ oder „Nachziehen“ wählen (verbindlich).
+    tiePick(db, ctx, game, st, p) {
+      const r = current(st);
+      if (r.phase !== 'choose' || r.choose.which !== 'first' || !r.choose.teamIds.includes(ctx.teamId)) fail('Gerade gibt es nichts zu wählen.');
+      if (r.coin) fail('Der Münzwurf läuft schon.');
+      r.choose.prefs = r.choose.prefs || {};
+      if (r.choose.prefs[ctx.teamId]) fail('Eure Wahl ist schon abgegeben.');
+      if (!['start', 'follow'].includes(p.pref)) fail('Bitte „Starten“ oder „Nachziehen“ wählen.');
+      r.choose.prefs[ctx.teamId] = p.pref;
+      log(db, ctx, 'gebot', `${teamName(db, ctx.teamId)} wählt ${p.pref === 'start' ? '„Starten“' : '„Nachziehen“'}`);
+      settleTie(db, ctx, r);
+    },
     notes(db, ctx, game, st, p) {
       const r = current(st);
       if (r.phase !== 'bidding') fail('Notizen sind nur während der Gebotsphase möglich.');
@@ -148,9 +187,9 @@ module.exports = {
       log(db, ctx, 'gebot', `Gebote aufgedeckt: ${Object.entries(r.bids).map(([id, b]) => `${teamName(db, id)} ${b}`).join(', ')}`);
       effect(db, 'reveal');
       if (top.length > 1) {
-        // Ein Gleichstand wird nie stillschweigend aufgelöst: die Moderation entscheidet.
+        // Gleichstand: die Teams wählen „Starten“ oder „Nachziehen“ (sonst Münzwurf).
         r.phase = 'choose';
-        r.choose = { which: 'first', teamIds: top };
+        r.choose = { which: 'first', teamIds: top, prefs: {} };
         return;
       }
       startAttempt(db, ctx, r, 'first', top[0]);
@@ -161,7 +200,18 @@ module.exports = {
       const r = current(st);
       if (r.phase !== 'choose' || !r.choose.teamIds.includes(p.teamId)) fail('Bitte ein Team aus dem Gleichstand wählen.');
       log(db, ctx, 'gebot', `Stichentscheid: ${teamName(db, p.teamId)} bekommt den ${r.choose.which === 'first' ? 'ersten' : 'zweiten'} Versuch`);
+      if (r.choose.which === 'first') r.follow = r.choose.teamIds.filter((id) => id !== p.teamId);
+      r.coin = null;
       startAttempt(db, ctx, r, r.choose.which, p.teamId);
+    },
+    // Nach dem Münzwurf auf dem Beamer: Ergebnis übernehmen, das Gewinnerteam beginnt.
+    coinDone(db, ctx, game, st) {
+      const r = current(st);
+      if (r.phase !== 'choose' || !r.coin || r.coin.done) fail('Gerade läuft kein Münzwurf.');
+      r.coin.done = true;
+      r.follow = r.choose.teamIds.filter((id) => id !== r.coin.winner);
+      log(db, ctx, 'gebot', `Münzwurf: ${teamName(db, r.coin.winner)} beginnt`);
+      startAttempt(db, ctx, r, 'first', r.coin.winner);
     },
 
     // Genannte Antwort werten: gültige, neue Antwort zählt, alles andere ist ein Fehler.
@@ -205,7 +255,7 @@ module.exports = {
     if (st.catIndex < 0) return null;
     const r = round(st, st.catIndex);
     return {
-      ...publicRound(db, game, st, r), ownBid: r.bids[teamId] ?? null, canBid: r.phase === 'bidding' && r.bids[teamId] === undefined, maxBid: MAX_BID,
+      ...publicRound(db, game, st, r), ownBid: r.bids[teamId] ?? null, ownPref: r.choose && r.choose.prefs ? r.choose.prefs[teamId] || null : null, canBid: r.phase === 'bidding' && r.bids[teamId] === undefined, maxBid: MAX_BID,
       // Während der Gebotsphase nicht mitschicken (sonst würde das Schreibfeld bei jedem Speichern neu aufgebaut).
       notesInk: r.phase !== 'bidding' && r.notes ? r.notes[teamId] || null : null,
     };

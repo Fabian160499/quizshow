@@ -234,11 +234,13 @@ function buildRun() {
   const started = cur >= 0;
   const head = h('div', { class: 'run-head' },
     h('div', { class: 'run-now' },
-      h('div', { class: 'run-title' }, started ? [h('span', { class: 'run-ico' }, runIcon(now.kind)), now.text] : 'Show noch nicht gestartet')),
+      h('div', { class: 'run-title' }, started ? [h('span', { class: 'run-ico' }, runIcon(now.kind)), now.text] : 'Show noch nicht gestartet'),
+      // Im Spiel: was „Weiter“ als Nächstes tut – oder worauf gewartet wird.
+      S.flow ? h('div', { class: `run-flow${S.flow.wait ? ' is-wait' : ''}` }, S.flow.wait ? ['⏳ ', S.flow.wait] : ['Weiter: ', h('b', {}, S.flow.label)]) : null),
     h('div', { class: 'run-buttons' },
       now && now.kind === 'video' && S.project.introVideo ? h('button', { class: 'btn ghost', onclick: () => act('run.goto', { index: cur }) }, '⟲ Video von vorn') : null,
       h('button', { class: 'btn ghost', disabled: cur <= 0, onclick: runPrev, title: 'Zurück (Pfeil links)' }, '◀ Zurück'),
-      h('button', { class: 'btn pink run-go', disabled: cur >= steps.length - 1, onclick: runNext, title: 'Weiter (Pfeil rechts, Leertaste)' }, started ? 'Weiter ▶' : 'Erster Schritt ▶')));
+      h('button', { class: `btn pink run-go${S.flow && S.flow.wait ? ' waiting' : ''}`, disabled: cur >= steps.length - 1 && !(S.flow && S.flow.label), onclick: runNext, title: 'Weiter (Pfeil rechts, Leertaste)' }, started ? 'Weiter ▶' : 'Erster Schritt ▶')));
   const strip = h('ol', { class: 'run-strip', 'aria-label': 'Alle Schritte' }, steps.map((st, i) => h('li', {},
     h('button', {
       class: `run-step k-${st.kind} ${i === cur ? 'current' : ''} ${i < cur ? 'done' : ''}`,
@@ -541,6 +543,13 @@ function buildGameControl() {
     play.classList.toggle('help-on', helpOn);
     const head = play.querySelector('h3');
     if (head) head.append(h('button', { class: `help-btn${helpOn ? ' on' : ''}`, title: helpOn ? 'Hinweise ausblenden' : 'Hinweise zur Bedienung einblenden', 'aria-label': 'Hinweise', onclick: () => { helpOn = !helpOn; store('quiz.helpOn', helpOn ? '1' : null); renderAll(); } }, '?'));
+  }
+  // Nachfrist: Teams ohne Abgabe nach dem Schließen einzeln wieder zulassen.
+  if (S.late && S.late.missing.length) {
+    play.append(h('div', { class: 'late-row' }, h('span', { class: 'muted' }, 'Nachfrist für:'),
+      S.late.missing.map((id) => (S.late.granted.includes(id)
+        ? h('span', { class: 'badge warn' }, `⏱ ${teamName(id)} darf abgeben`)
+        : h('button', { class: 'btn small ghost', onclick: () => act('play.allowLate', { teamId: id }) }, `⏱ ${teamName(id)}`)))));
   }
   return h('div', {}, timerBar(), play);
 }

@@ -2245,3 +2245,17 @@ body.drawer-open { overflow: hidden; }
 .beamer .answers.l5-answers.l5-solo.n1 .ink-answer.beamer { height: 38vh; }
 .beamer .answers.l5-answers.l5-solo.n1 .l5-name { font-size: clamp(1.2rem, min(3vw, 5vh), 3rem); }
 .beamer .answers.l5-answers.l5-solo.n1 .l5-stamp { width: 16vh; height: 16vh; font-size: 11vh; top: -4vh; right: -2.4vw; }
+
+/* Wer nix werd: Münzwurf bei Gleichstand */
+.beamer .nerd-coin-wrap { display: flex; flex-direction: column; align-items: center; gap: 3vh; margin-top: 3vh; perspective: 120vh; }
+.beamer .nerd-coin { position: relative; width: 30vh; height: 30vh; transform-style: preserve-3d; animation: nerdFlip 3.2s cubic-bezier(.2, .7, .3, 1) both; }
+.beamer .coin-face { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; text-align: center; padding: 3vh; backface-visibility: hidden; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 70%, #fff), var(--c) 60%, color-mix(in srgb, var(--c) 60%, #000)); box-shadow: inset 0 0 0 1.2vh rgba(255, 255, 255, 0.35), 0 2vh 5vh rgba(0, 0, 0, 0.6); color: #fff; font-weight: 900; font-size: 3.4vh; text-transform: uppercase; text-shadow: 0 0.3vh 1vh rgba(0, 0, 0, 0.6); }
+.beamer .coin-face.back { transform: rotateY(180deg); }
+.beamer .nerd-coin-result { font-size: 5vh; font-weight: 900; color: #fff; opacity: 0; animation: rise 0.6s 3.3s ease-out forwards; }
+@keyframes nerdFlip { 0% { transform: translateY(0) rotateY(0); } 40% { transform: translateY(-14vh) rotateY(1440deg); } 100% { transform: translateY(0) rotateY(2880deg); } }
+
+/* Weiter im Spiel */
+.run-flow { margin-top: 6px; font-size: 1rem; color: var(--accent-3); }
+.run-flow.is-wait { color: var(--accent-2); }
+.btn.run-go.waiting { filter: saturate(0.4) brightness(0.85); }
+.late-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); }

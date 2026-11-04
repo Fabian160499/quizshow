@@ -391,7 +391,18 @@ function nerd(g, ui) {
   // Nach der Gebotsphase: Notizen als Hilfe, nur noch zum Ansehen.
   if (g.notesInk) out.push(h('div', { class: 'card notes-view' }, h('p', { class: 'muted', style: { margin: '0 0 6px' } }, 'Eure Notizen (nicht mehr änderbar)'), h('img', { class: 'ink-answer', src: g.notesInk, alt: 'Eure Notizen' })));
   if (g.bids) out.push(h('ul', { class: 'list' }, g.bids.map((b) => h('li', {}, h('span', { class: 'dot', style: { background: ui.teamColor(b.teamId) } }), h('span', { class: 'grow' }, ui.teamName(b.teamId)), h('b', {}, b.bid)))));
-  if (g.phase === 'choose') out.push(stateBox('', '⚖', 'Gleichstand – die Moderation entscheidet, wer beginnt.'));
+  if (g.phase === 'choose') {
+    const mine = g.choose && g.choose.which === 'first' && g.choose.teamIds.includes(ui.team.id);
+    if (g.coin) out.push(stateBox('', '🪙', 'Münzwurf auf dem Beamer – wer beginnt?'));
+    else if (mine && !g.ownPref) {
+      // Gleichstand: selbst wählen, ob ihr startet oder nachzieht – ohne Rückfrage.
+      out.push(stateBox('ok', '⚖', 'Gleichstand! Wollt ihr starten oder nachziehen?'));
+      out.push(h('div', { class: 'row', style: { gap: '12px', marginTop: '12px' } },
+        h('button', { class: 'btn pink huge', style: { flex: '1' }, onclick: () => run(ui.conn, 'play.tiePick', { pref: 'start' }) }, 'Starten'),
+        h('button', { class: 'btn cyan huge', style: { flex: '1' }, onclick: () => run(ui.conn, 'play.tiePick', { pref: 'follow' }) }, 'Nachziehen')));
+    } else if (mine) out.push(stateBox('', '⏳', `Eure Wahl: ${g.ownPref === 'start' ? 'Starten' : 'Nachziehen'} – wartet auf das andere Team.`));
+    else out.push(stateBox('', '⚖', 'Gleichstand – die Teams entscheiden, wer beginnt.'));
+  }
   const a = g.attempt;
   if (a) {
     const mine = a.teamId === ui.team.id;
