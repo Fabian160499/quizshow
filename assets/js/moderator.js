@@ -1505,6 +1505,7 @@ function formField(f, holder, k, save, rerender, id) {
         return h('details', { class: 'item', open: isOpen, ontoggle: (ev) => ITEM_OPEN.set(openKey, ev.target.open), ...dragAttrs(i) },
           h('summary', {}, moveBtns(i), h('b', {}, label), f.noSummary ? null : h('span', { class: 'muted' }, ` · ${preview.slice(0, 60)}`)),
           h('div', { class: 'item-body' },
+            f.itemNotes && f.itemNotes[i] ? h('p', { class: 'muted', style: { margin: '0 0 8px' } }, f.itemNotes[i]) : null,
             previewTarget && !f.noPreview && id === `${previewTarget.key}-${f.key}` ? previewButton(previewTarget, i, label) : null,
             formFields(f.fields, item, save, rerender, `${id}-${i}`), remove ? h('div', { style: { marginTop: '8px' } }, remove) : null));
       });

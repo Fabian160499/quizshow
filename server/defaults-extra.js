@@ -76,7 +76,9 @@ const jokerSide = (good) => {
           // schon gewählte Joker sind in den anderen Feldern gesperrt.
           optionSource: { path: [good ? 'good' : 'bad', 'jokers'], unique: [good ? 'good' : 'bad', 'slots'] } }] },
       { key: 'jokers', label: `Joker-Datenbank: ${pool.length} ${good ? 'positive' : 'negative'} Joker (Name, Symbol, Text und Wert änderbar – die Wirkung bleibt)`, type: 'list', min: pool.length, max: pool.length, fixedOrder: true, noPreview: true,
-        itemLabel: (i) => `${word} ${i + 1} – Wirkung: ${pool[i].name}`,
+        itemLabel: (i) => `${word} ${i + 1}`,
+        // Feste Wirkung als Hinweis im aufgeklappten Eintrag (der Name ist frei änderbar).
+        itemNote: (i) => `Wirkung (bleibt immer gleich): ${pool[i].name}`,
         defaultItems: pool.map(jokerItem),
         fields: [text('name', 'Name', 40), text('icon', 'Symbol (Emoji)', 8), area('text', 'Text für Teams und Beamer', 200, { rows: 2 }),
           num('value', 'Wert (nur bei Jokern mit einer Zahl im Text, z. B. Punkte, Runden oder Sekunden)', 0, 60)] },
