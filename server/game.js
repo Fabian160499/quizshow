@@ -6,6 +6,7 @@
 const crypto = require('crypto');
 const { DATASETS } = require('./datasets');
 const { migrateBrainContent } = require('./defaults-extra');
+const { MOVIE_HINTS } = require('./defaults');
 const { TYPES, DEFAULT_ORDER, LIBRARY_ORDER, EXTRA_ORDER, COIN_POSITIONS, SHOW_SIZE, TEAM_COLORS, publicTypes } = require('./defaults');
 const { checkShow } = require('./check');
 const { scoringOf } = require('./scoring');
@@ -170,6 +171,12 @@ function migrate(db) {
       // „Keine Kon-Sequenz“ heißt jetzt „Hits me baby, one more time“ (Wunsch von Fabian).
       if (e.type === 'konsequenz' && e.title === 'Keine Kon-Sequenz') e.title = 'Hits me baby, one more time';
       // „Allein, allein“ heißt jetzt „Wir sind ein Telepa-Team“ (Wunsch von Fabian).
+      // Kassenschlager: Namen (hintNames) → Hinweis-Kategorien mit Name und Preis.
+      if (e.type === 'kassenschlager' && e.content && !Array.isArray(e.content.hintCats)) {
+        const names = Array.isArray(e.content.hintNames) ? e.content.hintNames : [];
+        e.content.hintCats = MOVIE_HINTS.map(([n, price], i) => ({ name: String(names[i] || '').trim() || n, price }));
+        delete e.content.hintNames;
+      }
       if (e.type === 'allein' && ['Allein, allein', 'Wir sind ein Telepathie-Team'].includes(e.title)) e.title = 'Wir sind ein Telepa-Team';
       // Brain or Dreh'n: Joker getrennt nach positiv/negativ (6 + 6 aufs Rad).
       if (e.type === 'brain') migrateBrainContent(e.content);

@@ -8,7 +8,10 @@ const { fail, log, effect, teamName, teamIds, bookTarget, cleanText, cleanInk } 
 const { pv } = require('./scoring');
 const { MOVIE_HINTS } = require('./defaults');
 // Name der Hinweis-Kategorie: im Editor umbenennbar, sonst Standard.
-const hintName = (game, i) => ((game.content.hintNames && String(game.content.hintNames[i] || '').trim()) || MOVIE_HINTS[i][0]);
+const cat = (game, i) => (game.content.hintCats && game.content.hintCats[i]) || {};
+const hintName = (game, i) => String(cat(game, i).name || '').trim() || (game.content.hintNames && String(game.content.hintNames[i] || '').trim()) || MOVIE_HINTS[i][0];
+// Preis der Hinweis-Kategorie: im Editor änderbar, sonst Standard.
+const hintPrice = (game, i) => { const v = cat(game, i).price; return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : MOVIE_HINTS[i][1]; };
 
 const START_MONEY = 20;
 const REWARD = 5;
@@ -30,21 +33,21 @@ function teamMovie(m, teamId) {
   return m.teams[teamId];
 }
 
-function canBuyAny(db, st, m, teamId) {
+function canBuyAny(db, st, m, teamId, game) {
   const tm = teamMovie(m, teamId);
   if (tm.bought.length >= MAX_BUYS) return false;
   const money = wallet(db, st, teamId);
-  return MOVIE_HINTS.some(([, price], i) => !tm.bought.includes(i) && price <= money);
+  return MOVIE_HINTS.some((_, i) => !tm.bought.includes(i) && (game ? hintPrice(game, i) : MOVIE_HINTS[i][1]) <= money);
 }
 
 // Zug an das nächste Team geben, das den Film noch nicht gelöst hat.
-function beginTurn(db, st, m) {
+function beginTurn(db, st, m, game) {
   while (m.cycle <= MAX_CYCLES) {
     while (m.turnPos < m.order.length) {
       const id = m.order[m.turnPos];
       if (!teamMovie(m, id).solved) {
         // Wer sich keinen Hinweis mehr leisten kann, darf direkt raten.
-        m.turn = { teamId: id, phase: canBuyAny(db, st, m, id) ? 'buy' : 'answer' };
+        m.turn = { teamId: id, phase: canBuyAny(db, st, m, id, game) ? 'buy' : 'answer' };
         return;
       }
       m.turnPos += 1;
@@ -57,7 +60,7 @@ function beginTurn(db, st, m) {
 
 function advance(db, ctx, game, st, m) {
   m.turnPos += 1;
-  beginTurn(db, st, m);
+  beginTurn(db, st, m, game);
   if (!m.turn) finishMovie(db, ctx, game, st, m);
 }
 
@@ -94,7 +97,7 @@ module.exports = {
       const tm = teamMovie(m, ctx.teamId);
       if (tm.bought.includes(i)) fail('Diesen Hinweis habt ihr schon gekauft.');
       if (tm.bought.length >= MAX_BUYS) fail(`Pro Film höchstens ${MAX_BUYS} Hinweise.`);
-      const price = MOVIE_HINTS[i][1];
+      const price = hintPrice(game, i);
       if (price > wallet(db, st, ctx.teamId)) fail('Dafür reicht euer Guthaben nicht.');
       st.wallet[ctx.teamId] -= price;
       tm.bought.push(i);
@@ -128,7 +131,7 @@ module.exports = {
       st.movieIndex = i;
       const m = { order, cycle: 1, turnPos: 0, turn: null, teams: {}, finished: false };
       st.movies[i] = m;
-      beginTurn(db, st, m);
+      beginTurn(db, st, m, game);
       log(db, ctx, 'ablauf', `Film ${i + 1} gestartet`);
     },
 
@@ -202,7 +205,8 @@ module.exports = {
       phase: myTurn ? m.turn.phase : null,
       maxBuys: MAX_BUYS,
       boughtCount: tm.bought.length,
-      hints: MOVIE_HINTS.map(([, price], i) => {
+      hints: MOVIE_HINTS.map((_, i) => {
+        const price = hintPrice(game, i);
         const photo = content.hintPhotos && content.hintPhotos[i] && content.hintPhotos[i].photo;
         return {
           label: hintName(game, i), price,
