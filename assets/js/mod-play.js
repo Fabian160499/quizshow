@@ -374,8 +374,17 @@ function nerd(ui, g, st) {
     return out;
   }
   if (r.phase === 'choose') {
-    out.push(h('div', { class: 'notice warn' }, `Gleichstand um den ${r.choose.which === 'first' ? 'ersten' : 'zweiten'} Versuch. Stichentscheid: Wer beginnt?`));
-    out.push(row(...r.choose.teamIds.map((id) => btn('', ui.teamName(id), () => ui.confirmAct(`${ui.teamName(id)} bekommt den Versuch? Der Stichentscheid wird protokolliert.`, 'play.choose', { teamId: id })))));
+    if (r.choose.which === 'first') {
+      const prefs = r.choose.prefs || {};
+      out.push(h('div', { class: 'notice warn' }, r.coin ? `Münzwurf läuft – ${ui.teamName(r.coin.winner)} beginnt. „Weiter“ übernimmt das Ergebnis.` : 'Gleichstand: Die Teams wählen auf dem iPad „Starten“ oder „Nachziehen“. Bei gleicher Wahl entscheidet ein Münzwurf.'));
+      out.push(h('ul', { class: 'list' }, r.choose.teamIds.map((id) => h('li', {}, ui.dot(ui.teamColor(id)), h('span', { class: 'grow' }, ui.teamName(id)),
+        prefs[id] ? badge('ok', prefs[id] === 'start' ? 'Starten' : 'Nachziehen') : badge('warn', 'wählt noch')))));
+      out.push(h('details', {}, h('summary', { class: 'muted' }, 'Notfall: iPad fällt aus – selbst festlegen, wer beginnt'),
+        row(...r.choose.teamIds.map((id) => btn('small ghost', ui.teamName(id), () => ui.confirmAct(`${ui.teamName(id)} beginnt? Wird protokolliert.`, 'play.choose', { teamId: id }))))));
+    } else {
+      out.push(h('div', { class: 'notice warn' }, 'Gleichstand um den zweiten Versuch. Stichentscheid: Wer bekommt ihn?'));
+      out.push(row(...r.choose.teamIds.map((id) => btn('', ui.teamName(id), () => ui.confirmAct(`${ui.teamName(id)} bekommt den Versuch? Der Stichentscheid wird protokolliert.`, 'play.choose', { teamId: id })))));
+    }
     return out;
   }
   const a = r.attempt;

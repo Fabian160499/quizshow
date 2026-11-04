@@ -217,6 +217,16 @@ function jauch(v, teamOf, s) {
 }
 
 // ---------- 8 ----------
+// Animierter Münzwurf: Vorder- und Rückseite mit Name und Farbe der Teams, landet auf dem Gewinner.
+function nerdCoin(coin, teamOf) {
+  const w = coin.winner;
+  const other = coin.teams.find((id) => id !== w) || w;
+  const face = (id, cls) => { const t = teamOf(id); return h('div', { class: `coin-face ${cls}`, '--c': t.color }, h('span', {}, t.name)); };
+  return h('div', { class: 'nerd-coin-wrap' },
+    h('div', { class: 'nerd-coin' }, face(w, 'front'), face(other, 'back')),
+    h('div', { class: 'nerd-coin-result' }, `${teamOf(w).name} beginnt!`));
+}
+
 function nerd(v, teamOf) {
   if (v.waiting) return [h('div', { class: 'mega', style: { fontSize: 'clamp(2.4rem,6vw,6rem)' } }, 'Wer nix werd, werd Nerd')];
   const out = [v.finale ? sub('★ Die große Finalkategorie ★') : null, h('div', { class: `q ${v.finale ? 'finale' : ''}` }, v.category),
@@ -226,7 +236,8 @@ function nerd(v, teamOf) {
     return out;
   }
   out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.bids.map((b, i) => chip(teamOf(b.teamId), v.attempt?.teamId === b.teamId && !v.attempt.done ? 'answering' : '', h('b', { style: { marginLeft: '.5em', animation: `pop .4s ${i * 0.2}s both` } }, b.bid)))));
-  if (v.phase === 'choose') out.push(sub('Gleichstand! Die Moderation entscheidet.', { marginTop: '3vh' }));
+  if (v.phase === 'choose' && v.coin) out.push(nerdCoin(v.coin, teamOf));
+  else if (v.phase === 'choose') out.push(sub(v.choose && v.choose.which === 'first' ? `Gleichstand! ${v.choose.teamIds.map((id) => teamOf(id).name).join(' und ')} wählen: Starten oder Nachziehen?` : 'Gleichstand! Die Moderation entscheidet.', { marginTop: '3vh' }));
   const a = v.attempt;
   if (a) {
     const t = teamOf(a.teamId);

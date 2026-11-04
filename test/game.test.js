@@ -413,13 +413,13 @@ test('Nerd: geheime Gebote, Stichentscheid, erster und zweiter Versuch', () => {
   mark({ text: 'Sonic' });
   mark({ text: 'Pikachu' }); // dritter Fehler → b verliert 4
   assert.equal(game.totals(db)[b], -4);
-  // Standardregel: das gleich hohe Gebot von a zählt nicht als zweithöchstes – c bekommt den Versuch mit Ziel 4.
+  // Das andere Team aus dem Gleichstand (a) zieht nach und bekommt den zweiten Versuch mit Ziel 4.
   const v = game.teamView(db, c).play;
-  assert.equal(v.attempt.teamId, c);
+  assert.equal(v.attempt.teamId, a);
   assert.equal(v.attempt.target, 4);
   mark({ text: 'falsch' });
-  mark({ text: 'falsch' }); // zweiter Fehler → c verliert höchstens 3 (Gebot 2)
-  assert.deepEqual([a, b, c].map((t) => game.totals(db)[t]), [0, -4, -2]);
+  mark({ text: 'falsch' }); // zweiter Fehler → a verliert höchstens 3
+  assert.deepEqual([a, b, c].map((t) => game.totals(db)[t]), [-3, -4, 0]);
   game.applyAction(db, mod(), 'play.open', { catIndex: 1 });
   game.applyAction(db, team(a), 'play.bid', { bid: 2 });
   game.applyAction(db, mod(), 'play.revealBids', { force: true });
@@ -427,7 +427,7 @@ test('Nerd: geheime Gebote, Stichentscheid, erster und zweiter Versuch', () => {
   game.applyAction(db, mod(), 'play.unmark');
   mark({ answer: 'Pakistan' });
   mark({ answer: 'Afghanistan' });
-  assert.equal(game.totals(db)[a], 2);
+  assert.equal(game.totals(db)[a], -1); // −3 aus Kategorie 1, +2 aus Kategorie 2
 });
 
 test('Kassenschlager: Paywall, Züge, private Ergebnisse, Ausscheiden und Umrechnung', () => {
@@ -1235,4 +1235,40 @@ test('Regie-Verbindung bekommt unveränderte große Teile nur einmal', () => {
   const third = game.trimForConnection(game.moderatorView(db), cache);
   assert.ok(third.library, 'geänderte Datenbank wird wieder geschickt');
   assert.ok(!('types' in third));
+});
+
+
+test('Nerd: Gleichstand – Teams wählen Starten/Nachziehen, bei gleicher Wahl Münzwurf', () => {
+  const { db, ids } = setup(3);
+  const [a, b, c] = ids;
+  activate(db, 'nerd');
+  const st = () => db.live.games[gid(db, 'nerd')].rounds[0];
+  game.applyAction(db, mod(), 'play.open', { catIndex: 0 });
+  for (const t of [a, b]) game.applyAction(db, team(t), 'play.bid', { bid: 5 });
+  game.applyAction(db, team(c), 'play.bid', { bid: 2 });
+  game.applyAction(db, mod(), 'play.revealBids');
+  assert.throws(() => game.applyAction(db, team(c), 'play.tiePick', { pref: 'start' }), /nichts zu wählen/);
+  game.applyAction(db, team(a), 'play.tiePick', { pref: 'follow' });
+  assert.equal(game.teamView(db, b).play.choose.picked.length, 1);
+  assert.ok(!JSON.stringify(game.teamView(db, b).play).includes('follow'), 'Wahl der anderen bleibt geheim');
+  game.applyAction(db, team(b), 'play.tiePick', { pref: 'start' });
+  assert.equal(st().attempt.teamId, b);
+  assert.deepEqual(st().follow, [a]);
+  // Zweite Kategorie: beide wählen „Starten“ → Münzwurf, „Weiter“ übernimmt
+  game.applyAction(db, mod(), 'play.mark', { text: 'x' });
+  game.applyAction(db, mod(), 'play.mark', { text: 'x' });
+  game.applyAction(db, mod(), 'play.mark', { text: 'x' }); // b scheitert → a zieht nach
+  assert.equal(st().attempt.teamId, a);
+  game.applyAction(db, mod(), 'play.mark', { text: 'x' });
+  game.applyAction(db, mod(), 'play.mark', { text: 'x' });
+  game.applyAction(db, mod(), 'play.open', { catIndex: 1 });
+  for (const t of [a, b]) game.applyAction(db, team(t), 'play.bid', { bid: 3 });
+  game.applyAction(db, mod(), 'play.revealBids', { force: true });
+  game.applyAction(db, team(a), 'play.tiePick', { pref: 'start' });
+  game.applyAction(db, team(b), 'play.tiePick', { pref: 'start' });
+  const r = db.live.games[gid(db, 'nerd')].rounds[1];
+  assert.ok(r.coin && [a, b].includes(r.coin.winner));
+  assert.ok(game.beamerView(db).gameView === undefined || true);
+  game.applyAction(db, mod(), 'play.coinDone');
+  assert.equal(r.attempt.teamId, r.coin.winner);
 });

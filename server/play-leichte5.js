@@ -41,6 +41,12 @@ module.exports = {
       r.wasOpened = true;
       log(db, ctx, 'ablauf', `Frage ${qIndex + 1} freigegeben`);
     },
+    // Abgabe schließen (auch automatisch, sobald alle abgegeben haben).
+    close(db, ctx, game, st) {
+      const r = round(st, st.qIndex);
+      r.open = false;
+      log(db, ctx, 'ablauf', `Abgabe für Frage ${st.qIndex + 1} geschlossen`);
+    },
     showAnswer(db, ctx, game, st, p) {
       const ans = round(st, st.qIndex).answers[p.teamId];
       if (!ans) fail('Dieses Team hat noch nicht abgegeben.');
