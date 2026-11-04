@@ -2220,3 +2220,21 @@ body.drawer-open { overflow: hidden; }
 .rundown-list li.rd-insert-form { margin: 6px 0; background: rgba(255, 45, 138, 0.1); outline: 2px dashed var(--accent); gap: 8px; }
 .rundown-list li.rd-insert-form select { width: auto; }
 @media (hover: none) { .rd-plus { opacity: 0.6; transform: none; } }
+
+/* Die leichten 5: jedes Team groß nebeneinander, richtig/falsch als großer Stempel */
+.beamer .answers.l5-answers { width: min(90vw, 160vh); box-sizing: border-box; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.2vh 1.6vw; margin-top: 2.4vh; }
+.beamer .answers.l5-answers.n1 { grid-template-columns: minmax(0, 60vh); justify-content: center; }
+.beamer .answers.l5-answers.n2, .beamer .answers.l5-answers.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(80vw, 140vh); }
+.beamer .l5-card { position: relative; overflow: visible; animation: rise 0.45s ease-out both; transition: box-shadow 0.3s; }
+.beamer .l5-card .l5-name { margin: 0 0.7vw; font-size: clamp(0.9rem, min(2vw, 3.4vh), 2.2rem); padding: 1vh 0.6vw; }
+.beamer .l5-card .ans-body { min-height: 24vh; font-size: clamp(1.2rem, min(3.4vw, 6vh), 4rem); }
+.beamer .answers.l5-answers.n1 .ans-body, .beamer .answers.l5-answers.n2 .ans-body { min-height: 34vh; }
+.beamer .l5-card .ink-answer.beamer { height: 22vh; }
+.beamer .answers.l5-answers.n1 .ink-answer.beamer, .beamer .answers.l5-answers.n2 .ink-answer.beamer { height: 30vh; }
+.beamer .l5-card.ok { box-shadow: inset 0.7vw 0 0 var(--team), inset -0.7vw 0 0 var(--team), 0 0 0 0.5vh var(--ok), 0 0 4vh rgba(43, 217, 107, 0.6); }
+.beamer .l5-card.bad { box-shadow: inset 0.7vw 0 0 var(--team), inset -0.7vw 0 0 var(--team), 0 0 0 0.5vh var(--bad), 0 0 4vh rgba(255, 77, 94, 0.5); }
+.beamer .l5-card.bad .ans-body > :not(.l5-stamp) { opacity: 0.55; }
+.beamer .l5-stamp { position: absolute; z-index: 2; right: -1.2vw; top: -2.4vh; width: 10vh; height: 10vh; border-radius: 50%; display: grid; place-items: center; font-size: 7vh; font-weight: 900; color: #fff; box-shadow: 0 0.8vh 2.4vh rgba(0, 0, 0, 0.55); animation: l5Stamp calc(0.5s * var(--speed, 1)) cubic-bezier(.2, 1.6, .4, 1) both; }
+.beamer .l5-stamp.ok { background: var(--ok); color: #062b14; }
+.beamer .l5-stamp.bad { background: var(--bad); }
+@keyframes l5Stamp { from { transform: scale(2.4) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }

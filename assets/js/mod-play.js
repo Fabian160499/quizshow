@@ -62,11 +62,28 @@ function leichte5(ui, g, st) {
   const q = g.content.questions[qIndex];
   out.push(h('p', { class: 'question', style: { fontSize: '1.4rem' } }, q.question));
   out.push(h('p', {}, h('span', { class: 'muted' }, 'Musterlösung (nur für dich): '), h('b', {}, q.solution)));
-  out.push(h('p', {}, round.open ? badge('ok', '● Abgabe offen') : badge('', '🔒 Abgabe geschlossen')));
+  const submitted = Object.values(round.answers);
+  const allShown = submitted.length > 0 && submitted.every((a) => a.onBeamer);
+  out.push(h('p', { class: 'row', style: { alignItems: 'center' } }, round.open ? badge('ok', '● Abgabe offen') : badge('', '🔒 Abgabe geschlossen'),
+    btn(allShown ? 'cyan' : 'pink', allShown ? 'Alle Antworten ausblenden' : `Alle Antworten groß zeigen (${submitted.length})`, () => ui.act('play.showAll', { visible: !allShown }), !submitted.length)));
+  // Auflösen: erst alle falschen, dann ein richtiges, dann die übrigen richtigen.
+  const ungraded = submitted.filter((a) => a.grade === null).length;
+  const wrongLeft = submitted.filter((a) => a.grade === false && !a.revealed).length;
+  const rightLeft = submitted.filter((a) => a.grade === true && !a.revealed).length;
+  const rightShown = submitted.some((a) => a.grade === true && a.revealed);
+  const nextLabel = wrongLeft ? `Auflösen: ${wrongLeft} falsche zeigen ✗`
+    : rightLeft && !rightShown ? 'Auflösen: ein richtiges zeigen ✓'
+      : rightLeft ? `Auflösen: ${rightLeft === 1 ? 'das letzte richtige' : `restliche ${rightLeft} richtige`} zeigen ✓` : null;
+  if (submitted.length) {
+    out.push(h('p', { class: 'row', style: { alignItems: 'center' } },
+      nextLabel ? btn('pink', nextLabel, () => ui.act('play.revealNext'), ungraded > 0) : badge('ok', 'Alles aufgelöst'),
+      ungraded ? h('span', { class: 'muted' }, `Erst alle bewerten (${ungraded} offen) – die Wertung bleibt bis zum Auflösen verdeckt.`) : null));
+  }
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
     const a = round.answers[t.id];
     if (!a) return h('li', {}, ui.dot(t.color), h('span', { class: 'grow' }, t.name, h('span', { class: 'muted' }, ' – noch nicht abgegeben')));
-    const grade = a.grade === true ? badge('ok', '✓ richtig') : a.grade === false ? badge('bad', '✗ falsch') : badge('warn', 'offen');
+    const grade = [a.grade === true ? badge('ok', '✓ richtig') : a.grade === false ? badge('bad', '✗ falsch') : badge('warn', 'offen'),
+      a.revealed ? badge('', 'aufgelöst') : null];
     return h('li', {}, ui.dot(t.color),
       h('span', { class: 'grow' }, h('b', {}, t.name), ': ', answerContent(a, 'mod')),
       grade,

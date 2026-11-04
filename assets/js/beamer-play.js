@@ -43,13 +43,14 @@ function leichte5(v, teamOf) {
     out.push(h('div', { class: `l5-image-box${v.answers.length || v.solution ? ' small' : ''}` }, img));
   }
   if (!v.answers.length && v.question && !v.solution) out.push(sub(`${v.submittedCount} von ${v.teamCount} Teams haben abgegeben`, { marginTop: '2vh' }));
-  out.push(h('div', { class: 'answers' }, v.answers.map((a) => {
+  // Jedes Team groß in einer eigenen Karte, alle nebeneinander; richtig/falsch als großer Stempel.
+  out.push(h('div', { class: `answers l5-answers n${Math.min(v.answers.length, 6)}` }, v.answers.map((a) => {
     const t = teamOf(a.teamId);
-    const mark = a.grade === true ? h('span', { class: 'mark ok', 'aria-label': 'richtig' }, '✓') : a.grade === false ? h('span', { class: 'mark bad', 'aria-label': 'falsch' }, '✗') : null;
+    const mark = a.grade === true ? h('span', { class: 'l5-stamp ok', 'aria-label': 'richtig' }, '✓') : a.grade === false ? h('span', { class: 'l5-stamp bad', 'aria-label': 'falsch' }, '✗') : null;
     // Wie im Finale: schwarze Antwortfläche, darunter die graue Namensleiste, Teamfarbe als seitliche Balken.
-    return h('div', { class: `answer fx-card${a.ink ? ' has-ink' : ''}`, '--team': t.color },
-      h('div', { class: 'ans-body' }, answerContent(a, 'beamer'), mark),
-      h('div', { class: 'ans-name' }, t.name));
+    return h('div', { class: `answer fx-card l5-card${a.ink ? ' has-ink' : ''}${a.grade === true ? ' ok' : a.grade === false ? ' bad' : ''}`, '--team': t.color },
+      h('div', { class: 'ans-name l5-name' }, t.name),
+      h('div', { class: 'ans-body' }, answerContent(a, 'beamer'), mark));
   })));
   if (v.solution) out.push(h('div', { class: 'solution' }, `Lösung: ${v.solution}`));
   return out;
