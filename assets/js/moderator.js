@@ -447,26 +447,47 @@ function buildPauseSongs(st) {
 }
 
 // Bearbeiten im Show-Editor: Schritte verschieben, löschen, Pausen einfügen.
+// Einfügen zwischen zwei Schritten: Maus auf die Lücke → „+“ → Art wählen → Einfügen.
+let rdInsertAt = null; // Index, an dem das Einfüge-Formular offen ist
+function rundownInsertForm(i, insertAt) {
+  const kindSel = h('select', { 'aria-label': 'Art des Schritts' },
+    Object.entries(RUN_KIND_LABEL).map(([k, label]) => h('option', { value: k }, k === 'coin' ? label : `${RUN_ICON[k]} ${label}`)));
+  const posSel = h('select', { 'aria-label': 'Spiel' }, S.project.games.map((g, k) => h('option', { value: String(k + 1) }, `Spiel ${k + 1} · ${g.title}`)));
+  const stageSel = h('select', { 'aria-label': 'Gewinnstufe' }, [1, 2, 3].map((n) => h('option', { value: String(n) }, `Gewinnstufe ${n}`)));
+  const updatePos = () => { posSel.hidden = !['title', 'game', 'coin', 'pyramid'].includes(kindSel.value); stageSel.hidden = !['stageTitle', 'hosts'].includes(kindSel.value); };
+  kindSel.onchange = updatePos;
+  kindSel.value = 'pause';
+  updatePos();
+  const close = () => { rdInsertAt = null; renderAll(true); };
+  const form = h('li', { class: 'rd-insert-form' },
+    h('span', { class: 'rd-plus on', 'aria-hidden': 'true' }, '+'),
+    kindSel, posSel, stageSel,
+    h('button', { class: 'btn small pink', onclick: () => {
+      const st = { kind: kindSel.value };
+      if (!posSel.hidden) st.pos = Number(posSel.value);
+      if (st.kind === 'pyramid' && st.pos === undefined) delete st.pos;
+      if (st.kind === 'stageTitle' || st.kind === 'hosts') st.stage = Number(stageSel.value);
+      rdInsertAt = null;
+      document.activeElement?.blur();
+      insertAt(i, st);
+    } }, 'Einfügen'),
+    h('button', { class: 'btn small ghost', onclick: close }, 'Abbrechen'));
+  setTimeout(() => kindSel.focus(), 0);
+  return form;
+}
+
 function buildRundownEditor() {
   const steps = (S.rundown || []).map(({ id, kind, pos, stage, label, songs }) => ({ id, kind, pos, stage, label, songs }));
   const save = (list) => act('rundown.set', { steps: list });
   const move = (i, d) => { const l = [...steps]; const [x] = l.splice(i, 1); l.splice(i + d, 0, x); save(l); };
   const insertAt = (i, st) => { const l = [...steps]; l.splice(i, 0, st); save(l); };
-  const kindSel = h('select', { 'aria-label': 'Art des Schritts' },
-    Object.entries(RUN_KIND_LABEL).map(([k, label]) => h('option', { value: k }, k === 'coin' ? label : `${RUN_ICON[k]} ${label}`)));
-  const posSel = h('select', { 'aria-label': 'Spiel' }, S.project.games.map((g, i) => h('option', { value: String(i + 1) }, `Spiel ${i + 1} · ${g.title}`)));
-  const stageSel = h('select', { 'aria-label': 'Gewinnstufe' }, [1, 2, 3].map((n) => h('option', { value: String(n) }, `Gewinnstufe ${n}`)));
-  const afterSel = h('select', { 'aria-label': 'Einfügen nach' },
-    h('option', { value: '0' }, 'ganz am Anfang'),
-    steps.map((st, i) => h('option', { value: String(i + 1), selected: i === steps.length - 1 }, `nach ${i + 1}. ${S.rundown[i].text}`)));
-  const updatePos = () => { posSel.hidden = !['title', 'game', 'coin', 'pyramid'].includes(kindSel.value); stageSel.hidden = !['stageTitle', 'hosts'].includes(kindSel.value); };
-  kindSel.onchange = updatePos;
-  kindSel.value = 'pause';
-  updatePos();
-  return card('Showablauf (Reihenfolge der Show)',
-    h('p', { class: 'muted' }, 'So läuft die Show in der Live-Regie ab – Schritt für Schritt mit „Weiter“, wie eine Präsentation.',
-      S.rundownCustom ? ' Du hast den Ablauf angepasst.' : ' Das ist der Standardablauf aus deinen Spielen.'),
-    h('ol', { class: 'list rundown-list' }, S.rundown.map((st, i) => h('li', { class: `rd k-${st.kind}` },
+  if (rdInsertAt !== null && rdInsertAt > steps.length) rdInsertAt = null;
+  const gap = (i) => (rdInsertAt === i ? rundownInsertForm(i, insertAt)
+    : h('li', { class: 'rd-gap' }, h('button', { class: 'rd-plus', title: 'Hier einen Schritt einfügen', 'aria-label': `Schritt an Position ${i + 1} einfügen`, onclick: () => { rdInsertAt = i; renderAll(true); } }, '+')));
+  const items = [];
+  S.rundown.forEach((st, i) => {
+    items.push(gap(i));
+    items.push(h('li', { class: `rd k-${st.kind}` },
       h('b', { class: 'rd-n' }, `${i + 1}.`),
       h('span', { class: 'rd-i', 'aria-hidden': 'true' }, runIcon(st.kind)),
       h('span', { class: 'grow' }, st.text),
@@ -474,21 +495,18 @@ function buildRundownEditor() {
         class: `btn small ${openPause === st.id ? 'pink' : 'ghost'}`, 'aria-expanded': String(openPause === st.id),
         onclick: () => { openPause = openPause === st.id ? null : st.id; renderAll(true); },
       }, `♪ Lieder (${(st.songs || []).length})`) : null,
-      h('button', { class: 'btn small ghost', title: 'Pause danach einfügen', onclick: () => insertAt(i + 1, { kind: 'pause' }) }, '+ ☕'),
       h('button', { class: 'btn small ghost', 'aria-label': 'Nach oben', disabled: i === 0, onclick: () => move(i, -1) }, '↑'),
       h('button', { class: 'btn small ghost', 'aria-label': 'Nach unten', disabled: i === steps.length - 1, onclick: () => move(i, 1) }, '↓'),
       h('button', { class: 'btn small bad', 'aria-label': 'Schritt entfernen', onclick: () => save(steps.filter((_, k) => k !== i)) }, '✕'),
-      st.kind === 'pause' && openPause === st.id ? buildPauseSongs(st) : null))),
-    h('div', { class: 'row', style: { marginTop: '12px' } },
-      kindSel, posSel, stageSel, afterSel,
-      h('button', { class: 'btn', onclick: () => {
-        const st = { kind: kindSel.value };
-        if (!posSel.hidden) st.pos = Number(posSel.value);
-        if (st.kind === 'pyramid' && st.pos === undefined) delete st.pos;
-        if (st.kind === 'stageTitle' || st.kind === 'hosts') st.stage = Number(stageSel.value);
-        insertAt(Number(afterSel.value), st);
-      } }, '+ Schritt einfügen'),
-      S.rundownCustom ? h('button', { class: 'btn ghost', onclick: () => confirmAct('Eigene Änderungen am Ablauf verwerfen und den Standardablauf wiederherstellen?', 'rundown.reset') }, 'Standardablauf wiederherstellen') : null));
+      st.kind === 'pause' && openPause === st.id ? buildPauseSongs(st) : null));
+  });
+  items.push(gap(S.rundown.length));
+  return card('Showablauf (Reihenfolge der Show)',
+    h('p', { class: 'muted' }, 'Fahre mit der Maus zwischen zwei Schritte und klicke auf „+“, um dort einen Schritt einzufügen.',
+      S.rundownCustom ? ' Du hast den Ablauf angepasst.' : ' Das ist der Standardablauf aus deinen Spielen.'),
+    h('ol', { class: 'list rundown-list' }, items),
+    S.rundownCustom ? h('div', { class: 'row', style: { marginTop: '12px' } },
+      h('button', { class: 'btn ghost', onclick: () => confirmAct('Eigene Änderungen am Ablauf verwerfen und den Standardablauf wiederherstellen?', 'rundown.reset') }, 'Standardablauf wiederherstellen')) : null);
 }
 
 let helpOn = store('quiz.helpOn') === '1';
