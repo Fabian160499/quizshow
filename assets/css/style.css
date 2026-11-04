@@ -2207,3 +2207,16 @@ details.item.drop-here { outline: 2px dashed var(--accent-2, #ffc23d); outline-o
 body.drawer-open { overflow: hidden; }
 @keyframes drawerIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Showablauf: „+“ zwischen den Schritten zum Einfügen */
+.rundown-list { gap: 0; }
+.rundown-list li.rd { margin: 0; }
+.rundown-list li.rd-gap { position: relative; height: 10px; padding: 0; background: transparent; justify-content: center; overflow: visible; }
+.rundown-list li.rd-gap::before { content: ""; position: absolute; left: 12px; right: 12px; top: 50%; height: 2px; margin-top: -1px; background: var(--accent); opacity: 0; transition: opacity 0.15s; }
+.rundown-list li.rd-gap:hover::before, .rundown-list li.rd-gap:focus-within::before { opacity: 0.8; }
+.rd-plus { position: relative; z-index: 1; width: 24px; height: 24px; margin-top: -7px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; font-weight: 800; font-size: 1rem; line-height: 24px; padding: 0; cursor: pointer; opacity: 0; transform: scale(0.7); transition: opacity 0.15s, transform 0.15s; }
+.rundown-list li.rd-gap:hover .rd-plus, .rd-plus:focus-visible { opacity: 1; transform: scale(1); }
+.rd-plus.on { opacity: 1; transform: none; margin: 0; display: inline-block; text-align: center; }
+.rundown-list li.rd-insert-form { margin: 6px 0; background: rgba(255, 45, 138, 0.1); outline: 2px dashed var(--accent); gap: 8px; }
+.rundown-list li.rd-insert-form select { width: auto; }
+@media (hover: none) { .rd-plus { opacity: 0.6; transform: none; } }
