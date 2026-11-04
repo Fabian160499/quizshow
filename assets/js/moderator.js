@@ -1041,7 +1041,6 @@ function buildSlot(g, i, running) {
     h('b', { class: 'slot-title' }, g.title),
     h('span', { class: 'muted slot-type' }, g.title === type.title ? type.summary : type.title),
     h('div', { class: 'row', style: { gap: '6px' } },
-      g.locked ? h('span', { class: 'badge warn' }, '🔒 Eröffnungsspiel') : null,
       S.coinPositions.includes(pos) ? h('span', { class: 'badge coin-badge' }, coinImg(), ' danach Münze') : null)),
   h('div', { class: 'slot-actions' },
     h('button', { class: `btn small ${g.id === selectedGame ? 'pink' : 'ghost'}`, onclick: () => { selectedGame = g.id; renderAll(true); } }, 'Bearbeiten'),
