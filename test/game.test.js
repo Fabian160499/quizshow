@@ -1053,26 +1053,42 @@ test('Kassenschlager: Hinweis-Kategorien umbenennbar, Foto als Hinweis erst nach
   const [a, b] = ids;
   const g = db.project.games.find((x) => x.type === 'kassenschlager');
   const content = structuredClone(g.content);
-  delete content.hintNames; // alter Stand ohne die neuen Felder
+  delete content.hintCats; // alter Stand ohne die neuen Felder
   content.movies.forEach((m) => delete m.hintPhotos);
   activate(db, 'kassenschlager', content);
   assert.ok(game.teamView(db, a)); // lädt ohne Fehler
   const c2 = structuredClone(db.project.games.find((x) => x.type === 'kassenschlager').content);
-  assert.equal(c2.hintNames.length, 10);
+  assert.equal(c2.hintCats.length, 10);
   assert.equal(c2.movies[0].hintPhotos.length, 10);
-  c2.hintNames[8] = 'Szenenfoto';
+  c2.hintCats[8] = { name: 'Szenenfoto', price: 5 };
+  c2.hintCats[0] = { name: 'Jahr', price: 0 };
   c2.movies[0].hints[8] = '';
   c2.movies[0].hintPhotos[8] = { photo: { id: 'media_bbbbbbbbbbbb22', type: 'image/jpeg', name: 'szene.jpg', size: 1 } };
   game.applyAction(db, mod(), 'show.activate', { gameId: null });
   activate(db, 'kassenschlager', c2);
   game.applyAction(db, mod(), 'play.startMovie', { movieIndex: 0 });
   assert.equal(game.teamView(db, a).play.hints[8].label, 'Szenenfoto');
+  assert.equal(game.teamView(db, a).play.hints[8].price, 5);
+  assert.equal(game.teamView(db, a).play.hints[0].price, 0);
   assert.equal(game.teamView(db, a).play.hints[8].photo, null); // noch nicht gekauft
   game.applyAction(db, team(a), 'play.buy', { hint: 8 });
   assert.equal(game.teamView(db, a).play.hints[8].photo.id, 'media_bbbbbbbbbbbb22');
+  assert.equal(game.teamView(db, a).play.wallet, 15); // 20 − 5
   assert.equal(game.teamView(db, b).play.hints[8].photo, null);
   assert.ok(game.referencedMedia(db).has('media_bbbbbbbbbbbb22'));
   // Generalprobe: Hinweis mit Foto ohne Text gilt nicht als leer.
   const rep = JSON.stringify(require('../server/check').checkShow(db, require('../server/defaults').TYPES));
   assert.ok(!/9\. Verpixeltes[^"]*","text":"ist leer/.test(rep));
+});
+
+test('Kassenschlager: alte umbenannte Hinweis-Namen werden beim Start zu Name + Preis übernommen', () => {
+  const db = game.createState();
+  const e = db.library.find((x) => x.type === 'kassenschlager');
+  delete e.content.hintCats;
+  e.content.hintNames = ['Jahr', '', 'Regie'];
+  game.migrate(db);
+  assert.equal(e.content.hintCats[0].name, 'Jahr');
+  assert.equal(e.content.hintCats[1].name, 'Genre');
+  assert.equal(e.content.hintCats[3].price, 4);
+  assert.equal(e.content.hintNames, undefined);
 });
