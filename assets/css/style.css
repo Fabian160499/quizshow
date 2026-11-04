@@ -2238,3 +2238,10 @@ body.drawer-open { overflow: hidden; }
 .beamer .l5-stamp.ok { background: var(--ok); color: #062b14; }
 .beamer .l5-stamp.bad { background: var(--bad); }
 @keyframes l5Stamp { from { transform: scale(2.4) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Auflösung einzeln: ein Team groß in der Mitte */
+.beamer .answers.l5-answers.l5-solo.n1 { grid-template-columns: minmax(0, min(70vw, 110vh)); }
+.beamer .answers.l5-answers.l5-solo.n1 .ans-body { min-height: 42vh; font-size: clamp(2rem, min(6vw, 10vh), 7rem); }
+.beamer .answers.l5-answers.l5-solo.n1 .ink-answer.beamer { height: 38vh; }
+.beamer .answers.l5-answers.l5-solo.n1 .l5-name { font-size: clamp(1.2rem, min(3vw, 5vh), 3rem); }
+.beamer .answers.l5-answers.l5-solo.n1 .l5-stamp { width: 16vh; height: 16vh; font-size: 11vh; top: -4vh; right: -2.4vw; }

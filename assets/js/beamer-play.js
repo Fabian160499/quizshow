@@ -44,7 +44,7 @@ function leichte5(v, teamOf) {
   }
   if (!v.answers.length && v.question && !v.solution) out.push(sub(`${v.submittedCount} von ${v.teamCount} Teams haben abgegeben`, { marginTop: '2vh' }));
   // Jedes Team groß in einer eigenen Karte, alle nebeneinander; richtig/falsch als großer Stempel.
-  out.push(h('div', { class: `answers l5-answers n${Math.min(v.answers.length, 6)}` }, v.answers.map((a) => {
+  out.push(h('div', { class: `answers l5-answers n${Math.min(v.answers.length, 6)}${v.reveal && !v.reveal.done ? ' l5-solo' : ''}` }, v.answers.map((a) => {
     const t = teamOf(a.teamId);
     const mark = a.grade === true ? h('span', { class: 'l5-stamp ok', 'aria-label': 'richtig' }, '✓') : a.grade === false ? h('span', { class: 'l5-stamp bad', 'aria-label': 'falsch' }, '✗') : null;
     // Wie im Finale: schwarze Antwortfläche, darunter die graue Namensleiste, Teamfarbe als seitliche Balken.

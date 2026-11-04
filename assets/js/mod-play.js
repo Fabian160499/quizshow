@@ -63,21 +63,26 @@ function leichte5(ui, g, st) {
   out.push(h('p', { class: 'question', style: { fontSize: '1.4rem' } }, q.question));
   out.push(h('p', {}, h('span', { class: 'muted' }, 'Musterlösung (nur für dich): '), h('b', {}, q.solution)));
   const submitted = Object.values(round.answers);
-  const allShown = submitted.length > 0 && submitted.every((a) => a.onBeamer);
-  out.push(h('p', { class: 'row', style: { alignItems: 'center' } }, round.open ? badge('ok', '● Abgabe offen') : badge('', '🔒 Abgabe geschlossen'),
-    btn(allShown ? 'cyan' : 'pink', allShown ? 'Alle Antworten ausblenden' : `Alle Antworten groß zeigen (${submitted.length})`, () => ui.act('play.showAll', { visible: !allShown }), !submitted.length)));
-  // Auflösen: erst alle falschen, dann ein richtiges, dann die übrigen richtigen.
+  out.push(h('p', {}, round.open ? badge('ok', '● Abgabe offen') : badge('', '🔒 Abgabe geschlossen')));
+  // Auflösung mit einem Knopf: jedes Team einzeln, erst Antwort, dann Wertung.
   const ungraded = submitted.filter((a) => a.grade === null).length;
-  const wrongLeft = submitted.filter((a) => a.grade === false && !a.revealed).length;
-  const rightLeft = submitted.filter((a) => a.grade === true && !a.revealed).length;
-  const rightShown = submitted.some((a) => a.grade === true && a.revealed);
-  const nextLabel = wrongLeft ? `Auflösen: ${wrongLeft} falsche zeigen ✗`
-    : rightLeft && !rightShown ? 'Auflösen: ein richtiges zeigen ✓'
-      : rightLeft ? `Auflösen: ${rightLeft === 1 ? 'das letzte richtige' : `restliche ${rightLeft} richtige`} zeigen ✓` : null;
+  const rv = round.rv;
+  let label = null;
+  if (!rv) label = 'Auflösung starten ▶ (erste Antwort groß zeigen)';
+  else if (!rv.done && !rv.verdict) {
+    const ids = rv.groups[rv.g] || [];
+    const ok = round.answers[ids[0]]?.grade === true;
+    label = ok ? (ids.length > 1 ? `✓ Alle ${ids.length} als richtig zeigen` : '✓ Richtig zeigen') : '✗ Falsch zeigen';
+  } else if (!rv.done) {
+    const nxt = rv.groups[rv.g + 1];
+    label = !nxt ? 'Übersicht aller Teams ▶' : nxt.length > 1 ? `Weiter: alle übrigen ${nxt.length} richtigen ▶` : `Weiter: ${ui.teamName(nxt[0])} ▶`;
+  }
   if (submitted.length) {
+    const cur = rv && !rv.done ? (rv.groups[rv.g] || []).map((id) => ui.teamName(id)).join(', ') : null;
     out.push(h('p', { class: 'row', style: { alignItems: 'center' } },
-      nextLabel ? btn('pink', nextLabel, () => ui.act('play.revealNext'), ungraded > 0) : badge('ok', 'Alles aufgelöst'),
-      ungraded ? h('span', { class: 'muted' }, `Erst alle bewerten (${ungraded} offen) – die Wertung bleibt bis zum Auflösen verdeckt.`) : null));
+      label ? btn('pink', label, () => ui.act('play.revealNext'), !rv && ungraded > 0) : badge('ok', 'Alles aufgelöst'),
+      !rv && ungraded ? h('span', { class: 'muted' }, `Erst alle bewerten (${ungraded} offen) – die Wertung bleibt bis zur Auflösung verdeckt.`) : null,
+      cur ? h('span', { class: 'muted' }, `Auf dem Beamer: ${cur}${rv.verdict ? '' : ' (noch ohne Wertung)'} · ${rv.g + 1} von ${rv.groups.length}`) : null));
   }
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
     const a = round.answers[t.id];
