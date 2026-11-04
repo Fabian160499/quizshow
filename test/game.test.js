@@ -1212,3 +1212,27 @@ test('Die leichten 5: Auflösung einzeln nacheinander – erst falsche, dann ein
   next(); assert.equal(shown().length, 5);
   assert.throws(next, /aufgelöst/);
 });
+
+test('Finale-iPad bekommt nur Showname, Frage und Spielstand – keine Codes, keine Lösungen', () => {
+  const { db } = setup(3);
+  const v = JSON.stringify(game.hostView(db));
+  for (const t of db.project.teams) assert.ok(!v.includes(t.code));
+  assert.ok(!v.includes('Canberra'));
+  assert.ok(!('library' in game.hostView(db)));
+  assert.equal(game.hostView(db).project.name, db.project.name);
+});
+
+test('Regie-Verbindung bekommt unveränderte große Teile nur einmal', () => {
+  const { db } = setup(2);
+  const cache = {};
+  const first = game.trimForConnection(game.moderatorView(db), cache);
+  assert.ok(first.types && first.datasets && first.library);
+  const second = game.trimForConnection(game.moderatorView(db), cache);
+  assert.ok(!('types' in second) && !('datasets' in second) && !('library' in second));
+  assert.ok(second.unchanged.includes('datasets'));
+  assert.ok(JSON.stringify(second).length < JSON.stringify(first).length / 5);
+  game.applyAction(db, mod(), 'library.add', { type: 'jauch' });
+  const third = game.trimForConnection(game.moderatorView(db), cache);
+  assert.ok(third.library, 'geänderte Datenbank wird wieder geschickt');
+  assert.ok(!('types' in third));
+});

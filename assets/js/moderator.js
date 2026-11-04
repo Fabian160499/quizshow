@@ -28,6 +28,8 @@ const conn = connect({
   onState: (s) => {
     // Andere Show geöffnet: alles Show-bezogene im Editor zurücksetzen, damit nichts
     // aus der vorherigen Show (Entwürfe, Auswahl) in die neue hineinwirkt.
+    // Unveränderte Teile schickt der Server nicht erneut – die letzte Fassung behalten.
+    for (const k of s.unchanged || []) if (S && k in S) s[k] = S[k];
     const switched = S && S.project.id !== s.project.id;
     S = s;
     if (switched) {
