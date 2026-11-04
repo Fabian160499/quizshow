@@ -373,9 +373,10 @@ const EXTRA_TYPES = {
           num('fy', 'Ausschnitt senkrecht: Mund-Mitte in Prozent von oben (0–100, leer = 50)', 0, 100),
           text('question', 'Frage / Aufgabe (sehen alle)', 200),
           text('answer', 'Richtige Antwort (nur für die Moderation)', 160),
+          media('reveal', 'Auflösungsfoto: der Schauspieler ganz (optional, erscheint mit der richtigen Antwort)', 'image'),
         ] },
     ],
-    example: { items: [{ image: null, zoom: 1, fx: null, fy: null, question: 'Wessen Lippen sind das?', answer: '' }] },
+    example: { items: [{ reveal: null, image: null, zoom: 1, fx: null, fy: null, question: 'Wessen Lippen sind das?', answer: '' }] },
   },
 
   telepa2: {

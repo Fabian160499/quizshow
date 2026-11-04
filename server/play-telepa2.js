@@ -7,6 +7,9 @@
 // abgegeben haben, sieht die Moderation beide Antworten nebeneinander und
 // entscheidet: passt (Punkte der Aufgabe, im Editor je Aufgabe einstellbar) oder
 // passt nicht (0). Die Buchung ist pro Team und Aufgabe eindeutig (keine Doppelwertung).
+// Auflösung nacheinander: Die Moderation drückt „Nächstes Team“ – der Beamer zeigt
+// dann nur dieses Team groß (beide Antworten, danach die Wertung). Ein Team sieht
+// sein Ergebnis auf dem iPad erst, wenn es auf dem Beamer aufgelöst wurde.
 
 const { fail, log, effect, teamName, teamIds, bookTarget, cleanInk } = require('./core');
 
@@ -20,6 +23,10 @@ function current(st) {
 }
 const pointsOf = (task) => { const v = Number(task.points); return Number.isFinite(v) ? v : 1; };
 const ans = (r, id) => (r.answers[id] ||= { p1: null, p2: null });
+const bothDone = (r, id) => !!(r.answers[id] && r.answers[id].p1 && r.answers[id].p2);
+// Teams in Team-Reihenfolge, die zur Auflösung anstehen (beide haben abgegeben).
+const revealOrder = (db, r) => teamIds(db).filter((id) => bothDone(r, id));
+const shownList = (r) => (r.shown ||= []);
 
 module.exports = {
   init: () => ({ index: -1, rounds: {} }),
@@ -53,6 +60,24 @@ module.exports = {
       current(st).open = false;
       log(db, ctx, 'ablauf', `Telepa-Team 2.0: Abgabe von Aufgabe ${st.index + 1} geschlossen`);
     },
+    // Nächstes Team auf dem Beamer auflösen. Schließt die Abgabe (sonst könnten
+    // andere Teams abschauen). Nach dem letzten Team: Übersicht aller Teams.
+    next(db, ctx, game, st) {
+      const r = current(st);
+      r.open = false;
+      const order = revealOrder(db, r);
+      const shown = shownList(r);
+      const nxt = order.find((id) => !shown.includes(id));
+      if (nxt) {
+        shown.push(nxt);
+        r.cur = nxt;
+        log(db, ctx, 'ablauf', `Telepa-Team 2.0: Auflösung ${teamName(db, nxt)}`);
+      } else {
+        r.cur = null;
+        r.overview = true;
+        log(db, ctx, 'ablauf', 'Telepa-Team 2.0: Übersicht aller Teams');
+      }
+    },
     // Wertung je Team: { teamId, match: true|false } – nur wenn beide abgegeben haben.
     judge(db, ctx, game, st, p) {
       const r = current(st);
@@ -72,7 +97,9 @@ module.exports = {
     const r = round(st, st.index);
     const task = game.content.tasks[st.index];
     const a = r.answers[teamId] || {};
-    const judged = r.judged[teamId];
+    // Ergebnis erst, wenn das Team auf dem Beamer aufgelöst wurde.
+    const revealed = shownList(r).includes(teamId) || r.overview;
+    const judged = revealed ? r.judged[teamId] : undefined;
     return {
       index: st.index,
       count: game.content.tasks.length,
@@ -90,16 +117,22 @@ module.exports = {
     if (st.index < 0) return { waiting: true };
     const r = round(st, st.index);
     const task = game.content.tasks[st.index];
+    const shown = shownList(r);
     return {
       index: st.index,
       count: game.content.tasks.length,
       task: task.task,
       points: pointsOf(task),
+      cur: r.cur || null,
+      overview: !!r.overview,
+      shownCount: shown.length,
+      revealCount: revealOrder(db, r).length,
       teams: db.project.teams.map((t) => {
         const a = r.answers[t.id] || {};
         const j = r.judged[t.id];
-        // Antworten erst nach der Wertung durch die Moderation.
-        return { teamId: t.id, p1: !!a.p1, p2: !!a.p2, judged: j === undefined ? null : j, inks: j === undefined ? null : [a.p1, a.p2] };
+        // Antworten erst, wenn das Team aufgelöst wird (nacheinander).
+        const vis = shown.includes(t.id);
+        return { teamId: t.id, p1: !!a.p1, p2: !!a.p2, shown: vis, judged: vis && j !== undefined ? j : null, inks: vis ? [a.p1, a.p2] : null };
       }),
     };
   },

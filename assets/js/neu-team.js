@@ -206,6 +206,7 @@ export function cropImg(m, crop, cls) {
 function lippen(g, ui) {
   const out = [muted(`Aufgabe ${g.index + 1} von ${g.count}`), g.image ? cropImg(g.image, g.crop, 'lip-img') : null, question(g.question)];
   if (g.resolved) {
+    if (g.reveal) out.push(h('div', { class: 'lip-full-box' }, img(g.reveal, 'lip-full')));
     out.push(g.answer ? h('p', { class: 'question' }, `Lösung: ${g.answer}`) : null);
     out.push(g.won ? stateBox('ok', '★', `Richtig! ${plus(pv(g, 'correct'))}`) : g.ownStatus === 'wrong' ? stateBox('bad', '✗', 'Leider daneben') : stateBox('', '■', 'Aufgabe beendet'));
     return out;
