@@ -214,7 +214,10 @@ export function ask(message, { confirmLabel = 'Ja', cancelLabel = 'Abbrechen', r
       const attrs = { id: `ask-f${i}`, name: f.name, autocomplete: 'off', type: f.type || 'text', value: f.value ?? '' };
       if (f.type === 'checkbox') Object.assign(attrs, { value: null, checked: !!f.value, style: { width: 'auto', marginRight: '8px' } });
       if (f.maxlength) attrs.maxlength = String(f.maxlength);
-      const el = h('input', attrs);
+      // Auswahlliste: f.options = [{ value, label }]
+      const el = f.type === 'select'
+        ? h('select', { id: attrs.id, name: f.name }, (f.options || []).map((o) => h('option', { value: o.value, selected: o.value === f.value }, o.label)))
+        : h('input', attrs);
       return { f, el, node: f.type === 'checkbox' ? h('label', { style: { fontWeight: 400, display: 'block', marginTop: '10px' } }, el, f.label) : [h('label', { for: attrs.id }, f.label), el] };
     });
     const ok = h('button', { class: `btn ${danger ? 'bad' : 'pink'}`, type: 'submit', disabled: !!requireText }, confirmLabel);

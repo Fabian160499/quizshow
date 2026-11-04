@@ -330,6 +330,16 @@ function kickTeam(teamId) {
   }
 }
 
+// Andere Show geöffnet: alle Team-iPads abmelden (jede Show hat eigene Zugangscodes).
+function kickAllTeams() {
+  for (const c of clients) {
+    if (c.role === 'team') {
+      send(c, { type: 'kicked', message: 'Die Moderation hat eine andere Show geöffnet. Bitte mit eurem Code neu anmelden.' });
+      c.ws.close();
+    }
+  }
+}
+
 function handleHello(c, msg) {
   if (msg.role === 'moderator') {
     if (!validSession(msg.token)) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
@@ -372,6 +382,7 @@ function handleAction(c, msg) {
     store.save();
     send(c, { type: 'ack', id: msg.id, ok: true, duplicate: !!result.duplicate, notice: result.notice || null, data: result.data ?? null });
     if (result.kick) kickTeam(result.kick);
+    if (result.kickAll) kickAllTeams();
     // Videos, auf die keine Show mehr verweist (ersetzt, entfernt, Show gelöscht), aufräumen.
     for (const id of mediaBefore) releaseMedia(id);
     broadcast();

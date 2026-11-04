@@ -173,6 +173,15 @@ export function createLocalServer() {
     }
   }
 
+  function kickAllTeams() {
+    for (const c of clients) {
+      if (c.role === 'team') {
+        send(c, { type: 'kicked', message: 'Die Moderation hat eine andere Show geöffnet. Bitte mit eurem Code neu anmelden.' });
+        setTimeout(() => c.close(), 10);
+      }
+    }
+  }
+
   function handle(c, msg) {
     if (msg.type === 'hello') {
       if (msg.role === 'moderator') {
@@ -205,6 +214,7 @@ export function createLocalServer() {
       save();
       send(c, { type: 'ack', id: msg.id, ok: true, duplicate: !!result.duplicate, notice: result.notice || null, data: result.data ?? null });
       if (result.kick) kickTeam(result.kick);
+      if (result.kickAll) kickAllTeams();
       broadcast();
       scheduleWake();
     } catch (err) {

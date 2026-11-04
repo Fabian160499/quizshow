@@ -206,6 +206,8 @@ function migrate(db) {
     }
     // Datenbank-Einträge von Spielarten, die es nicht mehr gibt (z. B. „All About That Bass“), entfernen.
     db.library = db.library.filter((e) => TYPES[e.type]);
+    // Shows strikt trennen (eigene IDs und Zugangscodes je Show).
+    separateShows(db);
     // Neue Spielarten einmalig in die Datenbank aufnehmen – nur ergänzen, nichts ändern.
     db.libraryTypesAdded = db.libraryTypesAdded || [];
     for (const type of EXTRA_ORDER) {
@@ -393,6 +395,56 @@ function findStashed(db, showId) {
   const s = db.shows.find((x) => x.project.id === showId);
   if (!s) fail('Show nicht gefunden.');
   return s;
+}
+
+// Shows sind vollständig getrennt: Eine Kopie bekommt eigene Spiel-, Team- und
+// Projekt-IDs und neue Zugangscodes – nichts wird zwischen Shows geteilt.
+function copyTeamsFresh(teams) {
+  const codes = [];
+  return teams.map((t) => {
+    const code = newTeamCode(codes);
+    codes.push(code);
+    return { ...clone(t), id: newId('team'), code };
+  });
+}
+function copyProject(src, name) {
+  const project = { ...clone(src), id: newId('proj'), name };
+  for (const g of project.games) g.id = newId('game');
+  project.teams = copyTeamsFresh(project.teams);
+  return project;
+}
+// Alte Daten reparieren: gleiche IDs oder gleiche Zugangscodes in mehreren Shows
+// (früher „Teams übernehmen, gleiche Codes“) führten dazu, dass Teams und Spiele
+// zwischen Shows verrutschten. Betroffene, gerade nicht geöffnete Shows bekommen neue IDs/Codes.
+function separateShows(db) {
+  const seenIds = new Set();
+  const seenCodes = new Set();
+  const remember = (pr) => {
+    for (const g of pr.games) seenIds.add(g.id);
+    for (const t of pr.teams) { seenIds.add(t.id); seenCodes.add(t.code); }
+    seenIds.add(pr.id);
+  };
+  remember(db.project);
+  db.shows = db.shows.map((sh) => {
+    const pr = sh.project;
+    const map = {};
+    if (seenIds.has(pr.id)) map[pr.id] = newId('proj');
+    for (const g of pr.games) if (seenIds.has(g.id)) map[g.id] = newId('game');
+    for (const t of pr.teams) if (seenIds.has(t.id)) map[t.id] = newId('team');
+    let out = sh;
+    if (Object.keys(map).length) {
+      // IDs sind zufällige, eindeutige Kennungen – Ersetzen im ganzen Show-Paket (Spielstand, Punkte) ist sicher.
+      let text = JSON.stringify(sh);
+      for (const [a, b] of Object.entries(map)) text = text.split(a).join(b);
+      out = JSON.parse(text);
+    }
+    const codes = out.project.teams.map((t) => t.code);
+    for (const t of out.project.teams) {
+      if (seenCodes.has(t.code)) { t.code = newTeamCode([...seenCodes, ...codes]); codes.push(t.code); }
+    }
+    remember(out.project);
+    return out;
+  });
 }
 
 function stashCurrent(db) {
@@ -1084,17 +1136,21 @@ const moderatorActions = {
   // Geöffnet ist immer genau eine Show (db.project mit Spielstand und Punkten),
   // die anderen liegen vollständig in db.shows.
 
+  // Neue Show: leer mit den Standardspielen oder als unabhängige Kopie einer Show
+  // (Spiele, Inhalte, Ablauf). Teams wahlweise übernehmen – immer mit neuen Codes.
   'shows.create'(db, ctx, p) {
     requireEditable(db);
     if (db.shows.length >= 50) fail('Maximal 50 Shows.');
     const name = cleanText(p.name || '', 80) || 'Neue Show';
-    const project = newProject(db.library, name);
+    const src = p.from ? (p.from === db.project.id ? db.project : findStashed(db, p.from).project) : null;
+    const project = src ? copyProject(src, name) : newProject(db.library, name);
     project.date = cleanDate(p.date);
-    if (p.copyTeams) project.teams = clone(db.project.teams);
+    if (!src && p.copyTeams) project.teams = copyTeamsFresh(db.project.teams);
+    if (src && !p.copyTeams) project.teams = newProject(db.library, name).teams;
     stashCurrent(db);
     openShow(db, { project, live: freshLive(), ledger: [] });
-    log(db, ctx, 'show', `Neue Show „${name}“ angelegt und geöffnet`);
-    return { created: project.id };
+    log(db, ctx, 'show', `Neue Show „${name}“ angelegt und geöffnet${src ? ` (Kopie von „${src.name}“)` : ''}`);
+    return { created: project.id, kickAll: true };
   },
 
   'shows.switch'(db, ctx, p) {
@@ -1105,14 +1161,15 @@ const moderatorActions = {
     stashCurrent(db);
     openShow(db, next);
     log(db, ctx, 'show', `Show „${next.project.name}“ geöffnet`);
+    // Team-iPads der vorherigen Show abmelden: jede Show hat ihre eigenen Codes.
+    return { kickAll: true };
   },
 
   'shows.duplicate'(db, ctx, p) {
     if (db.shows.length >= 50) fail('Maximal 50 Shows.');
     const src = p.showId === db.project.id ? db.project : findStashed(db, p.showId).project;
-    const project = { ...clone(src), id: newId('proj'), name: (cleanText(p.name || '', 80) || `${src.name} (Kopie)`).slice(0, 80) };
+    const project = copyProject(src, (cleanText(p.name || '', 80) || `${src.name} (Kopie)`).slice(0, 80));
     if ('date' in p) project.date = cleanDate(p.date);
-    for (const g of project.games) g.id = newId('game');
     // Als Vorlage für die nächste Show: auf Wunsch neue Teams (neue Namen und Zugangscodes, ohne Fotos).
     if (p.newTeams) project.teams = newProject(db.library, project.name).teams;
     db.shows.push({ project, live: freshLive(), ledger: [] });

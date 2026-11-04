@@ -26,7 +26,21 @@ const deferred = new Set();
 const conn = connect({
   hello: () => ({ role: 'moderator', token }),
   onState: (s) => {
+    // Andere Show geöffnet: alles Show-bezogene im Editor zurücksetzen, damit nichts
+    // aus der vorherigen Show (Entwürfe, Auswahl) in die neue hineinwirkt.
+    const switched = S && S.project.id !== s.project.id;
     S = s;
+    if (switched) {
+      drafts.clear();
+      saveState.pending.clear();
+      saveState.dirty = false;
+      selectedGame = null;
+      openPause = null;
+      rdInsertAt = null;
+      openTeam = null;
+      coinsOpen = false;
+      return renderAll(true);
+    }
     renderAll();
   },
   onAuthFailed: () => {
@@ -807,28 +821,22 @@ function hostAvatarCell(label, key) {
 
 // Teams je Show: Die Auswahl oben legt fest, für welche Show die Teams bearbeitet werden –
 // so lassen sich mehrere Shows mit wechselnden Teams im Voraus vorbereiten.
-let teamsShow = null;
 function buildTeams() {
   const base = `${location.origin}${location.pathname.replace(/moderator\.html$/, '')}team.html?code=`;
+  // Nur die geöffnete Show – jede Show ist eigenständig. Teams einer anderen Show
+  // lassen sich als Kopie (neue Codes) übernehmen.
   const others = S.showTeams || [];
-  if (teamsShow && !others.some((x) => x.id === teamsShow)) teamsShow = null;
-  const other = teamsShow ? others.find((x) => x.id === teamsShow) : null;
-  const showId = other ? other.id : undefined;
-  const teams = other ? other.teams : S.project.teams;
-  const showName = other ? other.name : S.project.name;
-  const sel = h('select', { id: 'teams-show', onchange: (ev) => { teamsShow = ev.target.value === 'current' ? null : ev.target.value; renderAll(true); } },
-    h('option', { value: 'current', selected: !other }, `${S.project.name} (geöffnet)`),
-    others.map((x) => h('option', { value: x.id, selected: other && other.id === x.id }, `${x.name}${x.date ? ` · ${fmtDate(x.date)}` : ''}`)));
-  const allShows = [{ id: S.project.id, name: S.project.name }, ...others].filter((x) => x.id !== (other ? other.id : S.project.id));
-  const copySel = h('select', { 'aria-label': 'Teams übernehmen aus' }, allShows.map((x) => h('option', { value: x.id }, x.name)));
-  const hasPoints = other ? other.hasPoints : (S.ledger || []).length > 0;
+  const showId = undefined;
+  const other = null;
+  const teams = S.project.teams;
+  const showName = S.project.name;
+  const copySel = h('select', { 'aria-label': 'Teams übernehmen aus' }, others.map((x) => h('option', { value: x.id }, x.name)));
+  const hasPoints = (S.ledger || []).length > 0;
   return [
-    card('Teams für Show',
-      h('div', { class: 'row' }, h('label', { for: 'teams-show', style: { margin: 0 } }, 'Show:'), sel),
-      h('p', { class: 'muted' }, 'Jede Show hat ihre eigenen Teams mit eigenen Zugangscodes. Wähle eine Show, um ihre Teams schon vorab einzutragen – auch ohne sie zu öffnen.'),
-      allShows.length ? h('div', { class: 'row' }, h('span', { class: 'muted' }, 'Teams übernehmen aus:'), copySel,
+    others.length ? card('Teams aus einer anderen Show übernehmen',
+      h('div', { class: 'row' }, copySel,
         h('button', { class: 'btn small ghost', disabled: hasPoints, title: hasPoints ? 'Diese Show hat schon Punkte.' : '',
-          onclick: () => confirmAct(`Die Teams von „${showName}“ durch die Teams der gewählten Show ersetzen? (neue Zugangscodes)`, 'teams.copyFrom', { showId: other ? other.id : S.project.id, fromShowId: copySel.value }) }, 'Übernehmen')) : null),
+          onclick: () => confirmAct(`Die Teams von „${showName}“ durch eine Kopie der Teams der gewählten Show ersetzen? (neue Zugangscodes, die andere Show bleibt unverändert)`, 'teams.copyFrom', { showId: S.project.id, fromShowId: copySel.value }) }, 'Übernehmen'))) : null,
     card('Team anlegen',
       h('form', {
         class: 'row', onsubmit: (ev) => {
@@ -954,32 +962,18 @@ async function renameShow(s) {
 }
 
 async function createShow() {
+  const shows = [{ id: S.project.id, name: S.project.name }, ...S.shows.filter((x) => !x.current)];
   const v = await ask('Neue Show anlegen', {
     confirmLabel: 'Anlegen und öffnen',
     fields: [
       { name: 'name', label: 'Name der Show', value: '', maxlength: 80 },
       { name: 'date', label: 'Datum der Show (optional)', type: 'date', value: '' },
-      { name: 'copyTeams', label: 'Teams aus der geöffneten Show übernehmen (gleiche Zugangscodes)', type: 'checkbox', value: true },
+      { name: 'from', label: 'Spiele und Ablauf', type: 'select', value: '', options: [{ value: '', label: 'Neu: die 8 Standardspiele aus der Datenbank' }, ...shows.map((x) => ({ value: x.id, label: `Kopie von „${x.name}“ (Spiele, Inhalte, Ablauf)` }))] },
+      { name: 'copyTeams', label: 'Teams der geöffneten bzw. kopierten Show übernehmen (Namen, Farben, Avatare – mit neuen Zugangscodes)', type: 'checkbox', value: false },
     ],
   });
   if (!v) return;
-  act('shows.create', { name: v.name, date: v.date, copyTeams: v.copyTeams });
-}
-
-// Fertige Show als Vorlage für die nächste: Spiele, Fragen, Ablauf, Lieder und Finale
-// werden übernommen; Punkte und Spielstände nicht. Teams wahlweise neu.
-async function duplicateShow(s) {
-  const v = await ask(`„${s.name}“ als Vorlage kopieren`, {
-    confirmLabel: 'Kopie anlegen',
-    fields: [
-      { name: 'name', label: 'Name der neuen Show', value: `${s.name} (Kopie)`.slice(0, 80), maxlength: 80 },
-      { name: 'date', label: 'Datum der neuen Show (optional)', type: 'date', value: '' },
-      { name: 'newTeams', label: 'Neue Teams anlegen (neue Namen und Zugangscodes) – sonst werden die Teams übernommen', type: 'checkbox', value: true },
-    ],
-  });
-  if (!v) return;
-  const r = await act('shows.duplicate', { showId: s.id, name: v.name, date: v.date, newTeams: v.newTeams });
-  if (r) toast(`„${v.name || s.name}“ angelegt – unter „Meine Shows“ öffnen`, 'info');
+  act('shows.create', { name: v.name, date: v.date, from: v.from || null, copyTeams: v.copyTeams });
 }
 
 let showsOpen = store('quiz.showsOpen') === '1';
@@ -989,18 +983,18 @@ function buildShows() {
   const toggle = h('button', { class: 'btn small ghost', onclick: () => { showsOpen = !showsOpen; store('quiz.showsOpen', showsOpen ? '1' : null); renderAll(true); } }, showsOpen ? 'Einklappen ▴' : `Shows verwalten${S.shows.length > 1 ? ` (${S.shows.length})` : ''} ▾`);
   if (!showsOpen) {
     return h('section', { class: 'card shows-line' },
-      h('span', { class: 'grow' }, h('span', { class: 'muted' }, 'Geöffnet: '), h('b', {}, cur.name), cur.date ? h('span', { class: 'muted' }, ` · ${fmtDate(cur.date)}`) : null,
-        h('span', { class: 'muted' }, ` · ${S.project.games.length} Spiele · ${S.project.teams.length} Teams`)), toggle);
+      h('span', { class: 'grow' }, h('span', { class: 'muted' }, 'Du bearbeitest: '), h('b', { class: 'shows-cur' }, cur.name), cur.date ? h('span', { class: 'muted' }, ` · ${fmtDate(cur.date)}`) : null,
+        h('span', { class: 'muted' }, ` · ${S.project.games.length} Spiele · ${S.project.teams.length} Teams`)),
+      h('button', { class: 'btn small', disabled: running, title: running ? 'Zuerst das laufende Spiel beenden.' : '', onclick: createShow }, '+ Neue Show'), toggle);
   }
   return h('section', { class: 'card' }, h('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'center' } }, h('h3', { style: { margin: 0 } }, 'Meine Shows'), toggle),
-    h('p', { class: 'muted', style: { marginTop: 0 } }, 'Jede Show hat eigene Spiele, Teams und Punkte. Bearbeitet und gespielt wird immer die geöffnete Show.'),
+    h('p', { class: 'muted', style: { marginTop: 0 } }, 'Jede Show ist komplett eigenständig: eigene Spiele, Teams, Zugangscodes und Punkte. Bearbeitet und gespielt wird immer nur die geöffnete Show. Beim Wechseln werden die Team-iPads abgemeldet.'),
     h('ul', { class: 'list' }, S.shows.map((s) => h('li', { class: s.current ? 'active' : '' },
       h('span', { class: 'grow' }, h('b', {}, s.name), s.date ? h('span', { class: 'muted' }, ` · ${fmtDate(s.date)}`) : null,
         h('span', { class: 'muted' }, ` · ${s.games} Spiele · ${s.teams} Teams`)),
       s.current ? h('span', { class: 'badge ok' }, 'geöffnet')
         : h('button', { class: 'btn small', disabled: running, title: running ? 'Zuerst das laufende Spiel beenden.' : '', onclick: () => act('shows.switch', { showId: s.id }) }, 'Öffnen'),
       h('button', { class: 'btn small ghost', onclick: () => renameShow(s) }, 'Umbenennen'),
-      h('button', { class: 'btn small ghost', onclick: () => duplicateShow(s) }, 'Als Vorlage kopieren'),
       s.current ? null : h('button', {
         class: 'btn small ghost icon', 'aria-label': `${s.name} löschen`,
         onclick: async () => { if (await ask(`Show „${s.name}“ mit allen Teams und Punkten löschen?`, { confirmLabel: 'Löschen', danger: true })) act('shows.remove', { showId: s.id }); },
