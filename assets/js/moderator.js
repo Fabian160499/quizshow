@@ -215,13 +215,10 @@ function buildRun() {
   const steps = S.rundown || [];
   const cur = S.live.run ?? -1;
   const now = steps[cur];
-  const next = steps[cur + 1];
   const started = cur >= 0;
   const head = h('div', { class: 'run-head' },
     h('div', { class: 'run-now' },
-      h('span', { class: 'run-count' }, started ? `Schritt ${cur + 1} von ${steps.length}` : `${steps.length} Schritte`),
-      h('div', { class: 'run-title' }, started ? [h('span', { class: 'run-ico' }, runIcon(now.kind)), now.text] : 'Show noch nicht gestartet'),
-      h('div', { class: 'run-next muted' }, next ? ['Als Nächstes: ', h('b', {}, runIcon(next.kind), ' ', next.text)] : 'Letzter Schritt erreicht')),
+      h('div', { class: 'run-title' }, started ? [h('span', { class: 'run-ico' }, runIcon(now.kind)), now.text] : 'Show noch nicht gestartet')),
     h('div', { class: 'run-buttons' },
       now && now.kind === 'video' && S.project.introVideo ? h('button', { class: 'btn ghost', onclick: () => act('run.goto', { index: cur }) }, '⟲ Video von vorn') : null,
       h('button', { class: 'btn ghost', disabled: cur <= 0, onclick: runPrev, title: 'Zurück (Pfeil links)' }, '◀ Zurück'),
