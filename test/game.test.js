@@ -1092,3 +1092,32 @@ test('Kassenschlager: alte umbenannte Hinweis-Namen werden beim Start zu Name + 
   assert.equal(e.content.hintCats[3].price, 4);
   assert.equal(e.content.hintNames, undefined);
 });
+
+test('Datenbank-Ordner: Vorschlag, anlegen, umbenennen, Spielart einordnen, löschen ohne Spiele zu verlieren', () => {
+  const db = game.createState();
+  game.migrate(db);
+  const names = db.libraryFolders.map((f) => f.name);
+  assert.ok(names.includes('Musik') && names.includes('Startspiele') && names.includes('Teamspiele'));
+  const musik = db.libraryFolders.find((f) => f.name === 'Musik');
+  assert.equal(db.libraryFolderOf.songsong, musik.id);
+  // Alte Daten ohne Ordner bekommen den Vorschlag einmalig.
+  delete db.libraryFolders; delete db.libraryFolderOf;
+  game.migrate(db);
+  assert.ok(db.libraryFolders.length >= 5);
+  const r = game.applyAction(db, mod(), 'folder.add', { name: 'Lieblinge' });
+  game.applyAction(db, mod(), 'folder.rename', { folderId: r.created, name: 'Favoriten' });
+  assert.equal(db.libraryFolders.find((f) => f.id === r.created).name, 'Favoriten');
+  assert.throws(() => game.applyAction(db, mod(), 'folder.rename', { folderId: r.created, name: '  ' }), /Namen/);
+  game.applyAction(db, mod(), 'folder.assign', { type: 'jauch', folderId: r.created });
+  assert.equal(db.libraryFolderOf.jauch, r.created);
+  game.applyAction(db, mod(), 'folder.move', { folderId: r.created, index: 0 });
+  assert.equal(db.libraryFolders[0].id, r.created);
+  const libCount = db.library.length;
+  game.applyAction(db, mod(), 'folder.remove', { folderId: r.created });
+  assert.equal(db.libraryFolderOf.jauch, undefined);
+  assert.equal(db.library.length, libCount);
+  game.applyAction(db, mod(), 'folder.assign', { type: 'jauch', folderId: null });
+  assert.throws(() => game.applyAction(db, mod(), 'folder.assign', { type: 'gibtsnicht', folderId: null }), /Unbekannt/);
+  // Ordner kommen im Moderator-Zustand an.
+  assert.ok(Array.isArray(game.moderatorView(db).libraryFolders));
+});

@@ -139,7 +139,7 @@ function renderLive() {
   const step = (S.rundown || [])[S.live.run ?? -1];
   const finaleOn = !S.live.activeGame && (S.live.finale || step?.kind === 'finale');
   document.getElementById('live-left').replaceChildren(finaleOn ? buildFinaleLive(finaleUi()) : buildGameControl());
-  document.getElementById('live-bottom').replaceChildren(buildFlow(),
+  document.getElementById('live-bottom').replaceChildren(
     h('div', { class: 'live-restart' },
       h('button', { class: 'btn ghost bad-text', onclick: restartShow, title: 'Punkte und Münzen auf 0, alle Fragen unbeantwortet, zurück zur ersten Folie. Editor-Inhalte bleiben.' }, '⟲ Show neu starten …')));
   // Lautstärkeregler nicht unter dem Finger neu aufbauen.
@@ -151,23 +151,6 @@ function renderLive() {
 
 function finaleUi() {
   return { S, card, act, confirmAct, autosave, rerender: () => renderAll(true) };
-}
-
-function buildFlow() {
-  const active = S.live.activeGame;
-  return card('Spiele (direkt aktivieren)',
-    h('ul', { class: 'list' }, S.project.games.map((g, i) => {
-      const pos = i + 1;
-      const playable = S.types[g.type].playable;
-      return h('li', { class: g.id === active ? 'active' : '' },
-        h('b', {}, `${pos}.`),
-        h('span', { class: 'grow' }, g.title, S.coinPositions.includes(pos) ? h('span', { class: 'muted' }, '  · danach Pause und Münze') : null),
-        playable ? null : h('span', { class: 'badge' }, 'noch nicht spielbar'),
-        g.id === active
-          ? h('button', { class: 'btn small ghost', onclick: () => act('show.activate', { gameId: null }) }, 'Beenden')
-          : h('button', { class: 'btn small', disabled: !playable, onclick: () => act('show.activate', { gameId: g.id }) }, 'Aktivieren'));
-    })),
-    S.project.games.length < S.showSize ? h('p', { class: 'muted' }, `Noch ${S.showSize - S.project.games.length} Plätze frei. Spiele setzt du im Show-Editor ein.`) : null);
 }
 
 // ---------- Showablauf wie eine Präsentation ----------
@@ -551,19 +534,7 @@ function buildBeamerControls() {
       h('div', { class: 'row' }, h('code', {}, url),
         h('button', { class: 'btn small ghost', onclick: () => Promise.resolve(navigator.clipboard?.writeText(url)).then(() => toast('Adresse kopiert', 'info'), () => toast(`Adresse: ${url}`, 'info')) }, 'Kopieren')),
       local ? h('p', { class: 'notice warn' }, 'Diese Adresse zeigt auf diesen Rechner selbst. Auf dem zweiten Gerät statt „localhost“ die IP-Adresse dieses Rechners im WLAN verwenden, z. B. http://192.168.1.20:3000/beamer.html') : null);
-  // Lautstärke: Effekttöne (Buzzer, richtig/falsch …) und Musik/Videos getrennt.
-  const slider = (label, key, icon) => {
-    const val = S.project.settings[key] ?? 80;
-    const out = h('b', { class: 'vol-val' }, `${val} %`);
-    let t = null;
-    const input = h('input', { type: 'range', min: '0', max: '100', step: '5', value: String(val), 'aria-label': label,
-      oninput: (ev) => { out.textContent = `${ev.target.value} %`; clearTimeout(t); t = setTimeout(() => act('volume.set', { [key]: Number(ev.target.value) }), 120); } });
-    return h('div', { class: 'vol-row' }, h('span', { class: 'vol-label' }, icon, ' ', label), input, out);
-  };
-  const volume = h('div', { class: 'vol-box' },
-    slider('Effekttöne', 'fxVolume', '🔔'),
-    slider('Musik & Videos', 'musicVolume', '🎵'));
-  return [status, volume, second];
+  return [status, second];
 }
 
 // Rangliste in der Regie: Punkte nachträglich von Hand anpassen (wird protokolliert).
@@ -1032,7 +1003,6 @@ function buildSlot(g, i, running) {
     h('b', { class: 'slot-title' }, g.title),
     h('span', { class: 'muted slot-type' }, g.title === type.title ? type.summary : type.title),
     h('div', { class: 'row', style: { gap: '6px' } },
-      type.playable ? h('span', { class: 'badge ok' }, 'spielbar') : h('span', { class: 'badge' }, 'Inhalte bearbeitbar'),
       g.locked ? h('span', { class: 'badge warn' }, '🔒 Eröffnungsspiel') : null,
       S.coinPositions.includes(pos) ? h('span', { class: 'badge coin-badge' }, coinImg(), ' danach Münze') : null)),
   h('div', { class: 'slot-actions' },
@@ -1062,69 +1032,205 @@ async function removeGame(g) {
   }
 }
 
+// Hilfen für Datenbank und Auswahl: alphabetisch (deutsch), Suche, Platz in der Show.
+const byTitle = (a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base' });
+const norm = (x) => String(x || '').toLocaleLowerCase('de').normalize('NFD').replace(/[̀-ͯ]/g, '');
+const matches = (q, ...texts) => !q || texts.some((t) => norm(t).includes(q));
+function showPositions(libraryId) {
+  return S.project.games.map((g, i) => (g.libraryId === libraryId ? i + 1 : null)).filter(Boolean);
+}
+// Ordner der Datenbank: Jede Spielart liegt in höchstens einem Ordner.
+const folders = () => S.libraryFolders || [];
+const folderOfType = (type) => { const id = (S.libraryFolderOf || {})[type]; return folders().some((f) => f.id === id) ? id : null; };
+const inFolder = (type, fid) => fid === 'all' || (fid === 'none' ? !folderOfType(type) : folderOfType(type) === fid);
+const validFolder = (fid) => fid === 'all' || fid === 'none' || folders().some((f) => f.id === fid);
+const DRAG_TYPE = 'application/x-quiz-type';
+const DRAG_FOLDER = 'application/x-quiz-folder';
+// Ziel zum Ablegen einer Spielart (Drag & Drop) – Ordner-Knopf oder „Ohne Ordner“.
+function folderDrop(fid, index) {
+  const has = (ev, t) => [...(ev.dataTransfer?.types || [])].includes(t);
+  return {
+    ondragover: (ev) => { if (has(ev, DRAG_TYPE) || (has(ev, DRAG_FOLDER) && index !== undefined)) { ev.preventDefault(); ev.currentTarget.classList.add('over'); } },
+    ondragleave: (ev) => { if (!ev.currentTarget.contains(ev.relatedTarget)) ev.currentTarget.classList.remove('over'); },
+    ondrop: (ev) => {
+      ev.preventDefault();
+      ev.currentTarget.classList.remove('over');
+      const type = ev.dataTransfer.getData(DRAG_TYPE);
+      const folder = ev.dataTransfer.getData(DRAG_FOLDER);
+      if (type) {
+        if (fid === 'all') return;
+        const target = fid === 'none' ? null : fid;
+        if (folderOfType(type) === target) return;
+        act('folder.assign', { type, folderId: target }).then((r) => r && toast(`„${S.types[type].title}“ → ${target ? folders().find((f) => f.id === target)?.name : 'Ohne Ordner'}`, 'info'));
+      } else if (folder && index !== undefined && folder !== fid) act('folder.move', { folderId: folder, index });
+    },
+  };
+}
+
+// Titel eines Eintrags: Hauptzeile = Name des Eintrags, darunter die Spielart nur, wenn sie anders heißt.
+function entryHead(e) {
+  const t = S.types[e.type];
+  return [h('b', { class: 'ec-title' }, e.title), e.title !== t.title ? h('span', { class: 'ec-kind' }, `Spielart: ${t.title}`) : null];
+}
+
 // Auswahl aus der Datenbank: für einen freien Platz oder zum Ersetzen eines Spiels.
-// Beim Ersetzen stehen oben Vorschläge derselben Spielart (ohne das aktuelle Spiel).
+// Jeder Eintrag erscheint genau einmal. Beim Ersetzen stehen andere Einträge derselben
+// Spielart oben; Spiele, die schon in der Show sind, sind markiert.
+let pickSearch = '';
+let pickHideUsed = false;
+let pickFolder = 'all';
 function pickFromLibrary(index, replace = null) {
   const overlay = h('div', { class: 'modal-backdrop', onclick: (ev) => ev.target === overlay && overlay.remove() });
-  const close = () => overlay.remove();
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
   const choose = async (e) => {
     close();
     const r = replace ? await act('game.replace', { gameId: replace.id, libraryId: e.id }) : await act('game.add', { libraryId: e.id, index });
     if (r) selectedGame = r.created || null;
   };
-  const entryRow = (e) => h('li', {},
-    h('span', { class: 'grow' }, e.title, h('span', { class: 'muted' }, ` · ${S.types[e.type].title} · Version ${e.version}`)),
-    h('button', { class: 'btn small pink', onclick: () => choose(e) }, replace ? 'Ersetzen' : 'Einsetzen'));
-  const used = new Set(S.project.games.map((g) => g.libraryId));
-  const sections = [];
-  if (replace) {
-    const same = S.library.filter((e) => e.type === replace.type && e.id !== replace.libraryId);
-    const fresh = S.library.filter((e) => e.type !== replace.type && !used.has(e.id));
-    sections.push(h('section', { class: 'pick-group' }, h('h4', {}, `Vorschläge: andere Spiele der Art „${S.types[replace.type].title}“`),
-      same.length ? h('ul', { class: 'list' }, same.map(entryRow)) : h('p', { class: 'muted' }, 'Keine weiteren Einträge dieser Art – lege in der Spiele-Datenbank einen an oder dupliziere einen.')));
-    if (fresh.length) sections.push(h('section', { class: 'pick-group' }, h('h4', {}, 'Vorschläge: Spiele, die noch nicht in der Show sind'), h('ul', { class: 'list' }, fresh.map(entryRow))));
-  }
-  for (const [type, t] of Object.entries(S.types)) {
-    const entries = S.library.filter((e) => e.type === type);
-    sections.push(h('section', { class: 'pick-group' },
-      h('h4', {}, replace ? `Alle: ${t.title}` : t.title, ' ', t.playable ? h('span', { class: 'badge ok' }, 'spielbar') : h('span', { class: 'badge' }, 'Inhalte bearbeitbar')),
-      entries.length ? h('ul', { class: 'list' }, entries.map(entryRow)) : h('p', { class: 'muted' }, 'Kein Eintrag. Lege in der Spiele-Datenbank einen an.')));
-  }
-  overlay.append(h('div', { class: 'modal card wide', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Spiel aus Datenbank wählen' },
+  const pickCard = (e) => {
+    const t = S.types[e.type];
+    const isCurrent = replace && e.id === replace.libraryId;
+    const pos = showPositions(e.id);
+    return h('button', { class: `pick-card${isCurrent ? ' current' : ''}${pos.length && !isCurrent ? ' used' : ''}`, disabled: isCurrent, onclick: () => choose(e), title: t.summary },
+      h('span', { class: 'pk-head' }, ...entryHead(e)),
+      pickFolder === 'all' || pickSearch.trim() ? h('span', { class: 'pk-folder' }, `📁 ${folders().find((f) => f.id === folderOfType(e.type))?.name || 'Ohne Ordner'}`) : null,
+      h('span', { class: 'pk-sum' }, t.summary),
+      h('span', { class: 'pk-tags' },
+        isCurrent ? h('span', { class: 'tag cur' }, 'Aktuell auf diesem Platz')
+          : pos.length ? h('span', { class: 'tag used' }, `Schon in der Show · Platz ${pos.join(', ')}`)
+            : h('span', { class: 'tag free' }, 'Noch nicht in der Show')));
+  };
+  const listBox = h('div', { class: 'pick-list' });
+  const chipBox = h('div', { class: 'folder-chips', role: 'tablist', 'aria-label': 'Ordner' });
+  // Beim Ersetzen öffnet sich der Ordner des aktuellen Spiels.
+  pickFolder = replace ? (folderOfType(replace.type) || 'all') : validFolder(pickFolder) ? pickFolder : 'all';
+  const renderChips = () => {
+    const count = (fid) => S.library.filter((e) => inFolder(e.type, fid)).length;
+    const chip = (fid, label) => h('button', { role: 'tab', class: `fchip${pickFolder === fid ? ' on' : ''}`, 'aria-selected': String(pickFolder === fid),
+      onclick: () => { pickFolder = fid; renderChips(); render(); } }, label, h('span', { class: 'n' }, count(fid)));
+    const none = count('none');
+    chipBox.replaceChildren(...[chip('all', 'Alle'), ...folders().map((f) => chip(f.id, f.name)), none ? chip('none', 'Ohne Ordner') : null].filter(Boolean));
+  };
+  const render = () => {
+    const q = norm(pickSearch.trim());
+    // Beim Suchen wird in allen Ordnern gesucht.
+    const all = [...S.library].sort(byTitle).filter((e) => (q ? true : inFolder(e.type, pickFolder))).filter((e) => matches(q, e.title, S.types[e.type].title, S.types[e.type].summary))
+      .filter((e) => !pickHideUsed || !showPositions(e.id).length || (replace && e.id === replace.libraryId));
+    const same = replace ? all.filter((e) => e.type === replace.type && e.id !== replace.libraryId) : [];
+    const rest = all.filter((e) => !same.includes(e) && !(replace && e.id === replace.libraryId));
+    const sections = [];
+    if (same.length) sections.push(h('section', { class: 'pick-group' }, h('h4', {}, 'Gleiche Spielart, andere Inhalte'), h('div', { class: 'pick-grid' }, same.map(pickCard))));
+    if (rest.length) sections.push(h('section', { class: 'pick-group' }, same.length ? h('h4', {}, 'Alle anderen Spiele') : null, h('div', { class: 'pick-grid' }, rest.map(pickCard))));
+    if (!sections.length) sections.push(h('p', { class: 'muted' }, q ? `Kein Spiel passt zu „${pickSearch.trim()}“.` : 'In diesem Ordner liegt kein passendes Spiel.'));
+    listBox.replaceChildren(...sections);
+  };
+  const search = h('input', { type: 'search', class: 'pick-search', placeholder: 'Spiel suchen …', value: pickSearch, oninput: (ev) => { pickSearch = ev.target.value; render(); } });
+  const hide = h('label', { class: 'pick-toggle' }, h('input', { type: 'checkbox', checked: pickHideUsed, onchange: (ev) => { pickHideUsed = ev.target.checked; render(); } }), 'Spiele aus der Show ausblenden');
+  overlay.append(h('div', { class: 'modal card wide pick-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Spiel aus Datenbank wählen' },
     h('div', { class: 'row', style: { justifyContent: 'space-between' } },
-      h('h3', { style: { margin: 0 } }, replace ? `Platz ${index + 1}: „${replace.title}“ ersetzen` : `Platz ${index + 1}: Spiel aus der Datenbank wählen`),
+      h('div', {}, h('h3', { style: { margin: 0 } }, replace ? `Platz ${index + 1} ersetzen` : `Platz ${index + 1} füllen`),
+        replace ? h('span', { class: 'muted' }, `Aktuell: „${replace.title}“ – tippe auf ein Spiel, um es zu ersetzen.`) : h('span', { class: 'muted' }, 'Tippe auf ein Spiel, um es einzusetzen.')),
       h('button', { class: 'btn small ghost', onclick: close }, 'Schließen')),
-    h('div', { class: 'pick-list' }, sections)));
+    h('div', { class: 'pick-tools' }, search, hide),
+    chipBox,
+    listBox));
+  renderChips();
+  render();
   document.body.append(overlay);
+  search.focus();
 }
 
 // ---------- Spiele-Datenbank ----------
 
+let libSearch = '';
+let libFolder = store('quiz.libFolder') || 'all';
+let renamingFolder = null;
+function setLibFolder(fid) { libFolder = fid; store('quiz.libFolder', fid); renderAll(true); }
+
+function buildFolderBar(types) {
+  const countTypes = (fid) => types.filter((t) => inFolder(t.type, fid)).length;
+  const item = (fid, label, extra = {}) => h('li', { class: `fold${libFolder === fid ? ' on' : ''}`, ...folderDrop(fid, extra.index), draggable: extra.folder ? 'true' : null,
+    ondragstart: extra.folder ? (ev) => { ev.dataTransfer.setData(DRAG_FOLDER, fid); ev.dataTransfer.effectAllowed = 'move'; } : null },
+    renamingFolder === fid
+      ? h('input', { class: 'fold-input', value: label, maxlength: 40, 'aria-label': 'Ordnername',
+        onkeydown: (ev) => { if (ev.key === 'Enter') ev.target.blur(); if (ev.key === 'Escape') { renamingFolder = null; renderAll(true); } },
+        onblur: (ev) => { const v = ev.target.value.trim(); renamingFolder = null; if (v && v !== label) act('folder.rename', { folderId: fid, name: v }); else renderAll(true); } })
+      : h('button', { class: 'fold-btn', onclick: () => setLibFolder(fid), ondblclick: extra.folder ? () => { renamingFolder = fid; renderAll(true); } : null, title: extra.folder ? 'Doppelklick zum Umbenennen · Spiele hierher ziehen' : '' },
+        h('span', { class: 'fold-ic' }, fid === 'all' ? '🗂' : fid === 'none' ? '📄' : libFolder === fid ? '📂' : '📁'), h('span', { class: 'fold-name' }, label), h('span', { class: 'n' }, countTypes(fid))),
+    extra.folder && renamingFolder !== fid ? h('span', { class: 'fold-tools' },
+      h('button', { class: 'fold-mini', title: 'Umbenennen', 'aria-label': `${label} umbenennen`, onclick: () => { renamingFolder = fid; renderAll(true); } }, '✎'),
+      h('button', { class: 'fold-mini', title: 'Ordner löschen (Spiele bleiben erhalten)', 'aria-label': `${label} löschen`, onclick: async () => {
+        if (await ask(`Ordner „${label}“ löschen? Die Spiele darin bleiben erhalten und landen unter „Ohne Ordner“.`, { confirmLabel: 'Ordner löschen', danger: true })) {
+          await act('folder.remove', { folderId: fid });
+          if (libFolder === fid) setLibFolder('all');
+        }
+      } }, '🗑')) : null);
+  const none = countTypes('none');
+  return h('aside', { class: 'card lib-folders' },
+    h('div', { class: 'lib-folders-head' }, h('b', {}, 'Ordner'),
+      h('button', { class: 'btn small ghost', onclick: async () => { const r = await act('folder.add', { name: 'Neuer Ordner' }); const id = r?.data?.created; if (id) { renamingFolder = id; libFolder = id; store('quiz.libFolder', id); renderAll(true); } } }, '+ Neuer Ordner')),
+    h('ul', { class: 'fold-list' },
+      item('all', 'Alle Spiele'),
+      folders().map((f, i) => item(f.id, f.name, { folder: true, index: i })),
+      none || libFolder === 'none' ? item('none', 'Ohne Ordner') : null),
+    h('p', { class: 'muted fold-hint' }, 'Spiel an der ⠿-Leiste packen und auf einen Ordner ziehen. Doppelklick auf einen Ordner benennt ihn um, Ordner lassen sich auch untereinander verschieben.'));
+}
+
 function buildLibrary() {
   if (!S.library.some((e) => e.id === selectedEntry)) selectedEntry = null;
+  if (!validFolder(libFolder)) libFolder = 'all';
   const sel = S.library.find((e) => e.id === selectedEntry);
-  const groups = Object.entries(S.types).map(([type, t]) => {
-    const entries = S.library.filter((e) => e.type === type);
-    return h('section', { class: 'card lib-group' },
-      h('h3', { style: { margin: 0 } }, t.title),
-      h('div', { class: 'row', style: { gap: '6px', marginTop: '10px' } },
-        t.playable ? h('span', { class: 'badge ok' }, 'spielbar') : h('span', { class: 'badge' }, 'Inhalte bearbeitbar, Spielablauf folgt'),
-        h('button', { class: 'btn small', onclick: async () => { const r = await act('library.add', { type }); if (r) { selectedEntry = null; } } }, '+ Neu')),
-      h('p', { class: 'muted' }, t.summary),
-      entries.length ? h('ul', { class: 'list' }, entries.map((e) => h('li', { class: e.id === selectedEntry ? 'active' : '' },
-        h('span', { class: 'grow' }, h('b', {}, e.title), h('span', { class: 'muted' }, ` · Version ${e.version}`)),
-        h('button', { class: `btn small ${e.id === selectedEntry ? 'pink' : 'ghost'}`, onclick: () => { selectedEntry = e.id; renderAll(true); } }, 'Bearbeiten'),
-        h('button', { class: 'btn small ghost', onclick: () => act('library.duplicate', { libraryId: e.id }) }, 'Duplizieren'),
-        h('button', { class: 'btn small ghost', disabled: S.project.games.length >= S.showSize || S.live.activeGame !== null, title: S.project.games.length >= S.showSize ? 'Die Show ist voll. Zuerst ein Spiel in den Mülleimer ziehen.' : '', onclick: () => act('game.add', { libraryId: e.id }).then((r) => r && toast(`„${e.title}“ in die Show eingesetzt`, 'info')) }, 'In Show einsetzen'),
-        h('button', { class: 'btn small ghost icon', 'aria-label': `${e.title} löschen`, onclick: async () => { if (await ask(`„${e.title}“ aus der Datenbank löschen? Spiele, die schon in der Show sind, bleiben erhalten.`, { confirmLabel: 'Löschen', danger: true })) act('library.remove', { libraryId: e.id }); } }, trashIcon()))))
-        : h('p', { class: 'muted' }, 'Noch kein Eintrag.'));
-  });
-  return [
+  const q = norm(libSearch.trim());
+  const full = S.project.games.length >= S.showSize;
+  // Eine Karte je Spielart, alphabetisch; „… 2.0“ steht so direkt neben dem Original.
+  const types = Object.entries(S.types).map(([type, t]) => ({ type, ...t })).sort(byTitle);
+  // Beim Suchen wird in allen Ordnern gesucht.
+  const visible = types.filter((t) => (q ? true : inFolder(t.type, libFolder)));
+  const groups = visible.map((t) => {
+    const entries = S.library.filter((e) => e.type === t.type).sort(byTitle);
+    const shown = entries.filter((e) => matches(q, e.title, t.title, t.summary));
+    if (q && !shown.length && !matches(q, t.title, t.summary)) return null;
+    const fname = folders().find((f) => f.id === folderOfType(t.type))?.name;
+    return h('section', { class: 'card lib-group', draggable: 'true',
+      ondragstart: (ev) => {
+        ev.dataTransfer.setData(DRAG_TYPE, t.type); ev.dataTransfer.effectAllowed = 'move'; ev.currentTarget.classList.add('dragging'); document.body.classList.add('dragging-type'); },
+      ondragend: (ev) => { ev.currentTarget.classList.remove('dragging'); document.body.classList.remove('dragging-type'); } },
+      h('div', { class: 'lib-head' },
+        h('span', { class: 'lib-grip', title: 'Ziehen, um in einen Ordner zu legen', 'aria-hidden': 'true' }, '⠿'),
+        h('h3', {}, t.title),
+        h('button', { class: 'btn small ghost', title: `Neuen Eintrag „${t.title}“ anlegen`, onclick: () => act('library.add', { type: t.type }).then((r) => { if (r) selectedEntry = null; }) }, '+ Variante')),
+      libFolder === 'all' || q ? h('span', { class: 'pk-folder' }, `📁 ${fname || 'Ohne Ordner'}`) : null,
+      h('p', { class: 'muted lib-sum' }, t.summary),
+      shown.length ? h('ul', { class: 'lib-entries' }, shown.map((e) => {
+        const pos = showPositions(e.id);
+        return h('li', { class: e.id === selectedEntry ? 'active' : '' },
+          h('button', { class: 'lib-name', onclick: () => { selectedEntry = e.id; renderAll(true); } },
+            h('b', {}, e.title), pos.length ? h('span', { class: 'tag used' }, `in der Show · Platz ${pos.join(', ')}`) : null),
+          h('span', { class: 'lib-actions' },
+            h('button', { class: `btn small ${e.id === selectedEntry ? 'pink' : 'ghost'}`, onclick: () => { selectedEntry = e.id; renderAll(true); } }, 'Bearbeiten'),
+            h('button', { class: 'btn small ghost', title: 'Kopie mit gleichen Inhalten anlegen', onclick: () => act('library.duplicate', { libraryId: e.id }) }, 'Duplizieren'),
+            h('button', { class: 'btn small ghost', disabled: full || S.live.activeGame !== null, title: full ? 'Die Show ist voll. Zuerst ein Spiel aus der Show entfernen oder im Show-Editor „Ersetzen“ nutzen.' : 'Auf den nächsten freien Platz der Show setzen', onclick: () => act('game.add', { libraryId: e.id }).then((r) => r && toast(`„${e.title}“ in die Show eingesetzt`, 'info')) }, '+ Show'),
+            h('button', { class: 'btn small ghost icon', 'aria-label': `${e.title} löschen`, title: 'Aus der Datenbank löschen', onclick: async () => { if (await ask(`„${e.title}“ aus der Datenbank löschen? Spiele, die schon in der Show sind, bleiben erhalten.`, { confirmLabel: 'Löschen', danger: true })) act('library.remove', { libraryId: e.id }); } }, trashIcon())));
+      })) : h('p', { class: 'muted' }, 'Noch kein Eintrag – „+ Variante“ legt einen an.'));
+  }).filter(Boolean);
+  const search = h('input', { type: 'search', class: 'pick-search', placeholder: 'In allen Ordnern suchen …', value: libSearch,
+    oninput: (ev) => { libSearch = ev.target.value; const pos = ev.target.selectionStart; renderAll(true); const n = document.querySelector('.lib-tools .pick-search'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } } });
+  const title = q ? `Suche: „${libSearch.trim()}“` : libFolder === 'all' ? 'Alle Spiele' : libFolder === 'none' ? 'Ohne Ordner' : folders().find((f) => f.id === libFolder)?.name;
+  const view = [
     h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '12px' } }, h('h2', { style: { margin: 0 } }, 'Spiele-Datenbank'), saveIndicator()),
-    h('p', { class: 'muted', style: { marginTop: 0 } }, 'Hier liegen alle Spiele mit ihren Inhalten. Lege Varianten an (z. B. zweimal „5 ist Trümpf“ mit anderen Begriffen) und setze sie im Show-Editor ein. Eine Show bekommt immer eine eigene Kopie.'),
     sel ? buildGameEditor('library', sel) : null,
-    h('div', { class: 'grid lib-grid', style: { marginTop: '16px' } }, groups),
+    h('div', { class: 'lib-layout' },
+      buildFolderBar(types),
+      h('div', { class: 'lib-main' },
+        h('div', { class: 'lib-tools' }, h('h3', { class: 'lib-title' }, title, h('span', { class: 'muted' }, ` · ${groups.length} ${groups.length === 1 ? 'Spielart' : 'Spielarten'}`)), search),
+        groups.length ? h('div', { class: 'grid lib-grid' }, groups)
+          : h('p', { class: 'muted lib-empty', ...(q ? {} : folderDrop(libFolder)) }, q ? `Kein Spiel passt zu „${libSearch.trim()}“.` : 'Dieser Ordner ist leer. Ziehe Spiele aus „Alle Spiele“ auf den Ordner links.'))),
   ];
+  // Eingabefeld beim Umbenennen direkt fokussieren.
+  if (renamingFolder) setTimeout(() => { const n = document.querySelector('.fold-input'); if (n && document.activeElement !== n) { n.focus(); n.select(); } }, 0);
+  return view;
 }
 
 // ---------- Formular-Editor für Spielinhalte ----------
