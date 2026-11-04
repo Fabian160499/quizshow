@@ -127,7 +127,7 @@ const TYPES = {
         fields: [
           text('category', 'Kategorie (sehen die Teams zuerst)', 80),
           text('term', 'Gesuchter Begriff', 120),
-          { key: 'hints', label: 'Hinweise', type: 'list', min: 5, max: 5, itemLabel: (i) => `Hinweis ${i + 1} · ${5 - i} ${i === 4 ? 'Punkt' : 'Punkte'}`, of: 'text', maxLength: 200 },
+          { key: 'hints', label: 'Hinweise', type: 'list', min: 5, max: 5, itemLabel: (i) => `Hinweis ${i + 1}`, of: 'text', maxLength: 200 },
         ] },
     ],
     example: {
@@ -150,7 +150,7 @@ const TYPES = {
         fields: [
           text('name', 'Name der Kategorie', 80),
           { key: 'mode', label: 'Wertung', type: 'select', options: ['Normal', 'Song Song Song (beide Titel nötig, keine Teilpunkte)'] },
-          { key: 'fields', label: 'Felder', type: 'list', min: 3, max: 3, itemLabel: (i) => `${i + 1} ${i === 0 ? 'Punkt' : 'Punkte'}`,
+          { key: 'fields', label: 'Felder', type: 'list', min: 3, max: 3, itemLabel: (i) => `Feld ${i + 1}`,
             fields: [area('task', 'Aufgabe', 300), text('answer', 'Lösung'), { key: 'clip', label: 'Musik-Clip (MP3 oder MP4) – läuft auf dem Beamer mit „Aufgabe starten“', type: 'media', accept: 'audio' }, text('audio', 'Notiz zum Clip (optional)', 200)] },
         ] },
     ],
@@ -172,7 +172,7 @@ const TYPES = {
     summary: 'Acht Fragen A–D mit steigendem Wert, Sicherheitsstufe bei Frage 4, zwei Joker.',
     schema: [
       { key: 'questions', label: 'Fragen', type: 'list', min: 8, max: 8,
-        itemLabel: (i) => `Frage ${i + 1} · ${JAUCH_LADDER[i]} ${JAUCH_LADDER[i] === 1 ? 'Punkt' : 'Punkte'}${i === 3 ? ' (Sicherheitsstufe)' : ''}`,
+        itemLabel: (i) => `Frage ${i + 1}${i === 3 ? ' (Sicherheitsstufe)' : ''}`,
         fields: [area('question', 'Frage', 300), optionsField, correctField] },
     ],
     example: {
@@ -239,6 +239,7 @@ function publicSchema(fields) {
     if (f.type === 'list') {
       out.itemLabels = Array.from({ length: f.max }, (_, i) => (f.itemLabel ? f.itemLabel(i) : `${i + 1}`));
       delete out.itemLabel;
+      if (f.itemNote) { out.itemNotes = Array.from({ length: f.max }, (_, i) => f.itemNote(i)); delete out.itemNote; }
       if (f.fields) out.fields = publicSchema(f.fields);
     }
     if (f.type === 'object') out.fields = publicSchema(f.fields);
