@@ -510,10 +510,12 @@ test('Mehrere Shows: anlegen, umbenennen, wechseln, duplizieren, löschen', () =
   const r = game.applyAction(db, mod(), 'shows.create', { name: 'Show 03.12.', copyTeams: true });
   assert.equal(db.project.id, r.created);
   assert.equal(db.project.teams.length, 2);
-  assert.equal(game.totals(db)[ids[0]], 0);
+  assert.ok(Object.values(game.totals(db)).every((v) => v === 0));
   assert.equal(db.project.games.length, 8);
-  // Teams mit gleichem Code bleiben in der neuen Show angemeldet.
-  assert.equal(game.teamView(db, ids[0]).team.id, ids[0]);
+  // Teams werden übernommen, aber als eigene Teams mit neuen IDs und Codes (strikte Trennung).
+  assert.ok(!db.project.teams.some((t) => ids.includes(t.id)));
+  assert.equal(db.project.teams[0].name, 'Team 1');
+  assert.equal(r.kickAll, true);
   const list = game.moderatorView(db).shows;
   assert.deepEqual(list.map((x) => x.name), ['Show 12.11.', 'Show 03.12.']);
   assert.equal(list.find((x) => x.current).id, r.created);
@@ -1120,4 +1122,51 @@ test('Datenbank-Ordner: Vorschlag, anlegen, umbenennen, Spielart einordnen, lös
   assert.throws(() => game.applyAction(db, mod(), 'folder.assign', { type: 'gibtsnicht', folderId: null }), /Unbekannt/);
   // Ordner kommen im Moderator-Zustand an.
   assert.ok(Array.isArray(game.moderatorView(db).libraryFolders));
+});
+
+
+test('Shows sind vollständig getrennt: Spiele, Teams und Codes beeinflussen sich nicht', () => {
+  const { db } = setup(3);
+  const A = db.project.id;
+  const gA = db.project.games[1];
+  // Kopie als neue Show (mit Teams) und eine leere neue Show
+  const r = game.applyAction(db, mod(), 'shows.create', { name: 'B', from: A, copyTeams: true });
+  const B = r.created;
+  assert.equal(db.project.id, B);
+  assert.equal(db.project.games.length, 8);
+  assert.notEqual(db.project.games[1].id, gA.id);
+  const codesA = db.shows.find((x) => x.project.id === A).project.teams.map((t) => t.code);
+  assert.ok(!db.project.teams.some((t) => codesA.includes(t.code)), 'Codes dürfen nicht doppelt sein');
+  // Spiel in B ändern → A bleibt unverändert (auch nach JSON-Speichern/Laden)
+  const gB = db.project.games[1];
+  game.applyAction(db, mod(), 'game.update', { gameId: gB.id, title: 'Nur in B', content: gB.content });
+  game.applyAction(db, mod(), 'team.update', { teamId: db.project.teams[0].id, name: 'B-Team' });
+  const saved = JSON.parse(JSON.stringify(db));
+  for (const x of [db, saved]) {
+    const a = x.shows.find((y) => y.project.id === A).project;
+    assert.notEqual(a.games[1].title, 'Nur in B');
+    assert.notEqual(a.teams[0].name, 'B-Team');
+  }
+  game.applyAction(db, mod(), 'shows.switch', { showId: A });
+  assert.notEqual(db.project.games[1].title, 'Nur in B');
+  // Eine Show-Kopie ohne Teams bekommt neue Standard-Teams
+  game.applyAction(db, mod(), 'shows.create', { name: 'C', from: A, copyTeams: false });
+  assert.equal(db.project.teams.length, 6);
+});
+
+test('Alte Daten mit geteilten IDs/Codes zwischen Shows werden beim Laden getrennt', () => {
+  const { db } = setup(2);
+  game.applyAction(db, mod(), 'shows.create', { name: 'B' });
+  // früherer Zustand nachstellen: B hat dieselben Team-IDs, Codes und Spiel-IDs wie A
+  const a = db.shows[0].project;
+  db.project.teams = JSON.parse(JSON.stringify(a.teams));
+  db.project.games[0].id = a.games[0].id;
+  db.ledger.push({ id: 'pt_x', teamId: a.teams[0].id, points: 2, ref: 'manual:x', reason: 't', at: 1 });
+  game.migrate(db);
+  const a2 = db.shows[0].project;
+  // die geöffnete Show bleibt wie sie ist, die gespeicherte bekommt neue IDs/Codes
+  assert.equal(db.project.teams[0].id, db.ledger[0].teamId);
+  assert.notEqual(a2.teams[0].id, db.project.teams[0].id);
+  assert.notEqual(a2.teams[0].code, db.project.teams[0].code);
+  assert.notEqual(a2.games[0].id, db.project.games[0].id);
 });
