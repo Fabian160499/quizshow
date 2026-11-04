@@ -1170,3 +1170,43 @@ test('Alte Daten mit geteilten IDs/Codes zwischen Shows werden beim Laden getren
   assert.notEqual(a2.teams[0].code, db.project.teams[0].code);
   assert.notEqual(a2.games[0].id, db.project.games[0].id);
 });
+
+test('Die leichten 5: alle Antworten auf einmal groß zeigen, in Team-Reihenfolge, Ton bei Wertung', () => {
+  const { db, ids } = setup(3);
+  game.applyAction(db, mod(), 'show.activate', { gameId: gid(db, 'leichte5') });
+  game.applyAction(db, mod(), 'play.open', { qIndex: 0 });
+  assert.throws(() => game.applyAction(db, mod(), 'play.showAll', {}), /abgegeben/);
+  game.applyAction(db, team(ids[2]), 'play.submit', { text: 'C' });
+  game.applyAction(db, team(ids[0]), 'play.submit', { text: 'A' });
+  game.applyAction(db, mod(), 'play.showAll', {});
+  game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
+  const v = game.beamerView(db).gameView;
+  assert.deepEqual(v.answers.map((a) => a.teamId), [ids[0], ids[2]]);
+  game.applyAction(db, mod(), 'play.grade', { teamId: ids[0], correct: true });
+  assert.equal(game.beamerView(db).gameView.answers[0].grade, null); // bis zum Auflösen verdeckt
+  game.applyAction(db, mod(), 'play.showAll', { visible: false });
+  assert.equal(game.beamerView(db).gameView.answers.length, 0);
+});
+
+test('Die leichten 5: Wertung verdeckt, Auflösen erst falsche, dann ein richtiges, dann übrige richtige', () => {
+  const { db, ids } = setup(5);
+  game.applyAction(db, mod(), 'show.activate', { gameId: gid(db, 'leichte5') });
+  game.applyAction(db, mod(), 'play.open', { qIndex: 0 });
+  ids.forEach((id, i) => game.applyAction(db, team(id), 'play.submit', { text: `A${i}` }));
+  game.applyAction(db, mod(), 'play.showAll', {});
+  game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
+  const marks = [true, false, true, false, true];
+  assert.throws(() => game.applyAction(db, mod(), 'play.revealNext'), /bewerten/);
+  ids.forEach((id, i) => game.applyAction(db, mod(), 'play.grade', { teamId: id, correct: marks[i] }));
+  const grades = () => game.beamerView(db).gameView.answers.map((a) => a.grade);
+  assert.deepEqual(grades(), [null, null, null, null, null]);
+  assert.equal(game.teamView(db, ids[0]).play.answer.grade, null);
+  game.applyAction(db, mod(), 'play.revealNext');
+  assert.deepEqual(grades(), [null, false, null, false, null]);
+  game.applyAction(db, mod(), 'play.revealNext');
+  assert.deepEqual(grades(), [true, false, null, false, null]);
+  assert.equal(game.teamView(db, ids[0]).play.answer.grade, true);
+  game.applyAction(db, mod(), 'play.revealNext');
+  assert.deepEqual(grades(), [true, false, true, false, true]);
+  assert.throws(() => game.applyAction(db, mod(), 'play.revealNext'), /aufgelöst/);
+});
