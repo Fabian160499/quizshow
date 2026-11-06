@@ -155,7 +155,7 @@ main = main.replace(/<script>\s*\/\/ Direkt per Doppelklick[\s\S]*?<\/script>\s*
 const mainScript = main.match(/<script type="module">([\s\S]*?)<\/script>/);
 if (!mainScript) throw new Error('Skript der Hauptseite nicht gefunden');
 let mainCode = mainScript[1]
-  .replace('iframe.src = s.src;', '__setPage(iframe, s.src);')
+  .replaceAll('iframe.src = s.src;', '__setPage(iframe, s.src);')
   .replace('for (const f of frames) f.iframe.src = f.s.src;', 'for (const f of frames) __setPage(f.iframe, f.s.src);');
 if (/\.src\s*=/.test(mainCode)) throw new Error('Unbehandelte iframe-Adresse in der Hauptseite');
 

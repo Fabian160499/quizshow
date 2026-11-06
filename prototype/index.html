@@ -110,6 +110,10 @@
     ...server.demoTeams.map((t, i) => ({ id: `team${i + 1}`, label: `iPad ${t.name}`, cls: 'team', src: `team.html?code=${t.code}`, w: 820, h: 1100, color: teamColors[i] })),
     { id: 'host', label: 'iPad Moderation', cls: 'team', src: 'host.html', w: 820, h: 1100, color: '#7fc8bd' },
     { id: 'start', label: 'Startseite', cls: 'start', src: 'start.html', w: 1100, h: 1100, color: '#c9b8f0' },
+    // Probelauf: erst aktiv, wenn im Editor bei einem Spiel „🧪 Probelauf“ gedrückt wurde.
+    { id: 'probe-mod', label: 'Probelauf · Regie', cls: 'mod', src: 'moderator.html?view=live&probe=1', lazy: true, w: 1280, h: 900, color: '#ffb020' },
+    { id: 'probe-beamer', label: 'Probelauf · Beamer', cls: 'beamer', src: 'beamer.html?probe=1', lazy: true, w: 1280, h: 720, color: '#ffb020' },
+    { id: 'probe-ipad', label: 'Probelauf · iPad', cls: 'team', src: 'team.html?code=DEMO', lazy: true, w: 820, h: 1100, color: '#ffb020' },
   ];
 
   const stage = document.getElementById('stage');
@@ -126,9 +130,23 @@
     iframe.name = 'quiz-proto';
     iframe.allow = 'fullscreen; autoplay; screen-wake-lock';
     iframe.allowFullscreen = true;
-    iframe.src = s.src;
+    if (!s.lazy) iframe.src = s.src;
     frames.push({ s, el, iframe, device: el.querySelector('.device') });
   }
+  // Probelauf-Bildschirme laden, sobald ein Probelauf läuft; sonst ein Hinweis.
+  const PROBE_IDLE = '<body style="margin:0;display:grid;place-items:center;height:100vh;background:#0b0b22;color:#c9c9e0;font:20px system-ui;text-align:center;padding:40px"><div>🧪 Kein Probelauf aktiv.<br><br>Im <b>Editor</b> bei einem Spiel auf „🧪 Probelauf“ tippen.</div></body>';
+  let probeOn = null;
+  function loadProbeFrame(iframe, s) { iframe.removeAttribute('srcdoc'); iframe.src = s.src; }
+  server.onProbe((p) => {
+    const on = !!p;
+    if (on === probeOn) return;
+    probeOn = on;
+    for (const f of frames) {
+      if (!f.s.lazy) continue;
+      if (on) loadProbeFrame(f.iframe, f.s);
+      else f.iframe.srcdoc = PROBE_IDLE;
+    }
+  });
 
   // Brücke für abgeschottete Bildschirme: Kommt ein Bildschirm nicht direkt an
   // window.__quizServer, schickt er Verbindungen und API-Aufrufe per postMessage.

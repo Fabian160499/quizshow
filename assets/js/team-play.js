@@ -213,6 +213,16 @@ function land(g, ui) {
 
 // ---------- 4 · Das ist ein echter Kassenschlager ----------
 
+// Foto-Hinweis groß anzeigen, mit × oben rechts wieder schließen.
+function photoZoom(src, label) {
+  if (!src) return;
+  const box = h('div', { class: 'photo-zoom', role: 'dialog', 'aria-modal': 'true', 'aria-label': label, onclick: (ev) => { if (ev.target === box) box.remove(); } },
+    h('div', { class: 'photo-zoom-in' },
+      h('button', { class: 'photo-zoom-x', 'aria-label': 'Schließen', onclick: () => box.remove() }, '×'),
+      h('img', { src, alt: label })));
+  document.body.append(box);
+}
+
 function kassenschlager(g, ui) {
   const money = h('span', { class: 'wallet' }, `${g.wallet} $`);
   const head = h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'muted' }, g.movieIndex >= 0 ? `Film ${g.movieIndex + 1} von ${g.movieCount} · Durchgang ${g.cycle} von 4` : 'Kassenschlager'), h('span', {}, 'Guthaben ', money));
@@ -232,15 +242,16 @@ function kassenschlager(g, ui) {
   out.push(h('p', { class: 'muted' }, `Paywall · ${g.boughtCount} von ${g.maxBuys} Hinweisen gekauft`));
   out.push(h('div', { class: 'paywall' }, g.hints.map((x, i) => {
     const affordable = x.price <= g.wallet && left > 0;
-    return h('button', {
+    // Gekaufte Hinweise sind kein Knopf mehr (sonst ließe sich das Foto nicht antippen).
+    return h(x.bought ? 'div' : 'button', {
       class: `hint ${x.bought ? 'bought' : ''}`,
-      disabled: x.bought || !buying || !affordable,
+      disabled: x.bought ? null : !buying || !affordable,
       onclick: async () => {
         const msg = `Möchtest du diesen Hinweis kaufen?\n${x.label} kostet ${x.price} $. Danach habt ihr noch ${g.wallet - x.price} $.`;
         if (await ask(msg, { confirmLabel: 'Ja, kaufen', cancelLabel: 'Abbrechen' })) run(ui.conn, 'play.buy', { hint: i });
       },
     }, h('span', { class: 'price' }, `${x.price} $`), h('span', { class: 'label' }, `${i + 1}. ${x.label}`),
-      x.bought && x.photo ? (() => { const im = h('img', { class: 'hint-photo', alt: x.label }); mediaUrl(x.photo.id).then((u) => { if (u) im.src = u; }); return im; })() : null,
+      x.bought && x.photo ? (() => { const im = h('img', { class: 'hint-photo', alt: x.label, title: 'Antippen zum Vergrößern', onclick: () => photoZoom(im.src, x.label) }); mediaUrl(x.photo.id).then((u) => { if (u) im.src = u; }); return im; })() : null,
       // Bei Foto-Hinweisen keinen Platzhaltertext wie „(Bild ergänzen)“ zeigen.
       x.bought && ((x.text && !(x.photo && /^\(.*\)$/.test(x.text.trim()))) || !x.photo) ? h('span', { class: 'text' }, x.text || '–') : null);
   })));

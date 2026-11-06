@@ -1318,7 +1318,7 @@ const moderatorActions = {
     db.live.showStarted = true; // „Show jetzt starten“ wird danach in der Regie ausgeblendet
     db.ledger = [];
     const key = showKey(db);
-    for (let i = UNDO_STACK.length - 1; i >= 0; i--) if (UNDO_STACK[i].project === key) UNDO_STACK.splice(i, 1);
+    { const st = undoStack(db); for (let i = st.length - 1; i >= 0; i--) if (st[i].project === key) st.splice(i, 1); }
     log(db, ctx, 'ablauf', 'Show gestartet – Proben und Tests verworfen');
     if (rundown(db).length) runStep(db, ctx, 0);
     return { reset: true };
@@ -1349,7 +1349,13 @@ function tick(db, now = Date.now()) {
 // Nur im Arbeitsspeicher (nicht in der Datei); gilt für die gerade geöffnete Show.
 const UNDO_STACK = [];
 const UNDO_MAX = 25;
-function undoStack() {
+// Ein Probelauf (db.sandbox) hat seinen eigenen Verlauf – er darf die echte Show nie berühren.
+const SANDBOX_UNDO = { id: null, stack: [] };
+function undoStack(db) {
+  if (db && db.sandbox) {
+    if (SANDBOX_UNDO.id !== db.sandbox) { SANDBOX_UNDO.id = db.sandbox; SANDBOX_UNDO.stack = []; }
+    return SANDBOX_UNDO.stack;
+  }
   return UNDO_STACK;
 }
 // ----- 10-Sekunden-Timer (für jedes Spiel von der Moderation startbar) -----

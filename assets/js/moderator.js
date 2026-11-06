@@ -8,7 +8,8 @@ if (!token) location.href = 'index.html';
 
 let S = null; // letzter Zustand vom Server
 // Ansicht: ?view=live (nur Moderation), ?view=editor (nur Editor), sonst beides.
-const VIEW = new URLSearchParams(location.search).get('view');
+const PROBE = new URLSearchParams(location.search).has('probe'); // Probelauf-Fenster
+const VIEW = PROBE ? 'live' : new URLSearchParams(location.search).get('view');
 const LIVE_TABS = ['live'];
 const EDITOR_TABS = ['editor', 'library'];
 const ALLOWED = VIEW === 'editor' ? EDITOR_TABS : VIEW === 'live' ? LIVE_TABS : [...LIVE_TABS, ...EDITOR_TABS];
@@ -20,11 +21,25 @@ if (VIEW === 'editor') {
   document.querySelector('.beamer-mini')?.remove(); // Beamer-Vorschau nur in der Moderation
 }
 if (VIEW === 'live') document.querySelector('#main-tabs [data-group="editor"]').remove();
+if (PROBE) {
+  // Probelauf: eigene Kopie der Show, Beamer-Vorschau und „Beamer öffnen“ zeigen den Probelauf.
+  document.body.classList.add('probe-mode');
+  const pv = document.querySelector('.beamer-mini iframe.preview');
+  if (pv) pv.src = 'beamer.html?preview&probe=1';
+  const open = document.querySelector('header a[href="beamer.html"]');
+  if (open) open.href = 'beamer.html?probe=1';
+  document.getElementById('logout').remove();
+}
 const saveState = { dirty: false, saving: false, timer: null, pending: new Map() };
 const deferred = new Set();
 
 const conn = connect({
-  hello: () => ({ role: 'moderator', token }),
+  hello: () => ({ role: 'moderator', token, probe: PROBE }),
+  onKicked: (message) => {
+    // Probelauf beendet: Hinweis statt leerer Regie.
+    document.querySelector('.mod-main').replaceChildren(h('div', { class: 'wait' }, h('p', { class: 'big' }, '🧪 Probelauf beendet'), h('p', {}, message || ''),
+      h('p', {}, h('button', { class: 'btn pink', onclick: () => window.close() }, 'Fenster schließen'))));
+  },
   onState: (s) => {
     // Andere Show geöffnet: alles Show-bezogene im Editor zurücksetzen, damit nichts
     // aus der vorherigen Show (Entwürfe, Auswahl) in die neue hineinwirkt.
@@ -51,7 +66,8 @@ const conn = connect({
   },
 });
 
-document.getElementById('logout').onclick = async () => {
+const logoutBtn = document.getElementById('logout');
+if (logoutBtn) logoutBtn.onclick = async () => {
   await fetch('api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }).catch(() => {});
   store('quiz.modToken', null);
   location.href = 'index.html';
@@ -157,11 +173,13 @@ async function confirmAct(message, name, payload) {
 // Die Beamer-Vorschau steht fest im HTML, damit sie bei Updates nicht neu lädt.
 function renderLive() {
   const scroll = window.scrollY;
-  document.getElementById('run-panel').replaceChildren(buildRun());
+  document.getElementById('run-panel').replaceChildren(...[PROBE && S.probe ? h('section', { class: 'card probe-bar active' },
+    h('span', { class: 'grow' }, '🧪 ', h('b', {}, `PROBELAUF: ${S.probe.title}`), h('span', {}, ` · iPad: Startseite → Code „${S.probe.code}“`), h('span', { class: 'muted' }, ' · andere Teams werden simuliert · nichts wird gespeichert')),
+    h('button', { class: 'btn small bad', onclick: () => act('probe.stop') }, 'Probelauf beenden')) : null, buildRun()].filter(Boolean));
   const step = (S.rundown || [])[S.live.run ?? -1];
   const finaleOn = !S.live.activeGame && (S.live.finale || step?.kind === 'finale');
   document.getElementById('live-left').replaceChildren(finaleOn ? buildFinaleLive(finaleUi()) : buildGameControl());
-  document.getElementById('live-bottom').replaceChildren(
+  document.getElementById('live-bottom').replaceChildren(PROBE ? '' :
     h('div', { class: 'live-restart' },
       h('button', { class: 'btn ghost bad-text', onclick: restartShow, title: 'Punkte und Münzen auf 0, alle Fragen unbeantwortet, zurück zur ersten Folie. Editor-Inhalte bleiben.' }, '⟲ Show neu starten …')));
   // Lautstärkeregler nicht unter dem Finger neu aufbauen.
@@ -252,7 +270,7 @@ function buildRun() {
     h('h3', { style: { margin: 0 } }, 'Showablauf'),
     h('div', { class: 'row', style: { gap: '8px' } },
       // Nur bis zum Start der echten Show sichtbar (danach „Show neu starten“ ganz unten).
-      S.live.showStarted ? null : h('button', { class: 'btn ok', onclick: startShowNow, title: 'Proben und Tests verwerfen, Punkte auf 0 und mit Schritt 1 beginnen' }, '🎬 Show jetzt starten')));
+      S.live.showStarted || PROBE ? null : h('button', { class: 'btn ok', onclick: startShowNow, title: 'Proben und Tests verwerfen, Punkte auf 0 und mit Schritt 1 beginnen' }, '🎬 Show jetzt starten')));
   const panel = h('section', { class: 'card run-card' }, title, head, strip);
   // Aktuellen Schritt in der Leiste sichtbar halten – nur die Leiste waagerecht scrollen,
   // nie die ganze Seite (sonst sprang die Regie bei jeder Abgabe nach oben).
@@ -955,6 +973,7 @@ function buildEditor() {
     h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '12px' } }, h('h2', { style: { margin: 0 } }, 'Show-Editor'),
       h('div', { class: 'row', style: { gap: '12px', alignItems: 'center' } }, saveIndicator(),
         h('button', { class: 'btn ghost', onclick: runCheck, title: 'Prüft alle Spiele: leere Fragen, fehlende Lösungen, fehlende Videos, Bilder und Lieder' }, '✅ Generalprobe-Check'))),
+    probeBar(),
     buildShows(),
     nav,
     ...[].concat(content).filter(Boolean),
@@ -1064,6 +1083,7 @@ function buildSlot(g, i, running) {
       S.coinPositions.includes(pos) ? h('span', { class: 'badge coin-badge' }, coinImg(), ' danach Münze') : null)),
   h('div', { class: 'slot-actions' },
     h('button', { class: `btn small ${g.id === selectedGame ? 'pink' : 'ghost'}`, onclick: () => { selectedGame = g.id; renderAll(true); } }, 'Bearbeiten'),
+    h('button', { class: 'btn small ghost', disabled: running, title: 'Dieses Spiel mit einem iPad ausprobieren (andere Teams simuliert, nichts wird gespeichert)', onclick: () => startProbe(g) }, '🧪 Probelauf'),
     h('button', { class: 'btn small ghost slot-more', disabled: running, title: 'Durch ein anderes Spiel aus der Datenbank ersetzen', onclick: () => pickFromLibrary(i, g) }, '⇄ Ersetzen'),
     h('button', { class: 'btn small ghost icon slot-more', disabled: running, 'aria-label': `${g.title} entfernen`, title: 'Aus der Show entfernen', onclick: () => removeGame(g) }, trashIcon())));
 }
@@ -1073,6 +1093,26 @@ function buildEmptySlot(i, running) {
     h('span', { class: 'slot-pos' }, i + 1),
     h('div', { class: 'slot-body' }, h('span', { class: 'muted' }, 'Freier Platz')),
     h('button', { class: 'btn small', disabled: running, onclick: () => pickFromLibrary(i) }, '+ Spiel aus Datenbank'));
+}
+
+// Probelauf starten: Kopie der Show, das gewählte Spiel ist aktiv. Die Regie dafür
+// öffnet sich in einem eigenen Fenster (im Prototyp: Reiter „Probelauf“).
+async function startProbe(g) {
+  const win = localServer ? null : window.open('', 'quiz-probe');
+  const r = await act('probe.start', { gameId: g.id });
+  if (!r) { win?.close(); return; }
+  if (localServer) {
+    try { window.top.location.hash = '#probe-mod'; } catch { /* egal */ }
+  } else if (win) win.location.href = 'moderator.html?probe=1';
+  else window.open('moderator.html?probe=1', 'quiz-probe');
+}
+function probeBar() {
+  const p = S.probe;
+  if (!p || PROBE) return null;
+  return h('section', { class: 'card probe-bar' },
+    h('span', { class: 'grow' }, '🧪 ', h('b', {}, `Probelauf läuft: ${p.title}`), h('span', { class: 'muted' }, ` · iPad: Startseite → Code „${p.code}“ · andere Teams werden simuliert · die echte Show bleibt unverändert`)),
+    localServer ? null : h('button', { class: 'btn small', onclick: () => window.open('moderator.html?probe=1', 'quiz-probe') }, 'Probelauf-Regie öffnen'),
+    h('button', { class: 'btn small bad', onclick: () => act('probe.stop') }, 'Probelauf beenden'));
 }
 
 async function removeGame(g) {

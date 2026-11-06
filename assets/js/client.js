@@ -128,7 +128,7 @@ if (localServer) {
     // Ohne new URL(): In eingebetteten Einzeldatei-Seiten (srcdoc) gibt es keine
     // auflösbare Seitenadresse.
     const raw = typeof input === 'string' ? input : input.url;
-    const m = raw.split(/[?#]/)[0].match(/(?:^|\/)api\/(teams|login|logout)$/);
+    const m = raw.split(/[?#]/)[0].match(/(?:^|\/)api\/(teams|login|logout|probe)$/);
     if (!m) return realFetch(input, init);
     const body = init?.body ? JSON.parse(init.body) : {};
     const [status, data] = await localServer.api(m[1], body);

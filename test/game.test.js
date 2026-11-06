@@ -1344,3 +1344,25 @@ test('Musikquiz: Art der Frage – nur Frage, Bild + Frage, Ton + Frage', () => 
   const issues = game.applyAction(db, mod(), 'check.show', {}).data.issues.map((x) => x.where + ' ' + x.text).join('\n');
   assert.ok(!/Kategorie 1 · Feld 2.*Bild/.test(issues));
 });
+
+test('Probelauf: Kopie der Show, simulierte Teams antworten, echte Show bleibt unverändert', () => {
+  const probeLib = require('../server/probe')(game);
+  const { db, ids } = setup(4);
+  const before = JSON.stringify(db);
+  const g = db.project.games.find((x) => x.type === 'leichte5');
+  const p = probeLib.createProbe(db, g.id, 1000);
+  assert.equal(p.teamId, ids[0]);
+  assert.equal(p.db.live.activeGame, g.id);
+  assert.ok(probeLib.isProbeCode(' demo '));
+  // Weiter → Frage 1; Bots geben nach ihrer Wartezeit ab.
+  game.applyAction(p.db, mod(), 'run.next', {});
+  let t = 1000;
+  for (let k = 0; k < 20; k++) { t += 3000; probeLib.botTick(p, t); }
+  const r = p.db.live.games[g.id].rounds[0];
+  assert.deepEqual(Object.keys(r.answers).sort(), ids.slice(1).sort(), 'alle simulierten Teams haben abgegeben, das echte noch nicht');
+  game.applyAction(p.db, team(ids[0]), 'play.submit', { text: '1440' });
+  assert.equal(r.open, false, 'nach der letzten Abgabe automatisch geschlossen');
+  assert.equal(JSON.stringify(db), before, 'echte Show unverändert');
+  assert.equal(game.moderatorView(db).undo, null, 'Rückgängig der echten Show bleibt leer');
+  assert.ok(game.moderatorView(p.db).undo, 'Probelauf hat eigenes Rückgängig');
+});

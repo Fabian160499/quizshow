@@ -38,6 +38,7 @@
         </p>
         <div id="team-list" class="team-pick" role="group" aria-label="Team auswählen"></div>
         <p id="no-teams" class="muted hidden">Die Moderation hat noch keine Teams angelegt.</p>
+        <div class="team-pick host-pick hidden" id="probe-pick"><button type="button" class="btn" style="border-left: 10px solid #ffb020" onclick="location.href='team.html?code=DEMO'">🧪 Probelauf beitreten</button></div>
         <div class="team-pick host-pick"><button type="button" id="host-pick" class="btn ghost" aria-pressed="false" style="border-left: 10px solid #7fc8bd">🎤 Moderation (Finale)</button></div>
         <form id="team-form">
           <label for="code" id="code-label">Team-Zugangscode</label>
@@ -92,6 +93,19 @@
     hostPick.addEventListener('click', () => setHostMode(!hostMode));
     if (new URLSearchParams(location.search).get('next') === 'host') setHostMode(true);
 
+    // Probelauf aktiv? Dann ein Knopf, der dieses iPad als Probe-Team anmeldet.
+    async function loadProbe() {
+      try {
+        const res = await fetch('api/probe', { cache: 'no-store' });
+        const p = res.ok ? await res.json() : null;
+        const box = document.getElementById('probe-pick');
+        box.classList.toggle('hidden', !(p && p.active));
+        if (p && p.active) box.querySelector('button').textContent = `🧪 Probelauf beitreten: ${p.title}`;
+      } catch { /* kein Server */ }
+    }
+    loadProbe();
+    setInterval(loadProbe, 4000);
+
     async function loadTeams() {
       try {
         const res = await fetch('api/teams', { cache: 'no-store' });
@@ -132,7 +146,8 @@
       }
       const code = codeInput.value.trim().toUpperCase();
       if (!code) return;
-      location.href = `team.html?code=${encodeURIComponent(code)}${selectedTeam ? `&expect=${encodeURIComponent(selectedTeam.id)}` : ''}`;
+      // Code „DEMO“: Probelauf – gehört zu keinem echten Team.
+      location.href = `team.html?code=${encodeURIComponent(code)}${selectedTeam && code !== 'DEMO' ? `&expect=${encodeURIComponent(selectedTeam.id)}` : ''}`;
     });
 
     document.getElementById('mod-form').addEventListener('submit', async (ev) => {
