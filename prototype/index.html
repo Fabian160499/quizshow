@@ -207,7 +207,7 @@
       // Moderation: in Originalgröße, so hoch wie das Fenster – wie die echte Anwendung.
       if (f.s.cls === 'mod' && stage.dataset.focus === f.s.id) {
         const top = f.device.getBoundingClientRect().top + window.scrollY;
-        const height = Math.max(560, window.innerHeight - top - 24);
+        const height = Math.max(300, window.innerHeight - top - 16);
         f.iframe.width = width;
         f.iframe.height = height;
         f.iframe.style.transform = 'none';
