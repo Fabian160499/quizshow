@@ -149,7 +149,7 @@ function musik(v, teamOf) {
   const board = h('div', { class: 'jeopardy' }, v.board.map((cat, i) => h('div', { class: 'col' },
     h('div', { class: 'cat' }, cat.name || `Kategorie ${i + 1}`),
     cat.fields.map((f) => h('div', { class: `cell ${f.played ? 'played' : ''}`, style: f.winner ? { borderColor: teamOf(f.winner).color, color: teamOf(f.winner).color } : null }, f.played ? (f.winner ? teamOf(f.winner).name : '–') : String(f.value))))));
-  if (!c || (c.resolved && !c.answer)) return [board];
+  if (!c || (c.resolved && !c.answer)) return [board, v.picker ? sub(`${teamOf(v.picker).name} wählt ein Feld`, { marginTop: '2vh' }) : null];
   const out = [sub(`${c.category} · ${pts(c.value)}${c.mashup ? ' · beide Songtitel nennen!' : ''}`)];
   out.push(h('div', { class: 'q' }, c.task || (c.started ? '🎵 Hört genau hin …' : '🎵')));
   out.push(buzzRow(v, teamOf, c.buzzOrder, c.answering));

@@ -133,7 +133,8 @@ const FLOW = {
       return step('Feld beenden (niemand richtig)', 'close');
     }
     if (Object.keys(st.played).length >= total) return null;
-    return wait('Das Team wählt ein Feld – tippe es auf dem Brett an');
+    if (!st.started) return step('Spiel starten (Team auslosen)', 'begin');
+    return wait(`${teamName(db, st.picker)} wählt ein Feld auf dem iPad`);
   },
 
   jauch(db, game, st) {
