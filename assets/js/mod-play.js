@@ -70,7 +70,8 @@ function leichte5(ui, g, st) {
   const ungraded = submitted.filter((a) => a.grade === null).length;
   const rv = round.rv;
   let label = null;
-  if (!rv) label = 'Auflösung starten ▶ (erste Antwort groß zeigen)';
+  if (!rv) label = 'Auflösung starten ▶ (erstes Team groß zeigen)';
+  else if (!rv.done && rv.shown === false) label = `Antwort von ${ui.teamName((rv.groups[rv.g] || [])[0])} zeigen ▶`;
   else if (!rv.done && !rv.verdict) {
     const ids = rv.groups[rv.g] || [];
     const ok = round.answers[ids[0]]?.grade === true;
@@ -84,7 +85,7 @@ function leichte5(ui, g, st) {
     out.push(h('p', { class: 'row', style: { alignItems: 'center' } },
       label ? btn('pink', label, () => ui.act('play.revealNext'), !rv && ungraded > 0) : badge('ok', 'Alles aufgelöst'),
       !rv && ungraded ? h('span', { class: 'muted' }, `Erst alle bewerten (${ungraded} offen) – die Wertung bleibt bis zur Auflösung verdeckt.`) : null,
-      cur ? h('span', { class: 'muted' }, `Auf dem Beamer: ${cur}${rv.verdict ? '' : ' (noch ohne Wertung)'} · ${rv.g + 1} von ${rv.groups.length}`) : null));
+      cur ? h('span', { class: 'muted' }, `Auf dem Beamer: ${cur}${rv.shown === false ? ' (nur Teamname)' : rv.verdict ? '' : ' (noch ohne Wertung)'} · ${rv.g + 1} von ${rv.groups.length}`) : null));
   }
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
     const a = round.answers[t.id];

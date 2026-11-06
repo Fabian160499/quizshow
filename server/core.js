@@ -138,7 +138,24 @@ function timerClosed(db, gameId, now = Date.now()) {
   return !!t && (!gameId || t.gameId === gameId) && now > t.startedAt + TIMER.announce + TIMER.run + TIMER.grace;
 }
 
+// ----- Reaktion auf dem Team-iPad (grün/rot, „+3 Punkte“) -----
+// Punkte, die gebucht werden, bevor das Ergebnis öffentlich ist (z. B. Bewertung vor
+// der Auflösung), warten in fxPending, bis die Auflösung sie freigibt.
+function teamFx(db, teamId, ok, points, now = Date.now()) {
+  if (!db.project.teams.some((t) => t.id === teamId)) return;
+  (db.live.teamFx ||= {})[teamId] = { id: `${now}-${Math.random().toString(36).slice(2, 8)}`, ok: !!ok, points: points || 0 };
+}
+function fxRelease(db, ids, ok, now) {
+  const pend = db.live.fxPending || {};
+  for (const id of ids) {
+    const p = pend[id] || 0;
+    delete pend[id];
+    teamFx(db, id, ok === undefined ? p > 0 : ok, p, now);
+  }
+}
+
 module.exports = {
+  teamFx, fxRelease,
   TIMER,
   timerClosed,
   QuizError, fail, newId, randomInt, log, effect, teamName, teamIds, totals, bookTarget, cleanText, cleanInk, cleanImage, cleanChoice, pts,
