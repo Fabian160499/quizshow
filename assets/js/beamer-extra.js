@@ -56,6 +56,8 @@ function konBuffer(ctx, id) {
   }
   return konBufs.get(id);
 }
+const MUS_REVEAL_MS = 12000; // Musikquiz: Auflösung läuft 12 Sekunden
+
 function konStop() {
   if (!konSrc) return;
   const { src, gain, ctx } = konSrc;
@@ -209,6 +211,22 @@ export function syncMedia(s) {
       if (last.audioSeq === k) return;
       last.audioSeq = k;
       au.currentTime = 0;
+      // Die Auflösung läuft 12 Sekunden, die letzte Sekunde wird leiser.
+      clearTimeout(last.stageTimer);
+      clearInterval(last.revealFade);
+      const stop = () => {
+        if (last.audioSeq !== k || au.paused) return;
+        const v0 = au.volume;
+        let n = 0;
+        last.revealFade = setInterval(() => {
+          n += 1;
+          if (last.audioSeq !== k) { clearInterval(last.revealFade); au.volume = v0; return; }
+          au.volume = Math.max(0, v0 * (1 - n / 10));
+          if (n >= 10) { clearInterval(last.revealFade); au.pause(); au.volume = v0; }
+        }, 100);
+      };
+      au.addEventListener('playing', () => { clearTimeout(last.stageTimer); last.stageTimer = setTimeout(stop, MUS_REVEAL_MS - 1000); }, { once: true });
+      last.stageTimer = setTimeout(stop, MUS_REVEAL_MS + 4000); // falls „playing“ ausbleibt
       (au.muted ? au.play().catch(() => {}) : playWithSound(au));
     });
   } else if (mus && musVid) {

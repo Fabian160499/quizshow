@@ -71,7 +71,7 @@ function gier(ui, g, st) {
       btn('pink', missing.length ? `Warten auf ${missing.map((id) => ui.teamName(id)).join(', ')}` : 'Auswerten', () => ui.act('play.evaluate'), missing.length > 0)));
     if (missing.length && over) out.push(muted('Jedes Team muss antworten – gib bei Bedarf noch einmal 10 Sekunden Nachfrist.'));
   } else {
-    out.push(h('ul', { class: 'list' }, r.results.map((x) => teamLi(ui, x.teamId, ` – ${fmtNum(x.value)} (−${fmtNum(x.diff)}) · ${fmtNum(x.before)} → ${fmtNum(x.after)}`, x.out ? badge('bad', 'raus') : null))));
+    out.push(h('ul', { class: 'list' }, r.results.map((x) => teamLi(ui, x.teamId, ` – ${fmtNum(x.value)} (${x.bonus ? `Volltreffer +${fmtNum(x.bonus)}` : `−${fmtNum(x.diff)}`}) · ${fmtNum(x.before)} → ${fmtNum(x.after)}`, x.out ? badge('bad', 'raus') : null))));
   }
   out.push(row(st.awarded ? badge('ok', `Spiel entschieden – Showpunkte ${[1, 2, 3, 4, 5, 6].map((n) => pvc(g, `place${n}`, [10, 6, 4, 3, 2, 1][n - 1])).join('/')} automatisch vergeben`)
     : badge('', 'Showpunkte werden automatisch vergeben: wer ausscheidet, sofort – das letzte Team am Ende')));

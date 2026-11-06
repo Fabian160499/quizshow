@@ -2327,3 +2327,8 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .beamer .rank.rank-final li.winner { box-shadow: inset -0.6vw 0 0 var(--team), 0 0 0 0.45vh var(--accent-2), 0 0 5vh rgba(255, 194, 61, 0.6); animation: finalIn calc(0.9s * var(--speed, 1)) cubic-bezier(.2, 1.3, .4, 1) both, winnerGlow 1.6s 1s ease-in-out infinite alternate; }
 @keyframes finalIn { 0% { opacity: 0; transform: scale(1.25); filter: brightness(2.2); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; filter: none; } }
 @keyframes winnerGlow { to { box-shadow: inset -0.6vw 0 0 var(--team), 0 0 0 0.45vh var(--accent-2), 0 0 9vh rgba(255, 194, 61, 0.9); } }
+/* Riskier die Gier: Volltreffer (genau richtig) bringt Leben zurück */
+.hp-dmg.hp-heal { color: var(--ok, #2bd96b); right: auto; left: 50%; text-shadow: 0 2px 0 #000, 0 0 12px rgba(43, 217, 107, 0.85); }
+.hp.heal .hp-heal { animation: hpHeal 2.4s ease-out var(--d) both; }
+@keyframes hpHeal { 0% { opacity: 0; transform: translate(-50%, 6px) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, -10px) scale(1.25); } 75% { opacity: 1; transform: translate(-50%, -30px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50px) scale(0.95); } }
+.hp.heal .hp-track::after { content: ''; position: absolute; inset: -2px; border-radius: 6px; background: var(--ok, #2bd96b); opacity: 0; animation: hpFlash 0.7s ease-out var(--d) both; pointer-events: none; }

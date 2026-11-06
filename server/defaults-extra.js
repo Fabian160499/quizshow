@@ -327,7 +327,7 @@ const EXTRA_TYPES = {
   gier: {
     title: 'Riskier die Gier',
     playable: true,
-    summary: 'Schätzfragen mit 100 fiktiven Gier-Punkten je Team: Die Abweichung wird abgezogen, bei 0 oder weniger ist man raus. Platzierung bringt 10/6/4/3/2/1 Showpunkte.',
+    summary: 'Schätzfragen mit 100 fiktiven Gier-Punkten je Team: Die Abweichung wird abgezogen, genau richtig bringt 5 Leben dazu, bei 0 oder weniger ist man raus. Platzierung bringt 10/6/4/3/2/1 Showpunkte.',
     schema: [
       num('seconds', 'Antwortzeit pro Frage in Sekunden (Standard 60)', 10, 300),
       { key: 'questions', label: 'Schätzfragen', type: 'list', min: 1, max: 20, itemLabel: (i) => `Frage ${i + 1}`, addLabel: 'Frage hinzufügen',
