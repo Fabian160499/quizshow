@@ -10,7 +10,7 @@ const { MOVIE_HINTS } = require('./defaults');
 const { TYPES, DEFAULT_ORDER, LIBRARY_ORDER, EXTRA_ORDER, COIN_POSITIONS, SHOW_SIZE, TEAM_COLORS, publicTypes } = require('./defaults');
 const { checkShow } = require('./check');
 const { scoringOf } = require('./scoring');
-const { QuizError, fail, newId, log, effect, teamName, teamIds, totals, cleanText, cleanImage, TIMER } = require('./core');
+const { QuizError, fail, newId, log, effect, teamName, teamIds, totals, cleanText, cleanImage, TIMER, currentBuzz, teamFx, fxRelease } = require('./core');
 
 // Ablauf der einzelnen Spiele. Jedes Modul liefert init, Team- und
 // Moderationsaktionen sowie die Sichten für Teams und Beamer.
@@ -309,6 +309,95 @@ function gameFlow(db, now = Date.now()) {
   if (!game || !FLOW[game.type]) return null;
   return FLOW[game.type](db, game, gameState(db, game), now) || null;
 }
+// ----- Rangliste vor dem Finale: Rückblick + Aufdecken von hinten -----
+// Gilt für die Rangliste, nach der kein Spiel und keine Münze mehr kommt, aber das Finale.
+function isFinalRanking(steps, index) {
+  const rest = steps.slice(index + 1);
+  return !rest.some((x) => x.kind === 'game' || x.kind === 'coin') && rest.some((x) => x.kind === 'finale' || x.kind === 'finaleTitle');
+}
+// Platz mit Gleichstand: gleiche Punkte = gleicher Platz.
+function placesOf(list) {
+  return list.map((r) => 1 + list.filter((x) => x.points > r.points).length);
+}
+// Kleine Statistik des Abends aus den Punktebuchungen.
+function recapSlides(db) {
+  const teams = db.project.teams;
+  const row = (id, text) => { const t = teams.find((x) => x.id === id); return t ? { teamId: id, name: t.name, color: t.color, text } : null; };
+  const gameOf = (ref) => { const id = String(ref || '').split(':')[1]; return db.project.games.find((g) => g.id === id) || null; };
+  const slides = [{ icon: '🎬', title: 'Rückblick auf den Abend', text: 'Bevor es ins Finale geht …' }];
+  const ledger = db.ledger.filter((e) => teams.some((t) => t.id === e.teamId));
+  const sum = ledger.reduce((a, e) => a + e.points, 0);
+  if (sum > 0) slides.push({ icon: '🎯', title: 'Punkte des Abends', big: String(sum), text: 'Punkte haben alle Teams zusammen gesammelt' });
+  // Bestes Einzelspiel eines Teams.
+  const per = new Map();
+  for (const e of ledger) { const g = gameOf(e.ref); if (!g) continue; const k = `${e.teamId}|${g.id}`; per.set(k, (per.get(k) || 0) + e.points); }
+  const best = Math.max(0, ...per.values());
+  if (best > 0) {
+    const rows = [...per].filter(([, v]) => v === best).map(([k]) => { const [tid, gid] = k.split('|'); const g = db.project.games.find((x) => x.id === gid); return row(tid, `${best} ${best === 1 ? 'Punkt' : 'Punkte'} in „${g.title}“`); }).filter(Boolean);
+    slides.push({ icon: '🔥', title: 'Bestes Spiel des Abends', rows: rows.slice(0, 4) });
+  }
+  // Punktesammler: am häufigsten gepunktet.
+  const hits = {};
+  for (const e of ledger) if (e.points > 0 && !String(e.ref).startsWith('manual:')) hits[e.teamId] = (hits[e.teamId] || 0) + 1;
+  const most = Math.max(0, ...Object.values(hits));
+  if (most > 1) slides.push({ icon: '🏅', title: 'Punktesammler', rows: Object.keys(hits).filter((id) => hits[id] === most).map((id) => row(id, `hat ${most}-mal gepunktet`)).filter(Boolean).slice(0, 4) });
+  // Aufholjagd: wer lag zwischendurch am weitesten hinten? (verrät die aktuelle Platzierung nicht)
+  const sums = Object.fromEntries(teams.map((t) => [t.id, 0]));
+  const worst = {};
+  ledger.forEach((e, i) => {
+    sums[e.teamId] += e.points;
+    const next = ledger[i + 1];
+    const g = gameOf(e.ref);
+    if (next && gameOf(next.ref) === g) return; // Stand jeweils nach einem Spiel
+    const list = teams.map((t) => ({ teamId: t.id, points: sums[t.id] }));
+    const pl = placesOf(list);
+    list.forEach((r, k) => { if (!worst[r.teamId] || pl[k] > worst[r.teamId].place) worst[r.teamId] = { place: pl[k], game: g }; });
+  });
+  const now = rankingSnapshot(db);
+  const nowPl = Object.fromEntries(now.map((r, k) => [r.teamId, placesOf(now)[k]]));
+  const climbs = Object.entries(worst).map(([id, w]) => ({ id, w, up: w.place - nowPl[id] })).filter((x) => x.up >= 2);
+  const maxUp = Math.max(0, ...climbs.map((x) => x.up));
+  if (maxUp >= 2) {
+    const x = climbs.find((c) => c.up === maxUp);
+    const after = x.w.game ? ` nach Spiel ${db.project.games.indexOf(x.w.game) + 1}` : '';
+    slides.push({ icon: '🚀', title: 'Aufholjagd des Abends', rows: [row(x.id, `lag${after} noch auf Platz ${x.w.place} – mal sehen, wo das Team jetzt steht …`)].filter(Boolean) });
+  }
+  return slides;
+}
+// Schritte der Rangliste vor dem Finale: Folien, leere Tafel, dann von hinten aufdecken.
+// Platz 2 und Platz 1 kommen gemeinsam – sonst wüsste Platz 1 es schon vorher.
+function finalRankPlan(fin, n) {
+  const S = fin.slides.length;
+  const reveals = Math.max(1, n - 1);
+  return { S, reveals, total: S + 1 + reveals };
+}
+function finalRevealed(fin, n) {
+  const { S, reveals } = finalRankPlan(fin, n);
+  const k = fin.step - S;
+  if (k <= 0) return 0;
+  return k >= reveals ? n : k;
+}
+function rankingFlow(db) {
+  const cur = rundown(db)[db.live.run ?? -1];
+  const b = db.live.beamer;
+  if (!cur || cur.kind !== 'ranking' || !b || b.view !== 'ranking' || !b.data || !b.data.final) return null;
+  const fin = b.data.final;
+  const list = b.data.ranking;
+  const n = list.length;
+  const { S, reveals, total } = finalRankPlan(fin, n);
+  const next = fin.step + 1;
+  if (next >= total) return null;
+  if (next < S) return { label: `Rückblick: ${fin.slides[next].title}`, action: 'ranking.next', mod: true };
+  if (next === S) return { label: 'Rangliste vor dem Finale zeigen', action: 'ranking.next', mod: true };
+  const k = next - S;
+  const pl = placesOf(list);
+  if (k >= reveals) return { label: n > 1 ? '🏆 Platz 2 und Platz 1 gleichzeitig aufdecken' : '🏆 Platz 1 aufdecken', action: 'ranking.next', mod: true };
+  return { label: `Platz ${pl[n - k]} aufdecken`, action: 'ranking.next', mod: true };
+}
+function stepFlow(db, now) {
+  return gameFlow(db, now) || rankingFlow(db);
+}
+
 // Teams ohne Abgabe nach dem Schließen (für die Nachfrist-Knöpfe in der Regie).
 function lateCandidates(db) {
   const game = activeGame(db);
@@ -663,6 +752,10 @@ function runStep(db, ctx, index) {
     // Münze der richtigen Position zeigen (auch beim Zurückblättern).
     db.live.beamer = { view: 'coin', data: { position: coin.position, teamId: coin.teamId } };
     effect(db, 'coin');
+  } else if (st.kind === 'ranking' && isFinalRanking(steps, index)) {
+    // Vor dem Finale: erst der Rückblick auf den Abend, dann die Rangliste von hinten.
+    db.live.beamer = { view: 'ranking', data: { ranking: rankingSnapshot(db), at: ctx.now, final: { slides: recapSlides(db), step: 0 } } };
+    effect(db, 'reveal');
   } else {
     moderatorActions['beamer.show'](db, ctx, { view });
     // Pause: Beamer spielt die Lieder dieses Pausenschritts.
@@ -1255,8 +1348,9 @@ const moderatorActions = {
   },
   'run.next'(db, ctx) {
     // Auf einer Spiel-Folie macht „Weiter“ zuerst den nächsten Schritt im Spiel.
-    const f = gameFlow(db, ctx.now);
+    const f = stepFlow(db, ctx.now);
     if (f && f.wait) fail(f.wait);
+    if (f && f.mod) return moderatorActions[f.action](db, ctx, f.payload || {}) || {};
     if (f && f.action) {
       const res = playAction(db, ctx, f.action, f.payload || {}) || {};
       if (TIMER_RESET.has(f.action)) delete db.live.timer;
@@ -1270,6 +1364,18 @@ const moderatorActions = {
     const next = (db.live.run ?? -1) + 1;
     if (next >= rundown(db).length) fail('Das war der letzte Schritt.');
     return runStep(db, ctx, next);
+  },
+  'ranking.next'(db, ctx) {
+    const b = db.live.beamer;
+    const fin = b && b.view === 'ranking' && b.data && b.data.final;
+    if (!fin) fail('Gerade läuft keine Rangliste vor dem Finale.');
+    const n = b.data.ranking.length;
+    const { S, total } = finalRankPlan(fin, n);
+    if (fin.step + 1 >= total) fail('Die Rangliste ist schon ganz aufgedeckt.');
+    fin.step += 1;
+    const shown = finalRevealed(fin, n);
+    effect(db, shown === n && fin.step > S ? 'coin' : 'reveal');
+    log(db, ctx, 'beamer', fin.step < S ? `Rückblick: ${fin.slides[fin.step].title}` : fin.step === S ? 'Rangliste vor dem Finale' : `Rangliste: ${shown} von ${n} Plätzen aufgedeckt`);
   },
   'run.prev'(db, ctx) {
     const prev = (db.live.run ?? -1) - 1;
@@ -1399,6 +1505,7 @@ function applyAction(db, ctx, name, payload, actionId) {
   const snap = isUndoable(ctx, name) ? { live: clone(db.live), ledger: clone(db.ledger), project: showKey(db), logLen: db.log.length, name, at: ctx.now, teamSince: 0 } : null;
   // Für „Rückgängig“ im Finale: Zustand vor jeder Finale-Aktion merken.
   const before = typeof name === 'string' && FINALE_UNDOABLE(name) && db.live.finale ? clone(db.live.finale) : null;
+  const fxBefore = { ledger: db.ledger, len: db.ledger.length, seq: db.live.effect.seq, live: db.live, buzz: buzzTeamNow(db) };
   if (ctx.role === 'beamer') {
     // Der Beamer darf nur melden, dass das Intro-Lied eines Spieltitels zu Ende ist.
     if (name !== 'beamer.introEnded') fail('Diese Aktion ist für diese Rolle nicht erlaubt.');
@@ -1419,6 +1526,7 @@ function applyAction(db, ctx, name, payload, actionId) {
   }
   if (ctx.role === 'moderator' && typeof name === 'string' && (name.startsWith('run.') || name === 'show.activate')) delete db.live.timer;
   rememberFinale(db, name, before);
+  teamReaction(db, ctx, name, payload || {}, fxBefore);
   if (snap) {
     const added = db.log.slice(snap.logLen);
     snap.label = (added.length ? added[added.length - 1].detail : name).slice(0, 140);
@@ -1435,6 +1543,39 @@ function applyAction(db, ctx, name, payload, actionId) {
     if (db.processed.length > MAX_PROCESSED) db.processed.splice(0, db.processed.length - MAX_PROCESSED);
   }
   return result;
+}
+
+// ----- Reaktion auf dem Team-iPad -----
+// Sobald ein Ergebnis öffentlich wird (Ton „richtig“, „falsch“, Auflösung, Münze), sieht
+// jedes betroffene Team auf seinem iPad grün/rot mit den gewonnenen Punkten.
+// Punkte, die vorher still gebucht wurden, warten bis zur nächsten Auflösung.
+const FX_PUBLIC = new Set(['correct', 'wrong', 'reveal', 'coin']);
+function buzzTeamNow(db) {
+  const g = db.live.activeGame && db.live.games[db.live.activeGame];
+  if (!g) return null;
+  for (const r of [g, g.rounds && g.rounds[g.qIndex], g.rounds && g.rounds[g.index], g.rounds && g.rounds[g.catIndex], g.round]) {
+    if (r && Array.isArray(r.buzzes)) { const b = currentBuzz(r); if (b) return b.teamId; }
+  }
+  return null;
+}
+function teamReaction(db, ctx, name, payload, before) {
+  // Neustart, Rückgängig usw. ersetzen Spielstand/Punkte – dann keine Reaktion.
+  if (db.ledger !== before.ledger || db.live !== before.live || db.ledger.length < before.len) return;
+  const pend = (db.live.fxPending ||= {});
+  for (const e of db.ledger.slice(before.len)) if (e.points) pend[e.teamId] = (pend[e.teamId] || 0) + e.points;
+  const fired = db.live.effect.seq !== before.seq ? db.live.effect.kind : null;
+  const g = activeGame(db);
+  if (!fired || !FX_PUBLIC.has(fired) || (g && PLAY[g.type].fxManual)) return;
+  const done = new Set();
+  for (const [id, p] of Object.entries(pend)) {
+    if (!p) { delete pend[id]; continue; }
+    fxRelease(db, [id], undefined, ctx.now);
+    done.add(id);
+  }
+  if (fired === 'correct' || fired === 'wrong') {
+    const who = (typeof payload.teamId === 'string' && payload.teamId) || (ctx.role === 'team' ? ctx.teamId : null) || before.buzz;
+    if (who && !done.has(who)) teamFx(db, who, fired === 'correct', 0, ctx.now);
+  }
 }
 
 const UNDO_LABEL = {
@@ -1498,6 +1639,8 @@ function teamView(db, teamId, now = Date.now()) {
     session: db.live.session || 0,
     game: gameHeader(db),
     settings: { reducedMotion: db.project.settings.reducedMotion },
+    // Letzte Reaktion für dieses Team (grün/rot mit Punkten); das iPad zeigt sie, sobald die id neu ist.
+    fx: (db.live.teamFx && db.live.teamFx[teamId]) || null,
   };
   if (db.project.settings.publicScores) view.ranking = rankingSnapshot(db).map(({ name, color, points }) => ({ name, color, points }));
   // Abschluss der Show: jedes Team sieht seinen Platz und ein Dankeschön.
@@ -1593,7 +1736,17 @@ function beamerView(db) {
   }
   if (b.view === 'video') view.introVideo = pr.introVideo ? { id: pr.introVideo.id, type: pr.introVideo.type } : null;
   if (b.view === 'game') { view.gameView = beamerGameView(db); view.timer = timerInfo(db); }
-  if (b.view === 'ranking') view.ranking = b.data.ranking;
+  if (b.view === 'ranking' && b.data.final) {
+    // Rangliste vor dem Finale: nur Aufgedecktes an den Beamer, Verdecktes ohne Namen und Punkte.
+    const fin = b.data.final;
+    const list = b.data.ranking;
+    const { S } = finalRankPlan(fin, list.length);
+    const shown = finalRevealed(fin, list.length);
+    const pl = placesOf(list);
+    view.rankFinal = fin.step < S
+      ? { slide: fin.slides[fin.step], index: fin.step, of: S }
+      : { board: list.map((r, i) => (i >= list.length - shown ? { place: pl[i], teamId: r.teamId, name: r.name, color: r.color, points: r.points } : { place: pl[i], hidden: true })), shown, all: shown === list.length, max: Math.max(1, ...list.map((r) => r.points)) };
+  } else if (b.view === 'ranking') view.ranking = b.data.ranking;
   if (b.view === 'coin') view.coin = b.data;
   if (b.view === 'finale') view.finale = FINALE.beamerView(db);
   if (b.view === 'stageTitle') {
@@ -1633,7 +1786,7 @@ function trimForConnection(view, cache) {
 }
 
 function moderatorView(db, connections) {
-  const f = gameFlow(db);
+  const f = stepFlow(db);
   return {
     role: 'moderator',
     // „Weiter“ im Spiel: Beschriftung oder Sperrgrund; Nachfrist-Kandidaten.

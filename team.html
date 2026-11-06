@@ -46,10 +46,42 @@
       onState: (s, serverTime) => {
         if (serverTime) clockOffset = serverTime - Date.now();
         render(s);
+        showFx(s);
       },
       onAuthFailed: (m) => leave(m),
       onKicked: (m) => leave(m),
     });
+
+    // Ergebnis groß auf dem iPad: grün mit Konfetti und Punkten, rot bei falsch.
+    // Beim ersten Zustand (Seite neu geladen) nichts zeigen, nur merken.
+    let lastFx;
+    function showFx(s) {
+      const f = s.fx || null;
+      const id = f ? f.id : null;
+      if (lastFx === undefined || id === lastFx) { lastFx = id; return; }
+      lastFx = id;
+      if (!f) return;
+      document.querySelector('.team-fx')?.remove();
+      const ok = f.ok;
+      const pts = f.points ? `${f.points > 0 ? '+' : '−'}${Math.abs(f.points)} ${Math.abs(f.points) === 1 ? 'Punkt' : 'Punkte'}` : null;
+      const box = h('div', { class: `team-fx ${ok ? 'ok' : 'bad'}`, role: 'status', onclick: () => box.remove() },
+        h('div', { class: 'team-fx-card' },
+          h('div', { class: 'team-fx-icon' }, ok ? '✓' : '✗'),
+          h('div', { class: 'team-fx-title' }, ok ? 'Richtig!' : 'Leider falsch'),
+          pts ? h('div', { class: 'team-fx-pts' }, pts) : null));
+      if (ok && !s.settings.reducedMotion) {
+        const colors = ['#ff2e88', '#ffd400', '#00d1ff', '#7cff4f', '#ff7a00', '#b16cff', '#fff'];
+        for (let i = 0; i < 70; i++) {
+          box.append(h('i', { class: 'confetti', style: {
+            left: `${Math.random() * 100}%`, background: colors[i % colors.length],
+            animationDelay: `${Math.random() * 0.6}s`, animationDuration: `${1.8 + Math.random() * 1.4}s`,
+            transform: `rotate(${Math.random() * 360}deg)`, width: `${6 + Math.random() * 8}px`, height: `${10 + Math.random() * 10}px`,
+          } }));
+        }
+      }
+      document.body.append(box);
+      setTimeout(() => box.remove(), 3600);
+    }
 
     function leave(message) {
       store('quiz.teamCode', null);

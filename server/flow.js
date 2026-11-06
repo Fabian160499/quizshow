@@ -50,8 +50,9 @@ const FLOW = {
     if (open && !r.rv) return wait(`Erst alle Antworten bewerten (${open} offen)`);
     if (answers.length && (!r.rv || !r.rv.done)) {
       const rv = r.rv;
-      if (!rv) return step('Auflösung: erste Antwort zeigen', 'revealNext');
+      if (!rv) return step(`Auflösung: ${(() => { const w = Object.entries(r.answers).filter(([, a]) => a.grade === false); const first = w.length ? w : Object.entries(r.answers); return first.length ? `Team ${teamName(db, first[0][0])} zeigen` : 'erstes Team zeigen'; })()}`, 'revealNext');
       const ids = rv.groups[rv.g] || [];
+      if (rv.shown === false) return step(`Antwort von ${teamName(db, ids[0])} zeigen`, 'revealNext');
       const ok = r.answers[ids[0]]?.grade === true;
       if (!rv.verdict) return step(ok ? (ids.length > 1 ? `✓ Alle ${ids.length} richtig zeigen` : '✓ Richtig zeigen') : '✗ Falsch zeigen', 'revealNext');
       const nxt = rv.groups[rv.g + 1];

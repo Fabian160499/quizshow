@@ -1219,13 +1219,19 @@ test('Die leichten 5: Auflösung einzeln nacheinander – erst falsche, dann ein
   const shown = () => game.beamerView(db).gameView.answers.map((a) => [ids.indexOf(a.teamId), a.grade]);
   const next = () => game.applyAction(db, mod(), 'play.revealNext');
   assert.equal(game.teamView(db, ids[1]).play.answer.grade, null);
-  next(); assert.deepEqual(shown(), [[1, null]]);
+  const hidden = () => game.beamerView(db).gameView.answers.map((a) => [ids.indexOf(a.teamId), !!a.hidden, a.text]);
+  // Einzelne Teams: erst nur der Name, dann die Antwort, dann die Wertung.
+  next(); assert.deepEqual(hidden(), [[1, true, '']]);
+  next(); assert.deepEqual(shown(), [[1, null]]); assert.deepEqual(hidden(), [[1, false, 'A1']]);
   next(); assert.deepEqual(shown(), [[1, false]]);
   assert.equal(game.teamView(db, ids[1]).play.answer.grade, false);
+  next(); assert.deepEqual(hidden(), [[3, true, '']]);
   next(); assert.deepEqual(shown(), [[3, null]]);
   next(); assert.deepEqual(shown(), [[3, false]]);
+  next(); assert.deepEqual(hidden(), [[0, true, '']]);
   next(); assert.deepEqual(shown(), [[0, null]]);
   next(); assert.deepEqual(shown(), [[0, true]]);
+  // Die übrigen richtigen zusammen: sofort mit Antwort (ohne Namensschritt).
   next(); assert.deepEqual(shown(), [[2, null], [4, null]]);
   next(); assert.deepEqual(shown(), [[2, true], [4, true]]);
   next(); assert.equal(shown().length, 5);
@@ -1365,4 +1371,55 @@ test('Probelauf: Kopie der Show, simulierte Teams antworten, echte Show bleibt u
   assert.equal(JSON.stringify(db), before, 'echte Show unverändert');
   assert.equal(game.moderatorView(db).undo, null, 'Rückgängig der echten Show bleibt leer');
   assert.ok(game.moderatorView(p.db).undo, 'Probelauf hat eigenes Rückgängig');
+});
+
+test('Rangliste vor dem Finale: Rückblick, dann von hinten aufdecken, Platz 2 und 1 gemeinsam', () => {
+  const { db, ids } = setup(4);
+  const g = db.project.games[0];
+  ids.forEach((id, i) => db.ledger.push({ id: `pt${i}`, teamId: id, points: (i + 1) * 3, ref: `leichte5:${g.id}:0:${id}`, at: i }));
+  const steps = game.moderatorView(db).rundown;
+  const idx = steps.findIndex((x) => x.kind === 'ranking');
+  game.applyAction(db, mod(), 'run.goto', { index: idx });
+  const bv = () => game.beamerView(db).rankFinal;
+  assert.equal(bv().slide.title, 'Rückblick auf den Abend');
+  const labels = [];
+  for (let k = 0; k < 20; k++) {
+    const f = game.moderatorView(db).flow;
+    if (!f) break;
+    labels.push(f.label);
+    game.applyAction(db, mod(), 'run.next', {});
+    const v = bv();
+    if (v.board) {
+      // Verdeckte Plätze verraten weder Namen noch Punkte.
+      for (const r of v.board.filter((x) => x.hidden)) assert.ok(!('name' in r) && !('points' in r));
+    }
+  }
+  assert.ok(labels.includes('Rangliste vor dem Finale zeigen'));
+  const reveals = labels.filter((l) => /aufdecken/.test(l));
+  assert.deepEqual(reveals, ['Platz 4 aufdecken', 'Platz 3 aufdecken', '🏆 Platz 2 und Platz 1 gleichzeitig aufdecken']);
+  assert.equal(bv().all, true);
+  assert.equal(bv().board[0].teamId, ids[3]);
+  // Danach geht „Weiter“ zur nächsten Folie (Finale-Titel).
+  game.applyAction(db, mod(), 'run.next', {});
+  assert.equal(game.moderatorView(db).rundown[db.live.run].kind, 'finaleTitle');
+});
+
+test('Team-iPad: Ergebnis erst bei der Auflösung (leichte 5), mit Punkten', () => {
+  const { db, ids } = setup(3);
+  game.applyAction(db, mod(), 'show.activate', { gameId: gid(db, 'leichte5') });
+  game.applyAction(db, mod(), 'play.open', { qIndex: 0 });
+  ids.forEach((id) => game.applyAction(db, team(id), 'play.submit', { text: 'x' }));
+  game.applyAction(db, mod(), 'play.grade', { teamId: ids[0], correct: true });
+  game.applyAction(db, mod(), 'play.grade', { teamId: ids[1], correct: false });
+  game.applyAction(db, mod(), 'play.grade', { teamId: ids[2], correct: true });
+  assert.equal(game.teamView(db, ids[0]).fx, null, 'Bewertung allein verrät noch nichts');
+  const next = () => game.applyAction(db, mod(), 'play.revealNext');
+  next(); next(); next(); // Team 2: Name, Antwort, falsch
+  assert.equal(game.teamView(db, ids[1]).fx.ok, false);
+  assert.equal(game.teamView(db, ids[0]).fx, null);
+  next(); next(); next(); // erstes richtiges Team
+  const fx = game.teamView(db, ids[0]).fx;
+  assert.equal(fx.ok, true);
+  assert.ok(fx.points > 0);
+  assert.equal(game.teamView(db, ids[2]).fx, null, 'das letzte richtige Team erfährt es erst bei seiner Auflösung');
 });

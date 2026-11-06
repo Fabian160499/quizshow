@@ -5,7 +5,7 @@
 // sichtbar). Alle Antworten erscheinen groß nebeneinander ohne Wertung. Per Knopf
 // wird aufgelöst: zuerst alle falschen, dann ein richtiges, dann alle übrigen richtigen.
 
-const { fail, log, effect, teamName, bookTarget, cleanText, cleanInk } = require('./core');
+const { fail, log, effect, teamName, bookTarget, cleanText, cleanInk, fxRelease } = require('./core');
 const { pv } = require('./scoring');
 
 function round(st, qIndex) {
@@ -14,6 +14,7 @@ function round(st, qIndex) {
 }
 
 module.exports = {
+  fxManual: true, // Ergebnis aufs iPad erst bei der Auflösung des Teams (siehe revealNext)
   init: () => ({ qIndex: -1, rounds: {} }),
 
   team: {
@@ -90,22 +91,29 @@ module.exports = {
         if (right.length) groups.push([right[0]]);
         if (right.length > 1) groups.push(right.slice(1));
         r.open = false;
-        r.rv = { groups, g: 0, verdict: false, done: false };
+        r.rv = { groups, g: 0, shown: groups[0].length > 1, verdict: false, done: false };
         log(db, ctx, 'beamer', 'Auflösung gestartet');
         return;
       }
       const rv = r.rv;
       if (rv.done) fail('Alles ist schon aufgelöst.');
+      // Einzelnes Team: erst nur der Name (Moderation geht hin), dann die Antwort, dann die Wertung.
+      if (rv.shown === false) {
+        rv.shown = true;
+        log(db, ctx, 'beamer', `Auflösung: Antwort von ${teamName(db, rv.groups[rv.g][0])} gezeigt`);
+        return;
+      }
       if (!rv.verdict) {
         rv.verdict = true;
         const ids = rv.groups[rv.g];
         for (const id of ids) if (r.answers[id]) r.answers[id].revealed = true;
         const ok = r.answers[ids[0]]?.grade === true;
         effect(db, ok ? 'correct' : 'wrong');
+        fxRelease(db, ids, ok, ctx.now); // iPad zeigt das Ergebnis erst jetzt
         log(db, ctx, 'beamer', `Auflösung: ${ids.map((id) => teamName(db, id)).join(', ')} ${ok ? 'richtig' : 'falsch'}`);
         return;
       }
-      if (rv.g + 1 < rv.groups.length) { rv.g += 1; rv.verdict = false; return; }
+      if (rv.g + 1 < rv.groups.length) { rv.g += 1; rv.verdict = false; rv.shown = rv.groups[rv.g].length > 1; return; }
       rv.done = true; // Übersicht aller Teams mit Wertung
       for (const [, a] of order) a.revealed = true;
     },
@@ -155,7 +163,8 @@ module.exports = {
         const list = rv && !rv.done ? pick(rv.groups[rv.g] || [])
           : rv && rv.done ? pick(db.project.teams.map((t) => t.id))
             : db.project.teams.map((t) => [t.id, r.answers[t.id]]).filter(([, a]) => a && a.onBeamer);
-        return list.map(([teamId, a]) => ({ teamId, text: a.text, ink: a.ink || null, grade: a.revealed ? a.grade : null }));
+        const hide = rv && !rv.done && rv.shown === false; // erst nur der Teamname
+        return list.map(([teamId, a]) => (hide ? { teamId, hidden: true, text: '', ink: null, grade: null } : { teamId, text: a.text, ink: a.ink || null, grade: a.revealed ? a.grade : null }));
       })(),
       reveal: r.rv ? { step: r.rv.done ? r.rv.groups.length : r.rv.g + 1, of: r.rv.groups.length, done: r.rv.done } : null,
       solution: r.solutionRevealed ? game.content.questions[st.qIndex].solution : null,

@@ -50,7 +50,7 @@ function leichte5(v, teamOf) {
     // Wie im Finale: schwarze Antwortfläche, darunter die graue Namensleiste, Teamfarbe als seitliche Balken.
     return h('div', { class: `answer fx-card l5-card${a.ink ? ' has-ink' : ''}${a.grade === true ? ' ok' : a.grade === false ? ' bad' : ''}`, '--team': t.color },
       h('div', { class: 'ans-name l5-name' }, t.name),
-      h('div', { class: 'ans-body' }, answerContent(a, 'beamer'), mark));
+      a.hidden ? h('div', { class: 'ans-body l5-hidden' }, h('span', { class: 'l5-q' }, '?')) : h('div', { class: 'ans-body' }, answerContent(a, 'beamer'), mark));
   })));
   if (v.solution) out.push(h('div', { class: 'solution' }, `Lösung: ${v.solution}`));
   return out;

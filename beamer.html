@@ -251,7 +251,7 @@
         onLock: () => snd && buzzer(),
       });
 
-      const key = JSON.stringify([s.view, s.gameView, s.ranking, s.coin, s.show, s.teams, s.game, s.games, s.pauseSongs, s.pauseCoinPos, s.introVideo, s.coins, s.finale, s.finaleIntro, s.stage, s.hosts]);
+      const key = JSON.stringify([s.view, s.gameView, s.ranking, s.rankFinal, s.coin, s.show, s.teams, s.game, s.games, s.pauseSongs, s.pauseCoinPos, s.introVideo, s.coins, s.finale, s.finaleIntro, s.stage, s.hosts]);
       const replayTitle = fresh && (s.effect.kind === 'title' || s.effect.kind === 'video');
       if (key === lastKey && !replayTitle) return;
       lastKey = key;
@@ -576,7 +576,49 @@
     // Rangliste von unten nach oben aufbauen: der letzte Platz erscheint zuerst.
     // Zwischenstand mit Animation: Teams stehen zuerst in Pultreihenfolge, die Balken
     // fahren hoch und die Punkte zählen mit; dann tauschen die Teams sichtbar die Plätze.
+    // Vor dem Finale: Rückblick-Folien, dann Rangliste von hinten (Platz 2 und 1 gemeinsam).
+    let finalShown = 0;
+    function finalRanking(s) {
+      const f = s.rankFinal;
+      if (f.slide) {
+        finalShown = 0;
+        const sl = f.slide;
+        return [h('div', { class: 'recap' },
+          h('div', { class: 'recap-icon' }, sl.icon || '★'),
+          h('div', { class: 'q rank-title recap-title' }, sl.title),
+          sl.big ? h('div', { class: 'recap-big' }, sl.big) : null,
+          sl.text ? h('p', { class: 'recap-text' }, sl.text) : null,
+          sl.rows ? h('div', { class: 'recap-rows' }, sl.rows.map((r, i) => h('div', { class: 'recap-row', '--team': r.color, style: { animationDelay: `${0.5 + i * 0.25}s` } },
+            h('span', { class: 'recap-name' }, r.name), h('span', { class: 'recap-what' }, r.text)))) : null)];
+      }
+      const reduced = document.documentElement.classList.contains('reduced-motion');
+      const fresh = f.shown > finalShown;
+      const before = finalShown;
+      finalShown = f.shown;
+      const n = f.board.length;
+      const ol = h('ol', { class: `rank rank-board rank-final n${n}${f.all ? ' all' : ''}` }, f.board.map((r, i) => {
+        if (r.hidden) return h('li', { class: 'hidden-row', '--team': '#3a3d6e' }, h('span', { class: 'pos' }, String(r.place)), h('span', { class: 'nm' }, '?'), h('span', { class: 'pts' }, ''));
+        const isNew = fresh && i >= n - f.shown && i < n - before;
+        const pts = h('span', { class: 'pts' }, isNew && !reduced ? '0' : String(r.points));
+        const li = h('li', { class: `${isNew ? 'new' : ''}${r.place === 1 && f.all ? ' winner' : ''}`, '--team': r.color },
+          h('span', { class: 'pos' }, String(r.place)), h('span', { class: 'nm' }, r.name),
+          h('span', { class: 'bar' }, h('i', { style: { width: `${Math.max(2, (r.points / f.max) * 100)}%` } })), pts);
+        if (isNew && !reduced) {
+          const speed = Number(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
+          const t0 = performance.now() + 500 * speed, dur = 1600 * speed;
+          const step = (t) => { const k = Math.max(0, Math.min(1, (t - t0) / dur)); pts.textContent = String(Math.round(r.points * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
+          requestAnimationFrame(step);
+        }
+        return li;
+      }));
+      const out = [h('div', { class: 'q rank-title' }, f.shown ? 'Rangliste vor dem Finale' : 'Wer steht wo vor dem Finale?'), ol];
+      if (f.all && fresh && !reduced) out.push(h('div', { class: 'fb-confetti', 'aria-hidden': 'true', style: { zIndex: 5 } }, Array.from({ length: 70 }, (_, i) => h('i', { style: { left: `${(i * 37) % 100}%`, animationDelay: `${0.8 + (i % 14) * 0.18}s`, background: ['#ffc23d', '#ff2d8a', '#1fd6f2', '#fff'][i % 4] }, '--rot': `${(i * 53) % 360}deg` }))));
+      return out;
+    }
+
     function ranking(s) {
+      if (s.rankFinal) return finalRanking(s);
+      finalShown = 0;
       const list = s.ranking || [];
       const max = Math.max(1, ...list.map((r) => r.points));
       const start = (s.teams || []).map((t) => list.find((r) => r.teamId === t.id)).filter(Boolean);
@@ -682,7 +724,7 @@
 
       if (f.result) {
         const won = f.result === 'team';
-        const conf = h('div', { class: 'fb-confetti', 'aria-hidden': 'true' }, won ? Array.from({ length: 70 }, (_, i) => h('i', { style: { left: `${(i * 37) % 100}%`, animationDelay: `${(i % 14) * 0.18}s`, background: ['#ffc23d', '#ff2d8a', '#1fd6f2', '#fff'][i % 4], '--rot': `${(i * 53) % 360}deg` } })) : []);
+        const conf = h('div', { class: 'fb-confetti', 'aria-hidden': 'true' }, won ? Array.from({ length: 70 }, (_, i) => h('i', { style: { left: `${(i * 37) % 100}%`, animationDelay: `${(i % 14) * 0.18}s`, background: ['#ffc23d', '#ff2d8a', '#1fd6f2', '#fff'][i % 4] }, '--rot': `${(i * 53) % 360}deg` })) : []);
         return [h('div', { class: `fb-stage result ${won ? 'won' : 'lost'}` }, conf, top,
           h('div', { class: 'fb-result' },
             won ? h('div', { class: 'fb-winner', '--team': f.team.color }, h('span', {}, f.team.name), h('b', {}, 'STIEHLT DIE SHOW!'))
