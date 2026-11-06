@@ -63,6 +63,7 @@
 
     // Neue Show-Sitzung („Show jetzt starten“): alte Entwürfe aus Proben verwerfen und neu laden.
     function checkSession(s) {
+      if (code === 'DEMO') return false; // Probelauf: eigene Kopie, echte Sitzung nicht anfassen
       const skey = `quiz.session.${s.team.id}`;
       const seen = store(skey);
       const now = String(s.session || 0);

@@ -112,9 +112,9 @@ export function syncMedia(s) {
   last.s = s;
   const v = s.view === 'game' ? s.gameView : null;
   const film = v && v.type === 'filmab' && !v.waiting ? v : null;
-  // Musikquiz: Auflösung mit Ton (MP4 als Video groß, MP3 nur Ton).
+  // Musikquiz: Auflösung mit Ton (MP3 und MP4 nur als Ton).
   const musRev = v && v.type === 'musik' && v.current && v.current.resolved && v.current.reveal ? v.current : null;
-  const musVid = musRev && musRev.reveal.type.startsWith('video') ? musRev : null;
+  const musVid = null; // MP4 wird beim Musikquiz nur als Ton abgespielt
   const fl = media.film || (film || musVid ? filmEl() : null);
   if (fl && musVid) {
     fl.classList.add('on');

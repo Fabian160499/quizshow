@@ -70,6 +70,7 @@ function require(name) {
   return cache[name].exports;
 }
 export const game = require('./game');
+export const probeLib = require('./probe');
 `;
 fs.writeFileSync(path.join(OUT, 'demo', 'game-bundle.js'), bundle);
 console.log(`Prototyp gebaut: ${path.relative(ROOT, OUT)}/prototype.html`);

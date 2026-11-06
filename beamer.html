@@ -213,7 +213,7 @@
     };
 
     const conn = demo ? { action: () => Promise.resolve(null) } : connect({
-      hello: () => ({ role: 'beamer', preview: embedded }),
+      hello: () => ({ role: 'beamer', preview: embedded, probe: new URLSearchParams(location.search).has('probe') }),
       quiet: embedded,
       onState: (s, serverTime) => {
         if (serverTime) clockOffset = serverTime - Date.now();

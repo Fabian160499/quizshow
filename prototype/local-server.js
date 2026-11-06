@@ -3,7 +3,9 @@
 // Verhalten nach: Anmeldung, rollenabhängige Sichten, Aktionen mit Rückmeldung.
 // Alle Bildschirme der Prototyp-Seite teilen sich diesen einen Zustand.
 
-import { game } from './game-bundle.js';
+import { game, probeLib as makeProbeLib } from './game-bundle.js';
+
+const probeLib = makeProbeLib(game);
 
 const PASSWORD = 'fabian';
 const DEMO_TOKEN = 'demo-token';
@@ -97,6 +99,11 @@ const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg', 
 export function createLocalServer() {
   let data = load();
   const clients = new Set();
+  // Probelauf (siehe server/probe.js): eigene Kopie, nichts wird gespeichert.
+  let probe = null;
+  let probeTimer = null;
+  const probeListeners = new Set();
+  const notifyProbe = () => { for (const fn of probeListeners) try { fn(probe ? { title: probe.title } : null); } catch { /* egal */ } };
 
   function save() {
     try {
@@ -111,6 +118,7 @@ export function createLocalServer() {
     let beamers = 0;
     let moderators = 0;
     for (const c of clients) {
+      if (c.probe) continue;
       if (c.role === 'team') teams[c.teamId] = (teams[c.teamId] || 0) + 1;
       if (c.role === 'beamer' && !c.preview) beamers++;
       if (c.role === 'moderator') moderators++;
@@ -119,7 +127,15 @@ export function createLocalServer() {
   }
 
   function viewFor(c) {
-    if (c.role === 'moderator') return game.trimForConnection(game.moderatorView(data, connections()), (c.cache ||= {}));
+    if (c.probe) {
+      if (!probe) throw new Error('kein Probelauf');
+      const pc = { teams: {}, beamers: 0, moderators: 0 };
+      for (const x of clients) if (x.probe && x.role === 'team') pc.teams[x.teamId] = 1;
+      if (c.role === 'moderator') return { ...game.trimForConnection(game.moderatorView(probe.db, pc), (c.cache ||= {})), probe: { title: probe.title, code: probe.code, active: true } };
+      if (c.role === 'team') return game.teamView(probe.db, c.teamId);
+      return game.beamerView(probe.db);
+    }
+    if (c.role === 'moderator') return { ...game.trimForConnection(game.moderatorView(data, connections()), (c.cache ||= {})), probe: probe ? { title: probe.title, code: probe.code, gameId: probe.gameId, active: false } : null };
     if (c.role === 'host') return game.hostView(data);
     if (c.role === 'team') return game.teamView(data, c.teamId);
     return game.beamerView(data);
@@ -167,7 +183,7 @@ export function createLocalServer() {
 
   function kickTeam(teamId) {
     for (const c of clients) {
-      if (c.role === 'team' && c.teamId === teamId) {
+      if (c.role === 'team' && c.teamId === teamId && !c.probe) {
         send(c, { type: 'kicked', message: 'Euer Zugangscode wurde erneuert oder das Team entfernt.' });
         setTimeout(() => c.close(), 10);
       }
@@ -176,28 +192,49 @@ export function createLocalServer() {
 
   function kickAllTeams() {
     for (const c of clients) {
-      if (c.role === 'team') {
+      if (c.role === 'team' && !c.probe) {
         send(c, { type: 'kicked', message: 'Die Moderation hat eine andere Show geöffnet. Bitte mit eurem Code neu anmelden.' });
         setTimeout(() => c.close(), 10);
       }
     }
   }
 
+  function stopProbe() {
+    probe = null;
+    clearInterval(probeTimer);
+    for (const c of clients) {
+      if (c.probe) {
+        send(c, { type: 'kicked', message: 'Der Probelauf ist beendet. Die echte Show ist unverändert.' });
+        setTimeout(() => c.close(), 10);
+      }
+    }
+    notifyProbe();
+  }
+
   function handle(c, msg) {
     if (msg.type === 'hello') {
       if (msg.role === 'moderator') {
         if (msg.token !== DEMO_TOKEN) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
+        if (msg.probe && !probe) return send(c, { type: 'kicked', message: 'Gerade läuft kein Probelauf. Starte ihn im Show-Editor.' });
+        c.probe = !!msg.probe;
         c.role = 'moderator';
       } else if (msg.role === 'host') {
         if (msg.token !== DEMO_TOKEN) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
         c.role = 'host';
+      } else if (msg.role === 'team' && probeLib.isProbeCode(msg.code)) {
+        if (!probe) return send(c, { type: 'auth-failed', message: 'Gerade läuft kein Probelauf.' });
+        c.role = 'team';
+        c.probe = true;
+        c.teamId = probe.teamId;
       } else if (msg.role === 'team') {
         const team = game.findTeamByCode(data, msg.code);
         if (!team) return send(c, { type: 'auth-failed', message: 'Zugangscode unbekannt.' });
         c.role = 'team';
         c.teamId = team.id;
       } else if (msg.role === 'beamer') {
+        if (msg.probe && !probe) return send(c, { type: 'kicked', message: 'Gerade läuft kein Probelauf.' });
         c.role = 'beamer';
+        c.probe = !!msg.probe;
         c.preview = !!msg.preview;
       } else {
         return send(c, { type: 'auth-failed', message: 'Unbekannte Rolle.' });
@@ -207,6 +244,42 @@ export function createLocalServer() {
     }
     if (msg.type !== 'action' || !(c.role === 'moderator' || c.role === 'host' || c.role === 'team' || (c.role === 'beamer' && !c.preview))) return;
     if (c.role === 'host' && msg.name !== 'finale.modAnswer') return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Diese Aktion ist auf dem Finale-iPad nicht erlaubt.' });
+    const fail = (err) => send(c, { type: 'ack', id: msg.id, ok: false, error: err instanceof game.QuizError ? err.message : 'Interner Fehler.' });
+    if (c.role === 'moderator' && (msg.name === 'probe.start' || msg.name === 'probe.stop')) {
+      try {
+        if (msg.name === 'probe.start') {
+          if (c.probe) throw new game.QuizError('Bitte im Show-Editor starten.');
+          if (data.live.activeGame) throw new game.QuizError('Während ein Spiel live läuft, ist kein Probelauf möglich.');
+          if (probe) stopProbe();
+          probe = probeLib.createProbe(data, msg.payload && msg.payload.gameId);
+          clearInterval(probeTimer);
+          probeTimer = setInterval(() => {
+            if (!probe) return clearInterval(probeTimer);
+            const now = Date.now();
+            const a = game.tick(probe.db, now);
+            const b = probeLib.botTick(probe, now);
+            if (a || b) broadcast();
+          }, 700);
+          notifyProbe();
+        } else stopProbe();
+        send(c, { type: 'ack', id: msg.id, ok: true, data: probe ? { code: probe.code } : null });
+        broadcast();
+      } catch (err) { fail(err); }
+      return;
+    }
+    if (c.probe) {
+      if (!probe) return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Der Probelauf ist beendet.' });
+      const draftP = structuredClone(probe.db);
+      try {
+        if (/^(shows|library|game|team)\./.test(msg.name)) throw new game.QuizError('Im Probelauf nicht möglich.');
+        const ctxP = { role: c.role, teamId: c.teamId, actor: c.role === 'team' ? `team:${c.teamId}` : c.role, now: Date.now() };
+        const result = game.applyAction(draftP, ctxP, msg.name, msg.payload, typeof msg.id === 'string' ? msg.id : null);
+        probe.db = draftP;
+        send(c, { type: 'ack', id: msg.id, ok: true, duplicate: !!result.duplicate, notice: result.notice || null, data: result.data ?? null });
+        broadcast();
+      } catch (err) { fail(err); }
+      return;
+    }
     const ctx = { role: c.role === 'host' ? 'moderator' : c.role, teamId: c.teamId, actor: c.role === 'team' ? `team:${c.teamId}` : c.role, now: Date.now() };
     const draft = structuredClone(data);
     try {
@@ -228,6 +301,8 @@ export function createLocalServer() {
   return {
     demoToken: DEMO_TOKEN,
     demoTeams: DEMO_TEAMS,
+    // Prototyp-Seite: Probelauf-Bildschirme ein-/ausblenden.
+    onProbe(fn) { probeListeners.add(fn); fn(probe ? { title: probe.title } : null); },
 
     // Gibt ein Objekt zurück, das sich wie ein WebSocket verhält.
     connect() {
@@ -251,6 +326,7 @@ export function createLocalServer() {
 
     api(name, body) {
       if (name === 'teams') return [200, data.project.teams.map((t) => ({ id: t.id, name: t.name, color: t.color }))];
+      if (name === 'probe') return [200, probe ? { active: true, title: probe.title } : { active: false }];
       if (name === 'login') {
         return body.password === PASSWORD ? [200, { token: DEMO_TOKEN }] : [401, { error: 'Passwort ist falsch. Es lautet „fabian“.' }];
       }

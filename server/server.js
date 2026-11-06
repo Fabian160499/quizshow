@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const { createStore } = require('./store');
 const game = require('./game');
+const probeLib = require('./probe')(game);
 
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT) || 3000;
@@ -209,6 +210,11 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { urls: lanAddresses().map((a) => `http://${a}:${PORT}/`) });
     }
 
+    // Läuft gerade ein Probelauf? (Startseite zeigt dann „Probelauf beitreten“.)
+    if (req.method === 'GET' && url.pathname === '/api/probe') {
+      return sendJson(res, 200, probe ? { active: true, title: probe.title } : { active: false });
+    }
+
     // Teamliste für die Startseite: nur Namen und Farben, niemals Zugangscodes.
     if (req.method === 'GET' && url.pathname === '/api/teams') {
       return sendJson(res, 200, store.data.project.teams.map((t) => ({ id: t.id, name: t.name, color: t.color })));
@@ -271,11 +277,37 @@ const server = http.createServer(async (req, res) => {
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 3 * 1024 * 1024 });
 const clients = new Set();
 
+// Probelauf (siehe server/probe.js): eigene Kopie der Daten, nichts wird gespeichert.
+let probe = null;
+let probeTimer = null;
+function startProbe(gameId) {
+  probe = probeLib.createProbe(store.data, gameId);
+  clearInterval(probeTimer);
+  probeTimer = setInterval(() => {
+    if (!probe) return clearInterval(probeTimer);
+    const now = Date.now();
+    const a = game.tick(probe.db, now);
+    const b = probeLib.botTick(probe, now);
+    if (a || b) broadcast();
+  }, 700);
+}
+function stopProbe() {
+  probe = null;
+  clearInterval(probeTimer);
+  for (const c of clients) {
+    if (c.probe) {
+      send(c, { type: 'kicked', message: 'Der Probelauf ist beendet. Die echte Show ist unverändert.' });
+      c.ws.close();
+    }
+  }
+}
+
 function connections() {
   const teams = {};
   let beamers = 0;
   let moderators = 0;
   for (const c of clients) {
+    if (c.probe) continue; // Probelauf zählt nicht als echte Verbindung
     if (c.role === 'team') teams[c.teamId] = (teams[c.teamId] || 0) + 1;
     if (c.role === 'beamer' && !c.preview) beamers++;
     if (c.role === 'moderator') moderators++;
@@ -284,6 +316,18 @@ function connections() {
 }
 
 function viewFor(c) {
+  if (c.probe) {
+    if (!probe) throw new Error('kein Probelauf');
+    const pc = { teams: {}, beamers: 0, moderators: 0 };
+    for (const x of clients) if (x.probe && x.role === 'team') pc.teams[x.teamId] = 1;
+    if (c.role === 'moderator') return { ...game.trimForConnection(game.moderatorView(probe.db, pc), (c.cache ||= {})), probe: { title: probe.title, code: probe.code, active: true } };
+    if (c.role === 'team') return game.teamView(probe.db, c.teamId);
+    return game.beamerView(probe.db);
+  }
+  if (c.role === 'moderator') return { ...viewForReal(c), probe: probe ? { title: probe.title, code: probe.code, gameId: probe.gameId, active: false } : null };
+  return viewForReal(c);
+}
+function viewForReal(c) {
   const db = store.data;
   if (c.role === 'moderator') return game.trimForConnection(game.moderatorView(db, connections()), (c.cache ||= {}));
   if (c.role === 'host') return game.hostView(db);
@@ -324,7 +368,7 @@ function scheduleWake() {
 
 function kickTeam(teamId) {
   for (const c of clients) {
-    if (c.role === 'team' && c.teamId === teamId) {
+    if (c.role === 'team' && c.teamId === teamId && !c.probe) {
       send(c, { type: 'kicked', message: 'Euer Zugangscode wurde erneuert oder das Team entfernt.' });
       c.ws.close();
     }
@@ -334,7 +378,7 @@ function kickTeam(teamId) {
 // Andere Show geöffnet: alle Team-iPads abmelden (jede Show hat eigene Zugangscodes).
 function kickAllTeams() {
   for (const c of clients) {
-    if (c.role === 'team') {
+    if (c.role === 'team' && !c.probe) {
       send(c, { type: 'kicked', message: 'Die Moderation hat eine andere Show geöffnet. Bitte mit eurem Code neu anmelden.' });
       c.ws.close();
     }
@@ -344,17 +388,27 @@ function kickAllTeams() {
 function handleHello(c, msg) {
   if (msg.role === 'moderator') {
     if (!validSession(msg.token)) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
+    if (msg.probe && !probe) return send(c, { type: 'kicked', message: 'Gerade läuft kein Probelauf. Starte ihn im Show-Editor.' });
+    c.probe = !!msg.probe;
     c.role = 'moderator';
   } else if (msg.role === 'host') {
     if (!validSession(msg.token, true)) return send(c, { type: 'auth-failed', message: 'Bitte erneut anmelden.' });
     c.role = 'host';
+  } else if (msg.role === 'team' && probeLib.isProbeCode(msg.code)) {
+    // Probelauf: das echte iPad spielt als erstes Team.
+    if (!probe) return send(c, { type: 'auth-failed', message: 'Gerade läuft kein Probelauf.' });
+    c.role = 'team';
+    c.probe = true;
+    c.teamId = probe.teamId;
   } else if (msg.role === 'team') {
     const team = game.findTeamByCode(store.data, msg.code);
     if (!team) return send(c, { type: 'auth-failed', message: 'Zugangscode unbekannt.' });
     c.role = 'team';
     c.teamId = team.id;
   } else if (msg.role === 'beamer') {
+    if (msg.probe && !probe) return send(c, { type: 'kicked', message: 'Gerade läuft kein Probelauf.' });
     c.role = 'beamer';
+    c.probe = !!msg.probe;
     c.preview = !!msg.preview;
   } else {
     return send(c, { type: 'auth-failed', message: 'Unbekannte Rolle.' });
@@ -368,6 +422,22 @@ function handleAction(c, msg) {
     return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Sitzung abgelaufen. Bitte neu anmelden.' });
   }
   if (c.role === 'host' && !HOST_ACTIONS.has(msg.name)) return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Diese Aktion ist auf dem Finale-iPad nicht erlaubt.' });
+  // Probelauf starten/beenden (nur aus der echten Regie bzw. dem Probelauf-Fenster).
+  if (c.role === 'moderator' && (msg.name === 'probe.start' || msg.name === 'probe.stop')) {
+    try {
+      if (msg.name === 'probe.start') {
+        if (c.probe) throw new game.QuizError('Bitte im Show-Editor starten.');
+        if (store.data.live.activeGame) throw new game.QuizError('Während ein Spiel live läuft, ist kein Probelauf möglich.');
+        startProbe(msg.payload && msg.payload.gameId);
+      } else stopProbe();
+      send(c, { type: 'ack', id: msg.id, ok: true, data: probe ? { code: probe.code } : null });
+      broadcast();
+    } catch (err) {
+      send(c, { type: 'ack', id: msg.id, ok: false, error: err instanceof game.QuizError ? err.message : 'Interner Fehler.' });
+    }
+    return;
+  }
+  if (c.probe) return handleProbeAction(c, msg);
   const ctx = {
     role: c.role === 'host' ? 'moderator' : c.role,
     teamId: c.teamId,
@@ -392,6 +462,23 @@ function handleAction(c, msg) {
     const message = err instanceof game.QuizError ? err.message : 'Interner Fehler.';
     if (!(err instanceof game.QuizError)) console.error(err);
     send(c, { type: 'ack', id: msg.id, ok: false, error: message });
+  }
+}
+
+// Aktionen im Probelauf: auf der Kopie, ohne Speichern und ohne Medien aufzuräumen.
+function handleProbeAction(c, msg) {
+  if (!probe) return send(c, { type: 'ack', id: msg.id, ok: false, error: 'Der Probelauf ist beendet.' });
+  const ctx = { role: c.role, teamId: c.teamId, actor: c.role === 'team' ? `team:${c.teamId}` : c.role, now: Date.now() };
+  const draft = structuredClone(probe.db);
+  try {
+    if (msg.name.startsWith('shows.') || msg.name.startsWith('library.') || msg.name.startsWith('game.') || msg.name.startsWith('team.')) throw new game.QuizError('Im Probelauf nicht möglich.');
+    const result = game.applyAction(draft, ctx, msg.name, msg.payload, typeof msg.id === 'string' ? msg.id : null);
+    probe.db = draft;
+    send(c, { type: 'ack', id: msg.id, ok: true, duplicate: !!result.duplicate, notice: result.notice || null, data: result.data ?? null });
+    broadcast();
+  } catch (err) {
+    send(c, { type: 'ack', id: msg.id, ok: false, error: err instanceof game.QuizError ? err.message : 'Interner Fehler.' });
+    if (!(err instanceof game.QuizError)) console.error(err);
   }
 }
 
