@@ -5,7 +5,8 @@
 // Alle Teams tippen gleichzeitig eine Zahl ein (Keypad), Standard 60 Sekunden.
 // Danach kann die Moderation eine Nachfrist von 10 Sekunden freigeben – nur für
 // Teams, die noch nicht abgegeben haben. Abgerechnet wird die Abweichung
-// |Schätzung − Lösung|, sie wird vom Guthaben abgezogen. Bei 0 oder darunter
+// |Schätzung − Lösung|, sie wird vom Guthaben abgezogen. Genau richtig geschätzt:
+// +5 Leben (EXACT_BONUS). Bei 0 oder darunter
 // scheidet das Team aus. Jedes Team muss antworten (ausgewertet wird erst, wenn
 // alle abgegeben haben; die Nachfrist kann dafür erneut freigegeben werden).
 // Platzierung → Showpunkte 10 / 6 / 4 / 3 / 2 / 1 (letztes verbleibendes Team
@@ -18,6 +19,7 @@ const { pv } = require('./scoring');
 
 const START = 100;
 const GRACE_MS = 10000;
+const EXACT_BONUS = 5; // genau die richtige Zahl: 5 Leben dazu
 const PLACE_POINTS = [10, 6, 4, 3, 2, 1];
 const MAX_VALUE = 1e12;
 
@@ -138,10 +140,11 @@ module.exports = {
         const a = r.answers[id];
         const before = t.balance;
         const diff = Math.abs(a.value - answer);
-        t.balance = Math.round((before - diff) * 100) / 100;
+        const bonus = diff === 0 ? EXACT_BONUS : 0;
+        t.balance = Math.round((before - diff + bonus) * 100) / 100;
         const out = t.balance <= 0;
         if (out) t.outRound = st.index;
-        results.push({ teamId: id, value: a.value, diff, before, after: t.balance, out, missing: false });
+        results.push({ teamId: id, value: a.value, diff, bonus, before, after: t.balance, out, missing: false });
       }
       r.results = results;
       r.open = false;

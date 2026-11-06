@@ -104,6 +104,20 @@ test('Riskier die Gier: gleiche Ausscheidungsrunde nach Restguthaben, Gleichstan
   assert.deepEqual(ids.map((id) => pts(db, id)), [10, 6, 3, 6]); // Platz 2 geteilt, Platz 3 übersprungen → Platz 4 = 3
 });
 
+test('Riskier die Gier: genau richtig geschätzt bringt 5 Leben dazu', () => {
+  const { db, ids } = setup(3);
+  use(db, 'gier', { seconds: 60, questions: [{ question: 'A', answer: 42, unit: '' }, { question: 'B', answer: 7, unit: '' }] });
+  const t0 = clock;
+  act(db, { ...mod(), now: t0 }, 'open', { index: 0 });
+  act(db, team(ids[0], t0 + 1), 'answer', { value: 42 }); // Volltreffer: 105
+  act(db, team(ids[1], t0 + 1), 'answer', { value: 40 }); // −2: 98
+  act(db, team(ids[2], t0 + 1), 'answer', { value: 50 }); // −8: 92
+  act(db, { ...mod(), now: t0 + 2 }, 'evaluate');
+  assert.deepEqual(ids.map((id) => tv(db, id).balance), [105, 98, 92]);
+  assert.equal(bv(db).results.find((r) => r.teamId === ids[0]).bonus, 5);
+  assert.equal(bv(db).results.find((r) => r.teamId === ids[1]).bonus, 0);
+});
+
 test('Top 100: tolerante Treffer, unsichere Treffer an die Moderation, Ranggruppen 1–5', () => {
   const list = Array.from({ length: 100 }, (_, i) => `Eintrag Nummer ${i + 1}`);
   list[0] = 'Volkswagen / VW'; list[24] = 'Die Ärzte'; list[59] = 'FC Bayern München'; list[99] = 'Mercedes-Benz';
