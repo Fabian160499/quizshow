@@ -22,6 +22,12 @@ function active(st) {
   return round(st, st.current);
 }
 
+// Art der Frage aus dem Editor: 'sound' (Standard), 'text' oder 'image'.
+function kindOf(fld) {
+  const k = String(fld.kind || '');
+  return k.startsWith('Nur') ? 'text' : k.startsWith('Bild') ? 'image' : 'sound';
+}
+
 function field(game, k) {
   const [c, f] = k.split('-').map(Number);
   const cat = game.content.categories[c];
@@ -169,7 +175,12 @@ module.exports = {
       answering: current ? current.teamId : null,
       answer: r.resolved ? info.field.answer : null,
       key: st.current,
-      clip: info.field.clip ? { id: info.field.clip.id, type: info.field.clip.type } : null,
+      kind: kindOf(info.field),
+      // Ton nur bei „Ton + Frage“, Bild nur bei „Bild + Frage“ (ab „Aufgabe starten“).
+      clip: kindOf(info.field) === 'sound' && info.field.clip ? { id: info.field.clip.id, type: info.field.clip.type } : null,
+      image: kindOf(info.field) === 'image' && info.field.image && r.started ? { id: info.field.image.id, type: info.field.image.type } : null,
+      // Auflösung mit Ton: erst, wenn das Feld beendet ist (richtig oder ohne Punkte).
+      reveal: r.resolved && info.field.reveal ? { id: info.field.reveal.id, type: info.field.reveal.type } : null,
       playback: r.resolved ? { state: 'stopped', seq: (r.playback?.seq || 0) + 1 } : r.playback || { state: 'stopped', seq: 0 },
       winner: st.played[st.current]?.winner || null,
     };

@@ -18,6 +18,8 @@ function checkFields(fields, obj, where, out, media) {
   for (const f of fields) {
     const v = obj ? obj[f.key] : undefined;
     const label = f.label.replace(/\s*\(.*$/, '').replace(/\s*[–-]\s.*$/, '');
+    // Nur bei passender Art nötig (z. B. Bild nur bei „Bild + Frage“).
+    if (f.showIf && !String(obj[f.showIf.key] ?? '').startsWith(f.showIf.prefix)) continue;
     const optional = OPTIONAL_KEYS.has(f.key) || /optional/i.test(f.label);
     if (f.type === 'media') {
       if (v && v.id) media.push({ id: v.id, type: v.type, where: `${where} · ${label}` });

@@ -24,9 +24,11 @@ const badge = (kind, text) => h('span', { class: `badge ${kind}` }, text);
 const row = (...c) => h('div', { class: 'row', style: { marginTop: '12px' } }, ...c);
 const btn = (cls, label, onclick, disabled = false) => h('button', { class: `btn ${cls}`, onclick, disabled }, label);
 
-function tabs(items, current, onPick, done) {
-  return h('div', { class: 'row' }, items.map((label, i) =>
-    h('button', { class: `btn small ${i === current ? 'pink' : 'ghost'}`, onclick: () => onPick(i) }, `${label}${done(i) ? ' ✓' : ''}`)));
+// Fortschritt statt Auswahl: Die Reihenfolge ist fest, „Weiter“ (Klicker) schaltet
+// zur nächsten Frage. Hier nur anzeigen, wo die Show gerade steht.
+function tabs(items, current, onPick, done = () => false) {
+  return h('div', { class: 'row prog-chips', 'aria-label': 'Fortschritt' }, items.map((label, i) =>
+    h('span', { class: `prog-chip${i === current ? ' cur' : ''}${done(i) ? ' done' : ''}`, 'aria-current': i === current ? 'step' : null }, `${label}${done(i) ? ' ✓' : ''}`)));
 }
 
 function teamLine(ui, teamId, ...rest) {
@@ -206,12 +208,7 @@ function kassenschlager(ui, g, st) {
   const i = st.movieIndex ?? -1;
   const movies = st.movies || {};
   const m = movies[i];
-  const out = [h('div', { class: 'row' }, g.content.movies.map((mv, k) =>
-    h('button', {
-      class: `btn small ${k === i ? 'pink' : 'ghost'}`,
-      disabled: !!movies[k] || (m && !m.finished),
-      onclick: () => ui.confirmAct(`Film ${k + 1} „${mv.title}“ starten?`, 'play.startMovie', { movieIndex: k }),
-    }, `Film ${k + 1}${movies[k]?.finished ? ' ✓' : ''}`)))];
+  const out = [tabs(g.content.movies.map((_, k) => `Film ${k + 1}`), i, null, (k) => !!movies[k]?.finished)];
   out.push(h('h4', {}, 'Guthaben (privat)'));
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
     const money = st.wallet?.[t.id] ?? 20;
@@ -220,24 +217,29 @@ function kassenschlager(ui, g, st) {
       st.out?.includes(t.id) ? badge('bad', 'ausgeschieden') : tm?.solved ? badge('ok', '✓ gelöst') : null,
       h('b', {}, `${money} $`), st.converted?.[t.id] ? badge('ok', `= ${pts(st.converted[t.id].points)}`) : null);
   })));
-  if (!m) return [...out, h('p', { class: 'muted help' }, 'Film starten: Teams kaufen reihum Hinweise und raten den Titel.')];
+  if (!m) return [...out, h('p', { class: 'muted help' }, 'Film starten: Alle Teams kaufen pro Durchgang gleichzeitig einen Hinweis und raten den Titel.')];
   const movie = g.content.movies[i];
   out.push(h('p', {}, h('span', { class: 'muted' }, 'Lösung: '), h('b', {}, movie.title), movie.aliases ? h('span', { class: 'muted' }, ` (auch: ${movie.aliases})`) : null));
-  if (m.turn) {
-    const tm = m.teams[m.turn.teamId] || { bought: [], answers: [] };
-    const phase = { buy: 'kauft einen Hinweis …', answer: 'schreibt eine Antwort …', grading: 'hat geantwortet' }[m.turn.phase];
-    out.push(h('p', { class: 'question', style: { fontSize: '1.2rem' } }, `Zyklus ${m.cycle} von 4 · `, h('span', { style: { color: ui.teamColor(m.turn.teamId) } }, ui.teamName(m.turn.teamId)), ` ${phase}`));
-    if (tm.bought.length) out.push(h('p', { class: 'muted' }, 'Gekauft: ', tm.bought.map((b) => (g.content.hintCats && g.content.hintCats[b] && g.content.hintCats[b].name) || (g.content.hintNames && g.content.hintNames[b]) || MOVIE_HINTS[b][0]).join(', ')));
-    if (m.turn.phase === 'grading') {
+  if (!m.finished) {
+    // Alle Teams gleichzeitig: pro Team Stand im Durchgang, offene Antworten zum Bewerten.
+    const PH = { buy: 'kauft einen Hinweis …', answer: 'schreibt eine Antwort …', grading: 'hat geantwortet', done: 'fertig' };
+    out.push(h('p', { class: 'question', style: { fontSize: '1.2rem' } }, `Durchgang ${m.cycle} von 4 – alle Teams gleichzeitig`));
+    out.push(h('ul', { class: 'list' }, m.order.map((id) => {
+      const tm = m.teams[id] || { bought: [], answers: [], phase: 'done' };
+      return h('li', {}, ui.dot(ui.teamColor(id)), h('span', { class: 'grow' }, h('b', {}, ui.teamName(id)), h('span', { class: 'muted' }, ` · ${tm.solved ? 'gelöst' : PH[tm.phase] || ''}`),
+        tm.bought.length ? h('span', { class: 'muted' }, ` · gekauft: ${tm.bought.map((b) => (g.content.hintCats && g.content.hintCats[b] && g.content.hintCats[b].name) || MOVIE_HINTS[b][0]).join(', ')}`) : null),
+        ['buy', 'answer'].includes(tm.phase) ? btn('small ghost', 'Aussetzen', () => ui.confirmAct(`${ui.teamName(id)} setzt in diesem Durchgang aus?`, 'play.skip', { teamId: id })) : null);
+    })));
+    const forms = [movie.title, ...(movie.aliases || '').split(',')].map(norm).filter(Boolean);
+    for (const id of m.order.filter((x) => (m.teams[x] || {}).phase === 'grading')) {
+      const tm = m.teams[id];
       const a = tm.answers[tm.answers.length - 1];
-      const forms = [movie.title, ...movie.aliases.split(',')].map(norm).filter(Boolean);
       const suggest = !a.ink && forms.includes(norm(a.text));
       out.push(h('div', { class: 'card', style: { background: 'rgba(255,255,255,.05)' } },
+        h('p', { style: { margin: '0 0 6px' } }, ui.dot(ui.teamColor(id)), ' ', h('b', {}, ui.teamName(id))),
         a.ink ? answerContent(a, 'mod-large') : h('p', { style: { fontSize: '1.4rem', margin: 0 } }, `„${a.text}“`),
         h('p', { class: 'muted' }, a.ink ? `Handschrift – bitte selbst prüfen. Lösung: ${movie.title}` : suggest ? 'Vorschlag: stimmt mit Titel/Alias überein' : 'Vorschlag: kein exakter Treffer – bitte selbst prüfen'),
-        row(btn('ok', '✓ Richtig (+5 $)', () => ui.act('play.grade', { correct: true })), btn('bad', '✗ Falsch', () => ui.act('play.grade', { correct: false })))));
-    } else {
-      out.push(row(btn('small ghost', 'Zug überspringen', () => ui.confirmAct(`Zug von ${ui.teamName(m.turn.teamId)} überspringen?`, 'play.skip'))));
+        row(btn('ok', '✓ Richtig (+5 $)', () => ui.act('play.grade', { teamId: id, correct: true })), btn('bad', '✗ Falsch', () => ui.act('play.grade', { teamId: id, correct: false })))));
     }
   }
   out.push(row(

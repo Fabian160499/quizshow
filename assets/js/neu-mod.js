@@ -17,9 +17,11 @@ const muted = (t) => h('p', { class: 'muted' }, t);
 const help = (t) => h('p', { class: 'muted help' }, t);
 const fmtNum = (n) => (n === null || n === undefined ? '–' : Number(n).toLocaleString('de-DE'));
 const teamLi = (ui, id, ...rest) => h('li', {}, ui.dot(ui.teamColor(id)), h('span', { class: 'grow' }, h('b', {}, ui.teamName(id)), rest[0] ?? null), ...rest.slice(1));
+// Fortschritt statt Auswahl: Die Reihenfolge ist fest, „Weiter“ (Klicker) schaltet
+// zur nächsten Frage. Hier nur anzeigen, wo die Show gerade steht.
 function tabs(items, current, onPick, done = () => false) {
-  return h('div', { class: 'row' }, items.map((label, i) =>
-    h('button', { class: `btn small ${i === current ? 'pink' : 'ghost'}`, onclick: () => onPick(i) }, `${label}${done(i) ? ' ✓' : ''}`)));
+  return h('div', { class: 'row prog-chips', 'aria-label': 'Fortschritt' }, items.map((label, i) =>
+    h('span', { class: `prog-chip${i === current ? ' cur' : ''}${done(i) ? ' done' : ''}`, 'aria-current': i === current ? 'step' : null }, `${label}${done(i) ? ' ✓' : ''}`)));
 }
 const teamIds = (ui) => ui.S.project.teams.map((t) => t.id);
 

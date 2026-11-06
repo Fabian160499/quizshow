@@ -1382,7 +1382,9 @@ async function openPreview(t, index, label) {
 const ITEM_OPEN = new Map();
 
 function formFields(fields, obj, save, rerender, idBase) {
-  const out = fields.map((f) => formField(f, obj, f.key, save, rerender, `${idBase}-${f.key}`));
+  // showIf: Feld nur zeigen, wenn ein anderes Feld passt (z. B. Bild nur bei „Bild + Frage“).
+  const visible = fields.filter((f) => !f.showIf || String(obj[f.showIf.key] ?? fields.find((x) => x.key === f.showIf.key)?.options?.[0] ?? '').startsWith(f.showIf.prefix));
+  const out = visible.map((f) => formField(f, obj, f.key, save, rerender, `${idBase}-${f.key}`));
   // Orte mit Breiten- und Längengrad: zusätzlich auf der Karte antippen.
   if (fields.some((f) => f.key === 'lat') && fields.some((f) => f.key === 'lng')) out.push(geoPicker(obj, save, idBase));
   return out;
@@ -1458,7 +1460,7 @@ function formField(f, holder, k, save, rerender, id) {
     case 'select': {
       // unique: in den anderen Einträgen derselben Liste schon gewählte Optionen sind gesperrt.
       const others = f.optionSource?.unique ? (atPath(previewTarget?.d?.content, f.optionSource.unique) || []).filter((x) => x !== holder).map((x) => x && x[f.key]) : [];
-      const sel = h('select', { id, onchange: (ev) => { set(ev.target.value); if (f.optionLabels) rerender(); } },
+      const sel = h('select', { id, onchange: (ev) => { set(ev.target.value); if (f.optionLabels || f.rerender) rerender(); } },
         f.options.map((o, j) => h('option', { value: o, disabled: others.includes(o) && o !== holder[k] }, `${optionLabel(f, j)}${others.includes(o) ? ' (schon auf dem Rad)' : ''}`)));
       sel.value = holder[k] ?? f.options[0];
       return h('div', { class: 'field' }, h('label', { for: id }, f.label), sel);

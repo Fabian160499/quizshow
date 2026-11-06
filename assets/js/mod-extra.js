@@ -22,9 +22,11 @@ const help = (t) => h('p', { class: 'muted help' }, t);
 const lines = (t) => String(t || '').split('\n').map((x) => x.trim()).filter(Boolean);
 const ink = (src) => h('img', { class: 'ink-answer mod', src, alt: 'Handschrift' });
 
+// Fortschritt statt Auswahl: Die Reihenfolge ist fest, „Weiter“ (Klicker) schaltet
+// zur nächsten Frage. Hier nur anzeigen, wo die Show gerade steht.
 function tabs(items, current, onPick, done = () => false) {
-  return h('div', { class: 'row' }, items.map((label, i) =>
-    h('button', { class: `btn small ${i === current ? 'pink' : 'ghost'}`, onclick: () => onPick(i) }, `${label}${done(i) ? ' ✓' : ''}`)));
+  return h('div', { class: 'row prog-chips', 'aria-label': 'Fortschritt' }, items.map((label, i) =>
+    h('span', { class: `prog-chip${i === current ? ' cur' : ''}${done(i) ? ' done' : ''}`, 'aria-current': i === current ? 'step' : null }, `${label}${done(i) ? ' ✓' : ''}`)));
 }
 
 function optionsList(q) {

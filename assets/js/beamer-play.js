@@ -111,10 +111,12 @@ function kassenschlager(v, teamOf) {
   if (v.waiting) return [h('div', { class: 'mega', style: { fontSize: 'clamp(2rem,5vw,5rem)' } }, 'Das ist ein echter Kassenschlager'), sub('Jedes Team startet mit 20 $', { marginTop: '3vh' })];
   const out = [h('div', { class: 'q' }, '🎬 Welcher Film ist gesucht?')];
   if (v.finished) out.push(h('div', { class: 'solution' }, v.title));
-  if (v.turn) {
-    const phase = { buy: 'kauft einen Hinweis …', answer: 'schreibt …', grading: 'hat geantwortet' }[v.turn.phase];
-    out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '3vh' } }, v.order.map((id) => chip(teamOf(id), id === v.turn.teamId ? 'answering' : ''))));
-    out.push(sub(`${teamOf(v.turn.teamId).name} ${phase}`, { marginTop: '3vh' }));
+  if (v.status) {
+    // Alle Teams gleichzeitig: wer noch kauft/schreibt, wer fertig ist.
+    const LBL = { buy: '💸 kauft', answer: '✍ schreibt', done: '✓ fertig' };
+    out.push(sub(`Durchgang ${v.cycle} von ${v.maxCycles}`, { marginTop: '2vh' }));
+    out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh', gap: '1.2vw', flexWrap: 'wrap' } }, v.status.map((x) =>
+      h('div', { class: `ks-st ${x.phase}`, '--team': teamOf(x.teamId).color }, h('span', {}, teamOf(x.teamId).name), h('b', {}, LBL[x.phase])))));
   }
   return out;
 }
@@ -144,6 +146,13 @@ function trumpf5(v, teamOf) {
 }
 
 // ---------- 6 ----------
+// Bild aus der Mediathek laden (Beamer).
+function mediaImg(m, cls) {
+  const im = h('img', { class: cls, alt: '' });
+  mediaUrl(m.id).then((u) => { if (u) im.src = u; });
+  return im;
+}
+
 function musik(v, teamOf) {
   const c = v.current;
   const board = h('div', { class: 'jeopardy' }, v.board.map((cat, i) => h('div', { class: 'col' },
@@ -151,7 +160,8 @@ function musik(v, teamOf) {
     cat.fields.map((f) => h('div', { class: `cell ${f.played ? 'played' : ''}`, style: f.winner ? { borderColor: teamOf(f.winner).color, color: teamOf(f.winner).color } : null }, f.played ? (f.winner ? teamOf(f.winner).name : '–') : String(f.value))))));
   if (!c || (c.resolved && !c.answer)) return [board, v.picker ? sub(`${teamOf(v.picker).name} wählt ein Feld`, { marginTop: '2vh' }) : null];
   const out = [sub(`${c.category} · ${pts(c.value)}${c.mashup ? ' · beide Songtitel nennen!' : ''}`)];
-  out.push(h('div', { class: 'q' }, c.task || (c.started ? '🎵 Hört genau hin …' : '🎵')));
+  out.push(h('div', { class: 'q' }, c.task || (c.kind === 'sound' ? (c.started ? '🎵 Hört genau hin …' : '🎵') : '')));
+  if (c.image && !c.resolved) out.push(mediaImg(c.image, 'musik-img'));
   out.push(buzzRow(v, teamOf, c.buzzOrder, c.answering));
   if (c.resolved) out.push(h('div', { class: 'solution' }, `${c.answer}${c.winner ? ` – ${teamOf(c.winner).name}` : ''}`));
   return out;
