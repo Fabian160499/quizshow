@@ -1272,3 +1272,23 @@ test('Nerd: Gleichstand – Teams wählen Starten/Nachziehen, bei gleicher Wahl 
   game.applyAction(db, mod(), 'play.coinDone');
   assert.equal(r.attempt.teamId, r.coin.winner);
 });
+
+test('Musikquiz: Team wählt das Feld auf dem iPad (ausgelost, dann Gewinner, sonst neu ausgelost)', () => {
+  const { db, ids } = setup(3);
+  activate(db, 'musik');
+  const st = () => db.live.games[gid(db, 'musik')];
+  assert.throws(() => game.applyAction(db, team(ids[0]), 'play.pick', { cat: 0, field: 0 }), /noch nicht begonnen/);
+  game.applyAction(db, mod(), 'play.begin');
+  const picker = st().picker;
+  assert.ok(ids.includes(picker));
+  assert.equal(game.teamView(db, picker).play.myPick, true);
+  const other = ids.find((id) => id !== picker);
+  assert.throws(() => game.applyAction(db, team(other), 'play.pick', { cat: 0, field: 0 }), /anderes Team/);
+  game.applyAction(db, team(picker), 'play.pick', { cat: 1, field: 2 });
+  assert.equal(st().current, '1-2');
+  game.applyAction(db, mod(), 'play.start');
+  game.applyAction(db, team(other), 'play.buzz');
+  game.applyAction(db, mod(), 'play.judge', { correct: true });
+  assert.equal(st().picker, other, 'wer richtig lag, wählt als Nächstes');
+  assert.throws(() => game.applyAction(db, team(other), 'play.pick', { cat: 1, field: 2 }), /schon gespielt/);
+});

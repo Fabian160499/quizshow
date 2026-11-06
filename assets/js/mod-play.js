@@ -288,7 +288,9 @@ function musik(ui, g, st) {
       }, p ? (p.winner ? ui.teamName(p.winner) : '–') : String(f + 1));
     }))));
   const out = [board];
-  if (!cur) return [...out, h('p', { class: 'muted' }, 'Ein Team wählt ein Feld – tippe es hier an.')];
+  const picking = !round || round.resolved;
+  if (picking) out.unshift(h('p', {}, st.started ? [badge('ok', `${ui.teamName(st.picker)} wählt auf dem iPad`), h('span', { class: 'muted' }, ' · Notfall: Feld hier antippen')] : h('span', { class: 'muted' }, '„Weiter“ lost das Team aus, das das erste Feld wählt.')));
+  if (!cur) return out;
   const [c, f] = cur.split('-').map(Number);
   const cat = g.content.categories[c];
   const field = cat.fields[f];

@@ -282,7 +282,16 @@ function board(b, ui, current) {
 function musik(g, ui) {
   const c = g.current;
   if (!c || c.resolved) {
-    return [h('p', { class: 'muted' }, 'Musikquiz · Das nächste Team wählt ein Feld'), board(g.board, ui, null), c?.ownStatus === 'correct' ? stateBox('ok', '✓', 'Richtig!') : null];
+    if (!g.started) return wait('Gleich geht’s los!', 'Ein Team wird ausgelost und wählt das erste Feld.');
+    const res = c?.ownStatus === 'correct' ? stateBox('ok', '✓', 'Richtig!') : null;
+    if (g.myPick) {
+      // Ihr seid dran: Feld antippen – sofort gewählt, ohne Rückfrage.
+      return [res, stateBox('ok', '👉', 'Ihr wählt! Tippt auf eine Kategorie und Punktzahl.'), h('div', { class: 'jp-board' }, g.board.map((cat, ci) => h('div', { class: 'jp-col' },
+        h('div', { class: 'jp-cat' }, cat.name || `Kategorie ${ci + 1}`),
+        cat.fields.map((f, fi) => h('button', { class: `jp-cell${f.played ? ' played' : ''}`, disabled: f.played,
+          onclick: (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.pick', { cat: ci, field: fi }); } }, f.played ? '' : String(f.value))))))];
+    }
+    return [res, h('p', { class: 'muted' }, `Musikquiz · ${g.picker ? ui.teamName(g.picker) : 'Das nächste Team'} wählt ein Feld`), board(g.board, ui, null)];
   }
   const out = [h('p', { class: 'muted' }, `${c.category} · ${pts(c.value)}`)];
   if (c.mashup) out.push(h('p', {}, h('span', { class: 'badge warn' }, 'Song Song Song: beide Titel nennen')));

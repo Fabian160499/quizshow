@@ -1,9 +1,12 @@
 'use strict';
 
 // Musikquiz im Jeopardy-Stil: fünf Kategorien mit Feldern zu 1, 2 und 3 Punkten.
-// Ein Feld wird gewählt, die Moderation startet den Clip, alle Teams buzzern.
+// Ein Team wählt auf dem iPad ein Feld (zu Beginn ausgelost, danach das Team mit der
+// richtigen Antwort, ohne richtige Antwort neu ausgelost), die Moderation startet den
+// Clip, alle Teams buzzern.
 
-const { fail, log, effect, teamName, bookTarget, buzzIn, currentBuzz, buzzTeamView } = require('./core');
+const core = require('./core');
+const { fail, log, effect, teamName, teamIds, bookTarget, buzzIn, currentBuzz, buzzTeamView } = core;
 const { pv } = require('./scoring');
 
 const key = (c, f) => `${c}-${f}`;
@@ -36,16 +39,40 @@ function board(game, st) {
   }));
 }
 
+function drawPicker(db, st) {
+  const ids = teamIds(db);
+  st.picker = ids.length ? ids[core.randomInt(ids.length)] : null;
+}
+
 function resolve(db, ctx, st, winner) {
   const r = active(st);
   r.resolved = true;
   st.played[st.current] = { winner };
+  // Wer richtig lag, wählt das nächste Feld – sonst wird neu ausgelost.
+  if (winner) st.picker = winner;
+  else drawPicker(db, st);
+}
+
+function choose(db, ctx, game, st, c, f, by) {
+  if (!game.content.categories[c]?.fields[f]) fail('Feld nicht gefunden.');
+  if (st.current && !round(st, st.current).resolved) fail('Erst das laufende Feld beenden.');
+  const k = key(c, f);
+  if (st.played[k]) fail('Dieses Feld wurde schon gespielt.');
+  st.current = k;
+  round(st, k);
+  log(db, ctx, 'ablauf', `${by ? `${teamName(db, by)} wählt` : 'Gewählt:'} „${game.content.categories[c].name || `Kategorie ${c + 1}`}“ für ${pv(game, `field${f + 1}`)}`);
 }
 
 module.exports = {
-  init: () => ({ current: null, played: {}, rounds: {} }),
+  init: () => ({ current: null, played: {}, rounds: {}, picker: null, started: false }),
 
   team: {
+    // Das Team am Zug wählt das Feld auf seinem iPad (sofort, ohne Rückfrage).
+    pick(db, ctx, game, st, p) {
+      if (!st.started) fail('Das Spiel hat noch nicht begonnen.');
+      if (st.picker !== ctx.teamId) fail('Ein anderes Team wählt gerade.');
+      choose(db, ctx, game, st, Number(p.cat), Number(p.field), ctx.teamId);
+    },
     buzz(db, ctx, game, st) {
       const r = active(st);
       if (!r.started) fail('Die Aufgabe läuft noch nicht.');
@@ -56,16 +83,18 @@ module.exports = {
   },
 
   mod: {
+    // Spielbeginn: ein Team auslosen, das das erste Feld wählt.
+    begin(db, ctx, game, st) {
+      if (st.started) fail('Das Spiel läuft schon.');
+      st.started = true;
+      drawPicker(db, st);
+      log(db, ctx, 'ablauf', `Musikquiz: ausgelost – ${teamName(db, st.picker)} wählt`);
+      effect(db, 'title');
+    },
+    // Notfall (iPad fällt aus): Regie wählt das Feld für das Team am Zug.
     pick(db, ctx, game, st, p) {
-      const c = Number(p.cat);
-      const f = Number(p.field);
-      if (!game.content.categories[c]?.fields[f]) fail('Feld nicht gefunden.');
-      if (st.current && !round(st, st.current).resolved) fail('Erst das laufende Feld beenden.');
-      const k = key(c, f);
-      if (st.played[k]) fail('Dieses Feld wurde schon gespielt.');
-      st.current = k;
-      round(st, k);
-      log(db, ctx, 'ablauf', `Feld „${game.content.categories[c].name || `Kategorie ${c + 1}`}“ für ${f + 1} gewählt`);
+      if (!st.started) { st.started = true; if (!st.picker) drawPicker(db, st); }
+      choose(db, ctx, game, st, Number(p.cat), Number(p.field), null);
     },
     start(db, ctx, game, st) {
       const r = active(st);
@@ -111,7 +140,9 @@ module.exports = {
   },
 
   teamView(db, game, st, teamId) {
-    const out = { board: board(game, st), current: null };
+    const cur = st.current ? round(st, st.current) : null;
+    const choosing = st.started && (!cur || cur.resolved);
+    const out = { board: board(game, st), current: null, started: !!st.started, picker: st.picker, myPick: choosing && st.picker === teamId };
     if (!st.current) return out;
     const r = round(st, st.current);
     const info = field(game, st.current);
@@ -125,7 +156,8 @@ module.exports = {
   },
 
   beamerView(db, game, st) {
-    const out = { board: board(game, st), current: null };
+    const cur = st.current ? round(st, st.current) : null;
+    const out = { board: board(game, st), current: null, picker: st.started && (!cur || cur.resolved) ? st.picker : null };
     if (!st.current) return out;
     const r = round(st, st.current);
     const info = field(game, st.current);

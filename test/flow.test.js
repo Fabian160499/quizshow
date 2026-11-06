@@ -55,7 +55,7 @@ function teamMoves(db, st) {
   for (let h = 0; h < 10; h++) out.push(['buy', { hint: h }]);
   out.push(['buzz', {}], ['buzz', { pick: 0 }], ['wheelBuzz', {}], ['spin', {}], ['decide', { choice: 'secure' }]);
   for (let k = 0; k < 24; k++) out.push(['choose', { q: k }]);
-  for (let c = 0; c < 5; c++) for (const l of [1, 2, 3]) out.push(['pick', { c, l }]);
+  for (let c = 0; c < 5; c++) for (const l of [1, 2, 3]) out.push(['pick', { c, l }], ['pick', { cat: c, field: l - 1 }]);
   const g = db.live.games[db.live.activeGame] || {};
   const dgf = g.rounds && g.rounds[g.catIndex];
   if (dgf && dgf.board) out.push(...dgf.board.filter((b) => !b.gone && !b.wrong).map((b) => ['pick', { termId: b.id }]), ['secure', {}]);
