@@ -2259,3 +2259,8 @@ body.drawer-open { overflow: hidden; }
 .run-flow.is-wait { color: var(--accent-2); }
 .btn.run-go.waiting { filter: saturate(0.4) brightness(0.85); }
 .late-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* Kassenschlager: Stand aller Teams im Durchgang */
+.beamer .ks-st { display: flex; flex-direction: column; align-items: center; gap: 0.6vh; min-width: 14vw; padding: 1.4vh 1.2vw; background: var(--box); color: #fff; box-shadow: inset 0.6vh 0 0 var(--team), inset -0.6vh 0 0 var(--team); font-weight: 800; font-size: 2.6vh; text-transform: uppercase; }
+.beamer .ks-st b { font-size: 2.2vh; opacity: 0.85; text-transform: none; }
+.beamer .ks-st.done { opacity: 0.55; }

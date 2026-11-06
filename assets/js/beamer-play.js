@@ -111,10 +111,12 @@ function kassenschlager(v, teamOf) {
   if (v.waiting) return [h('div', { class: 'mega', style: { fontSize: 'clamp(2rem,5vw,5rem)' } }, 'Das ist ein echter Kassenschlager'), sub('Jedes Team startet mit 20 $', { marginTop: '3vh' })];
   const out = [h('div', { class: 'q' }, '🎬 Welcher Film ist gesucht?')];
   if (v.finished) out.push(h('div', { class: 'solution' }, v.title));
-  if (v.turn) {
-    const phase = { buy: 'kauft einen Hinweis …', answer: 'schreibt …', grading: 'hat geantwortet' }[v.turn.phase];
-    out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '3vh' } }, v.order.map((id) => chip(teamOf(id), id === v.turn.teamId ? 'answering' : ''))));
-    out.push(sub(`${teamOf(v.turn.teamId).name} ${phase}`, { marginTop: '3vh' }));
+  if (v.status) {
+    // Alle Teams gleichzeitig: wer noch kauft/schreibt, wer fertig ist.
+    const LBL = { buy: '💸 kauft', answer: '✍ schreibt', done: '✓ fertig' };
+    out.push(sub(`Durchgang ${v.cycle} von ${v.maxCycles}`, { marginTop: '2vh' }));
+    out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh', gap: '1.2vw', flexWrap: 'wrap' } }, v.status.map((x) =>
+      h('div', { class: `ks-st ${x.phase}`, '--team': teamOf(x.teamId).color }, h('span', {}, teamOf(x.teamId).name), h('b', {}, LBL[x.phase])))));
   }
   return out;
 }

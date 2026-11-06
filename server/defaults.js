@@ -151,7 +151,7 @@ const TYPES = {
           text('name', 'Name der Kategorie', 80),
           { key: 'mode', label: 'Wertung', type: 'select', options: ['Normal', 'Song Song Song (beide Titel nötig, keine Teilpunkte)'] },
           { key: 'fields', label: 'Felder', type: 'list', min: 3, max: 3, itemLabel: (i) => `Feld ${i + 1}`,
-            fields: [area('task', 'Aufgabe', 300), text('answer', 'Lösung'), { key: 'clip', label: 'Musik-Clip (MP3 oder MP4) – läuft auf dem Beamer mit „Aufgabe starten“', type: 'media', accept: 'audio' }, text('audio', 'Notiz zum Clip (optional)', 200)] },
+            fields: [area('task', 'Aufgabe', 300), text('answer', 'Lösung'), { key: 'clip', label: 'Musik-Clip (MP3 oder MP4) – läuft auf dem Beamer mit „Aufgabe starten“', type: 'media', accept: 'audio' }, { key: 'reveal', label: 'Auflösung mit Ton (MP3 oder MP4, optional) – läuft auf dem Beamer, sobald das Feld aufgelöst ist', type: 'media', accept: 'audio' }, text('audio', 'Notiz zum Clip (optional)', 200)] },
         ] },
     ],
     example: {

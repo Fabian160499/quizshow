@@ -430,32 +430,34 @@ test('Nerd: geheime Gebote, Stichentscheid, erster und zweiter Versuch', () => {
   assert.equal(game.totals(db)[a], -1); // −3 aus Kategorie 1, +2 aus Kategorie 2
 });
 
-test('Kassenschlager: Paywall, Züge, private Ergebnisse, Ausscheiden und Umrechnung', () => {
+test('Kassenschlager: alle Teams kaufen gleichzeitig pro Durchgang, private Ergebnisse, Ausscheiden, Umrechnung', () => {
   const { db, ids } = setup(2);
   const [a, b] = ids;
   activate(db, 'kassenschlager');
   const play = (t, name, p) => game.applyAction(db, team(t), `play.${name}`, p);
   game.applyAction(db, mod(), 'play.startMovie', { movieIndex: 0 });
-  assert.throws(() => play(b, 'buy', { hint: 0 }), /nicht am Zug/);
+  // Beide Teams sind gleichzeitig dran.
   assert.throws(() => play(a, 'answer', { text: 'Titanic' }), /Erst einen Hinweis/);
   play(a, 'buy', { hint: 3 }); // 4 $
+  play(b, 'buy', { hint: 0 });
   assert.throws(() => play(a, 'buy', { hint: 0 }), /Antwort/);
   assert.equal(game.teamView(db, a).play.hints[3].text, 'Leonardo DiCaprio');
   assert.equal(game.teamView(db, b).play.hints[3].text, null);
   assert.equal(game.teamView(db, a).play.wallet, 16);
-  assert.equal(game.teamView(db, b).play.wallet, 20);
   assert.ok(!JSON.stringify(game.beamerView(db)).includes('wallet'));
+  play(b, 'answer', { text: 'Avatar' });
   play(a, 'answer', { text: 'Titanic' });
-  game.applyAction(db, mod(), 'play.grade', { correct: true });
+  assert.throws(() => game.applyAction(db, mod(), 'play.nextCycle'), /nicht alle/);
+  game.applyAction(db, mod(), 'play.grade', { teamId: a, correct: true });
   assert.equal(game.teamView(db, a).play.wallet, 21);
   assert.ok(!JSON.stringify(game.beamerView(db)).includes('Titanic'));
-  // b gibt sein ganzes Geld aus und rät falsch → nach dem Film mit 0 $ raus.
+  game.applyAction(db, mod(), 'play.grade', { teamId: b, correct: false });
+  assert.throws(() => play(b, 'buy', { hint: 1 }), /schon gekauft/);
+  // Durchgang 2: a hat gelöst und ist fertig; b hat kein Geld mehr und darf direkt raten.
   const st = db.live.games[gid(db, 'kassenschlager')];
-  st.wallet[b] = 4;
-  play(b, 'buy', { hint: 3 });
-  play(b, 'answer', { text: 'Avatar' });
-  game.applyAction(db, mod(), 'play.grade', { correct: false });
-  // a hat gelöst und wird übersprungen; b kann nichts mehr kaufen und darf direkt raten.
+  st.wallet[b] = 0;
+  game.applyAction(db, mod(), 'play.nextCycle');
+  assert.equal(game.teamView(db, a).play.myTurn, false);
   assert.equal(game.teamView(db, b).play.phase, 'answer');
   play(b, 'answer', { text: 'Avatar 2' });
   game.applyAction(db, mod(), 'play.grade', { correct: false });
@@ -468,6 +470,23 @@ test('Kassenschlager: Paywall, Züge, private Ergebnisse, Ausscheiden und Umrech
   game.applyAction(db, mod(), 'play.convert');
   assert.deepEqual([a, b].map((t) => game.totals(db)[t]), [11, 0]);
   assert.throws(() => game.applyAction(db, mod(), 'play.convert'), /bereits/);
+});
+
+test('Kassenschlager: Film endet nach 4 Durchgängen oder wenn alle gelöst haben', () => {
+  const { db, ids } = setup(2);
+  const [a, b] = ids;
+  activate(db, 'kassenschlager');
+  const play = (t, name, p) => game.applyAction(db, team(t), `play.${name}`, p);
+  const m = () => db.live.games[gid(db, 'kassenschlager')].movies[0];
+  game.applyAction(db, mod(), 'play.startMovie', { movieIndex: 0 });
+  for (let c = 1; c <= 4; c++) {
+    for (const t of ids) { play(t, 'buy', { hint: c }); play(t, 'answer', { text: 'falsch' }); game.applyAction(db, mod(), 'play.grade', { teamId: t, correct: false }); }
+    if (c < 4) game.applyAction(db, mod(), 'play.nextCycle');
+  }
+  assert.equal(m().finished, true);
+  game.applyAction(db, mod(), 'play.startMovie', { movieIndex: 1 });
+  for (const t of [a, b]) { play(t, 'buy', { hint: 1 }); play(t, 'answer', { text: 'x' }); game.applyAction(db, mod(), 'play.grade', { teamId: t, correct: true }); }
+  assert.equal(db.live.games[gid(db, 'kassenschlager')].movies[1].finished, true);
 });
 
 test('Land: Punkte setzen, Tipps zeigen, Zielort enthüllen, nächster gewinnt', () => {
@@ -1290,5 +1309,11 @@ test('Musikquiz: Team wählt das Feld auf dem iPad (ausgelost, dann Gewinner, so
   game.applyAction(db, team(other), 'play.buzz');
   game.applyAction(db, mod(), 'play.judge', { correct: true });
   assert.equal(st().picker, other, 'wer richtig lag, wählt als Nächstes');
+  // Auflösung mit Ton: nur nach dem Beenden des Feldes, wenn hochgeladen.
+  game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
+  assert.equal(game.beamerView(db).gameView.current.reveal, null);
+  const g = db.project.games.find((x) => x.type === 'musik');
+  g.content.categories[1].fields[2].reveal = { id: 'media_0123456789abcdef', type: 'audio/mpeg', name: 'a.mp3', size: 1 };
+  assert.equal(game.beamerView(db).gameView.current.reveal.id, 'media_0123456789abcdef');
   assert.throws(() => game.applyAction(db, team(other), 'play.pick', { cat: 1, field: 2 }), /schon gespielt/);
 });

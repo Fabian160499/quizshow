@@ -98,8 +98,12 @@ const FLOW = {
     const ms = game.content.movies;
     const m = st.movieIndex >= 0 ? st.movies[st.movieIndex] : null;
     if (m && !m.finished) {
-      if (m.turn && m.turn.phase === 'grading') return wait(`Erst die Antwort von ${teamName(db, m.turn.teamId)} bewerten (✓ / ✗)`);
-      if (m.turn) return wait(`${teamName(db, m.turn.teamId)} ist am Zug (${m.turn.phase === 'buy' ? 'Hinweis kaufen' : 'raten'}) – Durchgang ${m.cycle} von 4`);
+      const ph = (id) => (m.teams[id] && m.teams[id].phase) || 'done';
+      const grading = m.order.filter((id) => ph(id) === 'grading');
+      if (grading.length) return wait(`Erst die Antworten bewerten: ${names(db, grading)}`);
+      const open = m.order.filter((id) => ph(id) === 'buy' || ph(id) === 'answer');
+      if (open.length) return wait(`Durchgang ${m.cycle} von 4 – es kaufen/raten noch: ${names(db, open)}`);
+      if (m.cycle < 4) return step(`Durchgang ${m.cycle + 1} starten`, 'nextCycle');
       return step('Film beenden', 'endMovie');
     }
     const next = ms.findIndex((_, i) => !st.movies[i]);

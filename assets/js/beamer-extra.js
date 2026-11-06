@@ -112,8 +112,21 @@ export function syncMedia(s) {
   last.s = s;
   const v = s.view === 'game' ? s.gameView : null;
   const film = v && v.type === 'filmab' && !v.waiting ? v : null;
-  const fl = media.film || (film ? filmEl() : null);
-  if (fl) {
+  // Musikquiz: Auflösung mit Ton (MP4 als Video groß, MP3 nur Ton).
+  const musRev = v && v.type === 'musik' && v.current && v.current.resolved && v.current.reveal ? v.current : null;
+  const musVid = musRev && musRev.reveal.type.startsWith('video') ? musRev : null;
+  const fl = media.film || (film || musVid ? filmEl() : null);
+  if (fl && musVid) {
+    fl.classList.add('on');
+    fl.muted = !env.soundOn();
+    setSrc(fl, musVid.reveal.id, 'filmId').then(() => {
+      const k = `mr${musVid.key}`;
+      if (last.filmSeq === k) return;
+      last.filmSeq = k;
+      fl.currentTime = 0;
+      (fl.muted ? fl.play().catch(() => {}) : playWithSound(fl, { mutedFallback: true }));
+    });
+  } else if (fl) {
     fl.classList.toggle('on', !!film && !!film.clip && film.started && !film.resolved);
     if (!film) { if (!fl.paused) fl.pause(); last.filmSeq = null; } else if (film.clip) {
       fl.muted = !env.soundOn();
@@ -130,7 +143,8 @@ export function syncMedia(s) {
   const song = v && v.type === 'songsong' && !v.waiting ? v : null;
   const kon = v && v.type === 'konsequenz' && !v.waiting ? v : null;
   const mus = v && v.type === 'musik' && v.current && v.current.clip ? v.current : null;
-  const au = media.audio || (song || kon || mus ? audioEl() : null);
+  const musAud = musRev && !musVid ? musRev : null;
+  const au = media.audio || (song || kon || mus || musAud ? audioEl() : null);
   if (!au) return;
   au.muted = !env.soundOn();
   if (!kon) konStop();
@@ -187,6 +201,19 @@ export function syncMedia(s) {
       last.stageTimer = setTimeout(() => au.pause(), len * 1000 + 4000);
       (au.muted ? au.play().catch(() => {}) : playWithSound(au));
     });
+  } else if (musAud) {
+    // Musikquiz: Auflösung als Ton, einmal pro Feld.
+    konStop();
+    setSrc(au, musAud.reveal.id, 'audioId').then(() => {
+      const k = `mr${musAud.key}`;
+      if (last.audioSeq === k) return;
+      last.audioSeq = k;
+      au.currentTime = 0;
+      (au.muted ? au.play().catch(() => {}) : playWithSound(au));
+    });
+  } else if (mus && musVid) {
+    // Auflösung läuft als Video: Clip-Ton aus.
+    if (!au.paused) au.pause();
   } else if (mus) {
     // Musikquiz (Jeopardy): Clip startet mit „Aufgabe starten“, pausiert beim Buzzern.
     konStop();

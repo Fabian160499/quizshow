@@ -170,6 +170,8 @@ module.exports = {
       answer: r.resolved ? info.field.answer : null,
       key: st.current,
       clip: info.field.clip ? { id: info.field.clip.id, type: info.field.clip.type } : null,
+      // Auflösung mit Ton: erst, wenn das Feld beendet ist (richtig oder ohne Punkte).
+      reveal: r.resolved && info.field.reveal ? { id: info.field.reveal.id, type: info.field.reveal.type } : null,
       playback: r.resolved ? { state: 'stopped', seq: (r.playback?.seq || 0) + 1 } : r.playback || { state: 'stopped', seq: 0 },
       winner: st.played[st.current]?.winner || null,
     };
