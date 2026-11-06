@@ -24,9 +24,11 @@ const badge = (kind, text) => h('span', { class: `badge ${kind}` }, text);
 const row = (...c) => h('div', { class: 'row', style: { marginTop: '12px' } }, ...c);
 const btn = (cls, label, onclick, disabled = false) => h('button', { class: `btn ${cls}`, onclick, disabled }, label);
 
-function tabs(items, current, onPick, done) {
-  return h('div', { class: 'row' }, items.map((label, i) =>
-    h('button', { class: `btn small ${i === current ? 'pink' : 'ghost'}`, onclick: () => onPick(i) }, `${label}${done(i) ? ' ✓' : ''}`)));
+// Fortschritt statt Auswahl: Die Reihenfolge ist fest, „Weiter“ (Klicker) schaltet
+// zur nächsten Frage. Hier nur anzeigen, wo die Show gerade steht.
+function tabs(items, current, onPick, done = () => false) {
+  return h('div', { class: 'row prog-chips', 'aria-label': 'Fortschritt' }, items.map((label, i) =>
+    h('span', { class: `prog-chip${i === current ? ' cur' : ''}${done(i) ? ' done' : ''}`, 'aria-current': i === current ? 'step' : null }, `${label}${done(i) ? ' ✓' : ''}`)));
 }
 
 function teamLine(ui, teamId, ...rest) {
@@ -206,12 +208,7 @@ function kassenschlager(ui, g, st) {
   const i = st.movieIndex ?? -1;
   const movies = st.movies || {};
   const m = movies[i];
-  const out = [h('div', { class: 'row' }, g.content.movies.map((mv, k) =>
-    h('button', {
-      class: `btn small ${k === i ? 'pink' : 'ghost'}`,
-      disabled: !!movies[k] || (m && !m.finished),
-      onclick: () => ui.confirmAct(`Film ${k + 1} „${mv.title}“ starten?`, 'play.startMovie', { movieIndex: k }),
-    }, `Film ${k + 1}${movies[k]?.finished ? ' ✓' : ''}`)))];
+  const out = [tabs(g.content.movies.map((_, k) => `Film ${k + 1}`), i, null, (k) => !!movies[k]?.finished)];
   out.push(h('h4', {}, 'Guthaben (privat)'));
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
     const money = st.wallet?.[t.id] ?? 20;

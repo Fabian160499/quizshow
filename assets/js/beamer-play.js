@@ -146,6 +146,13 @@ function trumpf5(v, teamOf) {
 }
 
 // ---------- 6 ----------
+// Bild aus der Mediathek laden (Beamer).
+function mediaImg(m, cls) {
+  const im = h('img', { class: cls, alt: '' });
+  mediaUrl(m.id).then((u) => { if (u) im.src = u; });
+  return im;
+}
+
 function musik(v, teamOf) {
   const c = v.current;
   const board = h('div', { class: 'jeopardy' }, v.board.map((cat, i) => h('div', { class: 'col' },
@@ -153,7 +160,8 @@ function musik(v, teamOf) {
     cat.fields.map((f) => h('div', { class: `cell ${f.played ? 'played' : ''}`, style: f.winner ? { borderColor: teamOf(f.winner).color, color: teamOf(f.winner).color } : null }, f.played ? (f.winner ? teamOf(f.winner).name : '–') : String(f.value))))));
   if (!c || (c.resolved && !c.answer)) return [board, v.picker ? sub(`${teamOf(v.picker).name} wählt ein Feld`, { marginTop: '2vh' }) : null];
   const out = [sub(`${c.category} · ${pts(c.value)}${c.mashup ? ' · beide Songtitel nennen!' : ''}`)];
-  out.push(h('div', { class: 'q' }, c.task || (c.started ? '🎵 Hört genau hin …' : '🎵')));
+  out.push(h('div', { class: 'q' }, c.task || (c.kind === 'sound' ? (c.started ? '🎵 Hört genau hin …' : '🎵') : '')));
+  if (c.image && !c.resolved) out.push(mediaImg(c.image, 'musik-img'));
   out.push(buzzRow(v, teamOf, c.buzzOrder, c.answering));
   if (c.resolved) out.push(h('div', { class: 'solution' }, `${c.answer}${c.winner ? ` – ${teamOf(c.winner).name}` : ''}`));
   return out;

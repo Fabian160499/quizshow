@@ -2264,3 +2264,11 @@ body.drawer-open { overflow: hidden; }
 .beamer .ks-st { display: flex; flex-direction: column; align-items: center; gap: 0.6vh; min-width: 14vw; padding: 1.4vh 1.2vw; background: var(--box); color: #fff; box-shadow: inset 0.6vh 0 0 var(--team), inset -0.6vh 0 0 var(--team); font-weight: 800; font-size: 2.6vh; text-transform: uppercase; }
 .beamer .ks-st b { font-size: 2.2vh; opacity: 0.85; text-transform: none; }
 .beamer .ks-st.done { opacity: 0.55; }
+
+/* Fortschritt der Fragen (nicht klickbar – „Weiter“ schaltet weiter) */
+.prog-chips { gap: 6px; }
+.prog-chip { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.14); opacity: 0.6; }
+.prog-chip.done { opacity: 0.45; }
+.prog-chip.cur { opacity: 1; background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.beamer .musik-img { display: block; max-width: min(80vw, 120vh); max-height: 42vh; margin: 2vh auto 0; object-fit: contain; box-shadow: 0 1vh 3vh rgba(0, 0, 0, 0.6); }

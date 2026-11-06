@@ -1317,3 +1317,30 @@ test('Musikquiz: Team wählt das Feld auf dem iPad (ausgelost, dann Gewinner, so
   assert.equal(game.beamerView(db).gameView.current.reveal.id, 'media_0123456789abcdef');
   assert.throws(() => game.applyAction(db, team(other), 'play.pick', { cat: 1, field: 2 }), /schon gespielt/);
 });
+
+
+test('Musikquiz: Art der Frage – nur Frage, Bild + Frage, Ton + Frage', () => {
+  const { db } = setup(2);
+  activate(db, 'musik');
+  const g = db.project.games.find((x) => x.type === 'musik');
+  const f = g.content.categories[0].fields;
+  const M = (type) => ({ id: 'media_0123456789abcdef', type, name: 'x', size: 1 });
+  Object.assign(f[0], { kind: 'Bild + Frage', image: M('image/png'), clip: M('audio/mpeg') });
+  Object.assign(f[1], { kind: 'Nur Frage', clip: M('audio/mpeg') });
+  game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
+  game.applyAction(db, mod(), 'play.pick', { cat: 0, field: 0 });
+  let c = game.beamerView(db).gameView.current;
+  assert.equal(c.kind, 'image');
+  assert.equal(c.clip, null, 'bei Bild + Frage kein Ton');
+  assert.equal(c.image, null, 'Bild erst mit „Aufgabe starten“');
+  game.applyAction(db, mod(), 'play.start');
+  assert.equal(game.beamerView(db).gameView.current.image.id, 'media_0123456789abcdef');
+  game.applyAction(db, mod(), 'play.close');
+  game.applyAction(db, mod(), 'play.pick', { cat: 0, field: 1 });
+  c = game.beamerView(db).gameView.current;
+  assert.equal(c.kind, 'text');
+  assert.equal(c.clip, null);
+  // Prüfung: Bild fehlt nur bei „Bild + Frage“, Clip nur bei „Ton + Frage“
+  const issues = game.applyAction(db, mod(), 'check.show', {}).data.issues.map((x) => x.where + ' ' + x.text).join('\n');
+  assert.ok(!/Kategorie 1 · Feld 2.*Bild/.test(issues));
+});

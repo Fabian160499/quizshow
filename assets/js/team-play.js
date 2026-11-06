@@ -241,7 +241,8 @@ function kassenschlager(g, ui) {
       },
     }, h('span', { class: 'price' }, `${x.price} $`), h('span', { class: 'label' }, `${i + 1}. ${x.label}`),
       x.bought && x.photo ? (() => { const im = h('img', { class: 'hint-photo', alt: x.label }); mediaUrl(x.photo.id).then((u) => { if (u) im.src = u; }); return im; })() : null,
-      x.bought && (x.text || !x.photo) ? h('span', { class: 'text' }, x.text || '–') : null);
+      // Bei Foto-Hinweisen keinen Platzhaltertext wie „(Bild ergänzen)“ zeigen.
+      x.bought && ((x.text && !(x.photo && /^\(.*\)$/.test(x.text.trim()))) || !x.photo) ? h('span', { class: 'text' }, x.text || '–') : null);
   })));
   if (g.finished || g.solved) return out;
   if (!g.myTurn) out.push(stateBox('', '⏳', g.othersOpen ? 'Fertig für diesen Durchgang – die anderen Teams sind noch dran.' : 'Gleich startet der nächste Durchgang.'));
