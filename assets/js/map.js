@@ -77,6 +77,7 @@ function placeLabels(items, pinR, bounds) {
 // markers: [{ lat, lng, color, label, kind: 'team' | 'target' | 'pending', showLabel }]
 // area: Umriss eines gesuchten Landes, Ringe aus [lng, lat] – wird hervorgehoben.
 // zoom: Objekt aus zoomState() → Karte wird zoom- und verschiebbar.
+let mapUid = 0;
 export function mapView(name, { markers = [], onPick = null, label = 'Karte', area = null, zoom = null, fit = false } = {}) {
   const m = MAPS[name] || MAPS.Welt;
   const R = m.width / 160; // Grundgröße der Markierungen (klein, für präzises Tippen)
@@ -88,22 +89,51 @@ export function mapView(name, { markers = [], onPick = null, label = 'Karte', ar
     const d = area.map((ring) => ring.map(([lng, lat], i) => { const [x, y] = project(m, lat, lng); return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`; }).join('') + 'Z').join('');
     world.append(el('path', { d, class: 'target-area' }));
   }
-  // Punktradien um den Zielort (z. B. 100 km und 50 km), farbig – echte Kilometer auf der Karte.
+  // Punktradien um den Zielort (100 km und 50 km): ausgefüllte, leuchtende Flächen
+  // in den Showfarben (außen Cyan, innen Pink), mit Punkten und Entfernung in der Fläche.
+  // radii: Zahlen (km) oder { km, pts }.
+  const gid = `mapr${++mapUid}`;
   for (const mk of markers) {
     if (mk.kind !== 'target' || !mk.radii) continue;
     const [x, y] = project(m, mk.lat, mk.lng);
-    let fs = null; // eine Schriftgröße für alle Radien (nach dem größten Kreis)
-    for (const km of [...mk.radii].sort((a, b) => b - a)) {
-      const [, yn] = project(m, mk.lat + km / 111.2, mk.lng);
-      const [xe] = project(m, mk.lat, mk.lng + km / (111.32 * Math.max(0.05, Math.cos((mk.lat * Math.PI) / 180))));
-      const rx = Math.abs(xe - x), ry = Math.abs(yn - y);
-      world.append(el('ellipse', { cx: x, cy: y, rx, ry, class: `radius r${km}` }));
-      if (fs === null) fs = Math.min(m.width / 60, ry * 0.2);
-      // Größter Kreis: Beschriftung oben rechts, kleinerer: unten links (überdecken sich nicht).
-      const big = km === Math.max(...mk.radii);
-      const t = el('text', { x: big ? x + rx * 0.72 : x - rx * 0.72, y: big ? y - ry * 0.72 : y + ry * 0.72 + fs * 0.8, class: `radius-label r${km}`, 'font-size': fs, 'text-anchor': big ? 'start' : 'end' });
-      t.textContent = `${km} km`;
+    const rings = mk.radii.map((r) => (typeof r === 'number' ? { km: r, pts: null } : r)).sort((p, q) => q.km - p.km);
+    const defs = el('defs');
+    world.append(defs);
+    const geo = rings.map((r) => {
+      const [, yn] = project(m, mk.lat + r.km / 111.2, mk.lng);
+      const [xe] = project(m, mk.lat, mk.lng + r.km / (111.32 * Math.max(0.05, Math.cos((mk.lat * Math.PI) / 180))));
+      return { ...r, rx: Math.abs(xe - x), ry: Math.abs(yn - y) };
+    });
+    geo.forEach((r, k) => {
+      const outer = k === 0;
+      const g = el('radialGradient', { id: `${gid}-${k}` });
+      g.append(
+        el('stop', { offset: '0%', 'stop-color': outer ? '#1fd6f2' : '#ff2d8a', 'stop-opacity': outer ? 0.18 : 0.55 }),
+        el('stop', { offset: '78%', 'stop-color': outer ? '#1fd6f2' : '#ff2d8a', 'stop-opacity': outer ? 0.32 : 0.5 }),
+        el('stop', { offset: '100%', 'stop-color': outer ? '#1fd6f2' : '#ff2d8a', 'stop-opacity': outer ? 0.55 : 0.75 }));
+      defs.append(g);
+      world.append(el('ellipse', { cx: x, cy: y, rx: r.rx, ry: r.ry, class: `radius ${outer ? 'outer' : 'inner'} r${r.km}`, fill: `url(#${gid}-${k})` }));
+    });
+    // Beschriftung: Punkte groß, Kilometer klein – außen im Ring oben, innen unter dem Ziel.
+    const [o, i] = [geo[0], geo[1]];
+    // In der Fläche, wenn genug Platz ist; sonst als Schild rechts neben dem Kreis.
+    const minFs = m.width / 62;
+    const inside = (i ? o.ry - i.ry : o.ry) * 0.42 >= minFs * 0.8 && (!i || i.ry * 0.5 >= minFs * 0.8);
+    const fs = inside ? Math.min(m.width / 30, (i ? o.ry - i.ry : o.ry) * 0.42) : minFs;
+    const label = (r, ly, outer, side) => {
+      const t = el('text', { x: side ? x + o.rx + fs * 0.6 : x, y: ly, class: `radius-label ${outer ? 'outer' : 'inner'} r${r.km}${side ? ' side' : ''}`, 'font-size': fs, 'text-anchor': side ? 'start' : 'middle' });
+      if (r.pts !== null && r.pts !== undefined) {
+        const a = el('tspan', { class: 'pts' }); a.textContent = `+${r.pts}`; t.append(a);
+        const b = el('tspan', { class: 'km', dx: fs * 0.25, 'font-size': fs * 0.6 }); b.textContent = `${r.km} km`; t.append(b);
+      } else t.textContent = `${r.km} km`;
       world.append(t);
+    };
+    if (inside) {
+      label(o, i ? y - (o.ry + i.ry) / 2 + fs * 0.35 : y - o.ry * 0.55, true);
+      if (i) label(i, y + i.ry * 0.62 + fs * 0.35, false);
+    } else {
+      label(o, y - fs * 0.25, true, true);
+      if (i) label(i, y + fs * 0.95, false, true);
     }
   }
   svg.append(world);

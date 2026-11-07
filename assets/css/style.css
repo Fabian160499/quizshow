@@ -2391,13 +2391,8 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 /* Karte (Ich sehe ein Land …): nie höher als der Bildschirm, damit man die Seite nicht scrollen muss */
 .team-main .map-box { display: flex; justify-content: center; background: #0e2a4d; }
 .team-main .map-box .map { width: auto; max-width: 100%; max-height: max(260px, calc(100dvh - 330px)); }
-/* Kassenschlager im Querformat: Paywall links, Schreiben rechts */
+/* Kassenschlager: Paywall oben, Aufgabe und Schreibfeld darunter (Wunsch von Fabian) */
 .ks-split { display: grid; gap: 14px; }
-@media (orientation: landscape) and (min-width: 1000px) {
-  .ks-split { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; }
-  .ks-split .paywall { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-  .ks-split .ink-canvas { height: clamp(190px, 42dvh, 460px); }
-}
 .paywall .hint { min-height: 0; }
 .paywall .hint .label, .paywall .hint .text { overflow-wrap: anywhere; hyphens: auto; }
 @media (orientation: portrait) { .team-main .ink-canvas { height: clamp(190px, 28dvh, 420px); } .team-main .ink.notes-pad .ink-canvas { height: clamp(260px, 40dvh, 560px); } }
@@ -2416,12 +2411,6 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 @keyframes musPick { from { transform: scale(1); } to { transform: scale(1.08); } }
 .beamer .mus-picked { text-align: center; margin-top: 2.4vh; font-size: clamp(1rem, 3.6vh, 2.6rem); color: #fff; font-weight: 700; }
 /* Ich sehe ein Land: Radien 50 km (3 Punkte) und 100 km (2 Punkte) um den Zielort */
-.map .radius { stroke-width: 0.25%; vector-effect: non-scaling-stroke; animation: fadeIn 0.8s ease-out both; }
-.map .radius.r100 { fill: rgba(31, 214, 242, 0.16); stroke: #1fd6f2; stroke-width: 2; stroke-dasharray: 6 4; }
-.map .radius.r50 { fill: rgba(43, 217, 107, 0.26); stroke: #2bd96b; stroke-width: 2.5; animation-delay: 0.3s; }
-.map .radius-label { font-family: var(--font); font-weight: 800; paint-order: stroke; stroke: rgba(0, 0, 0, 0.75); stroke-width: 0.12em; animation: fadeIn 0.8s ease-out 0.5s both; }
-.map .radius-label.r100 { fill: #1fd6f2; }
-.map .radius-label.r50 { fill: #2bd96b; }
 /* Das Cover ist besser als das Original: Bühne mit Hintergrund und Elementen (Beamer und Editor) */
 .cover-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; container-type: inline-size; }
 .cover-stage .cover-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -2565,3 +2554,13 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .beamer .ksw.beamer-wall .ksw-value.mid { font-size: 1em; }
 .ksw-tile.solved { box-shadow: none; }
 .ksw-tile.solved::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; box-shadow: inset 0 0 0 0.3em var(--ok, #3ddc84); }
+/* Land: Punktradien als leuchtende Flächen in Showfarben */
+.map .radius { stroke-dasharray: none; vector-effect: non-scaling-stroke; animation: radiusIn 0.9s cubic-bezier(.2, 1.2, .4, 1) both; transform-box: fill-box; transform-origin: center; }
+.map .radius.outer { stroke: #1fd6f2; stroke-width: 2; filter: drop-shadow(0 0 6px rgba(31, 214, 242, 0.7)); }
+.map .radius.inner { stroke: #ff2d8a; stroke-width: 2.5; filter: drop-shadow(0 0 6px rgba(255, 45, 138, 0.8)); animation-delay: 0.35s; }
+@keyframes radiusIn { from { transform: scale(0.2); opacity: 0; } to { transform: none; opacity: 1; } }
+.map .radius-label { font-family: var(--font-display, var(--font)); font-weight: 900; fill: #fff; paint-order: stroke; stroke: rgba(10, 6, 30, 0.85); stroke-width: 0.14em; stroke-linejoin: round; animation: fadeIn 0.6s ease-out 0.8s both; }
+.map .radius-label .km { font-weight: 700; fill: rgba(255, 255, 255, 0.85); }
+.map .radius-label.outer .pts { fill: #7beeff; }
+.map .radius-label.inner .pts { fill: #ffd0e6; }
+.ksw.ipad-wall { grid-template-rows: repeat(4, minmax(92px, auto)); font-size: 15px; }

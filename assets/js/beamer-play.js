@@ -6,6 +6,8 @@ import { mapView } from './map.js';
 import { BEAMER_EXTRA } from './beamer-extra.js';
 import { ksWall } from './ks-wall.js';
 
+const pv = (v, k, d = 1) => (v && v.scoring && typeof v.scoring[k] === 'number' ? v.scoring[k] : d);
+
 const ABCD = ['A', 'B', 'C', 'D'];
 const pts = (n) => `${n} ${Math.abs(n) === 1 ? 'Punkt' : 'Punkte'}`;
 const sub = (text, style = {}) => h('div', { class: 'sub', style: { marginTop: 0, ...style } }, text);
@@ -102,7 +104,7 @@ function land(v, teamOf) {
     return `${n} · ${g.km.toLocaleString('de-DE')} km`;
   };
   const markers = (v.guesses || []).map((g) => ({ lat: g.lat, lng: g.lng, color: teamOf(g.teamId).color, label: tag(g), showLabel: true }));
-  if (v.target && !v.target.country) markers.push({ lat: v.target.lat, lng: v.target.lng, kind: 'target', label: v.target.name, radii: [100, 50] });
+  if (v.target && !v.target.country) markers.push({ lat: v.target.lat, lng: v.target.lng, kind: 'target', label: v.target.name, radii: [{ km: 100, pts: pv(v, 'r100', 2) }, { km: 50, pts: pv(v, 'r50', 3) }] });
   const map = h('div', { class: 'map-box beamer-map' }, mapView(v.map, { markers, area: v.target && v.target.country ? v.target.shape : null, fit: !!v.target }));
   let out;
   if (v.image) {

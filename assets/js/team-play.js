@@ -170,7 +170,7 @@ function land(g, ui) {
   } else if (g.own) {
     markers.push({ lat: g.own.lat, lng: g.own.lng, color: ui.team.color, label: 'Euer Punkt' });
   }
-  if (g.target && !g.target.country) markers.push({ lat: g.target.lat, lng: g.target.lng, kind: 'target', label: g.target.name, radii: [100, 50] });
+  if (g.target && !g.target.country) markers.push({ lat: g.target.lat, lng: g.target.lng, kind: 'target', label: g.target.name, radii: [{ km: 100, pts: pv(g, 'r100', 2) }, { km: 50, pts: pv(g, 'r50', 3) }] });
   const canPick = g.open && !g.own;
   const box = h('div', { class: 'map-box' });
   const zk = `${key}:${g.map}:${g.target ? "aufgel" : "offen"}`; // bei der Auflösung neu: auf alle Tipps heranzoomen
@@ -243,7 +243,7 @@ function kassenschlager(g, ui) {
   }
   const buying = g.myTurn && g.phase === 'buy';
   const left = g.maxBuys - g.boughtCount;
-  // Querformat: Paywall links, Aufgabe/Schreibfeld rechts (siehe .ks-split).
+  // Paywall oben, Aufgabe/Schreibfeld darunter (siehe .ks-split).
   const wall = [];
   wall.push(h('p', { class: 'muted' }, `Paywall · ${g.boughtCount} von ${g.maxBuys} Hinweisen gekauft`));
   // Hinweis-Wand wie auf dem Beamer: verdeckte Kacheln zeigen Namen und Preis,
