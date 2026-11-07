@@ -170,7 +170,7 @@ function land(g, ui) {
   } else if (g.own) {
     markers.push({ lat: g.own.lat, lng: g.own.lng, color: ui.team.color, label: 'Euer Punkt' });
   }
-  if (g.target && !g.target.country) markers.push({ lat: g.target.lat, lng: g.target.lng, kind: 'target', label: g.target.name, radii: [{ km: 100, pts: pv(g, 'r100', 2) }, { km: 50, pts: pv(g, 'r50', 3) }] });
+  if (g.target && !g.target.country) markers.push({ lat: g.target.lat, lng: g.target.lng, kind: 'target', label: g.target.name, radii: [{ km: (g.target.radii || {}).outer || 100, pts: pv(g, 'r100', 2) }, { km: (g.target.radii || {}).inner || 50, pts: pv(g, 'r50', 3) }] });
   const canPick = g.open && !g.own;
   const box = h('div', { class: 'map-box' });
   const zk = `${key}:${g.map}:${g.target ? "aufgel" : "offen"}`; // bei der Auflösung neu: auf alle Tipps heranzoomen
@@ -205,7 +205,8 @@ function land(g, ui) {
         : stateBox('', '🗺', `${g.target.name}${own ? ` – ihr lagt ${own.km.toLocaleString('de-DE')} km daneben` : ''}`));
     } else {
       const mine = (g.awards || {})[ui.team.id];
-      const why = own && own.km <= 50 ? 'Innerhalb von 50 km!' : own && own.km <= 100 ? 'Innerhalb von 100 km!' : 'Am nächsten dran!';
+      const rad = g.target.radii || { inner: 50, outer: 100 };
+      const why = own && own.km <= rad.inner ? `Innerhalb von ${rad.inner} km!` : own && own.km <= rad.outer ? `Innerhalb von ${rad.outer} km!` : 'Am nächsten dran!';
       out.push(mine ? stateBox('ok', '✓', `${why} ${plus(mine)}${own ? ` (${own.km.toLocaleString('de-DE')} km)` : ''}`)
         : stateBox('', '📍', `${g.target.name}${own ? ` – ihr wart ${own.km.toLocaleString('de-DE')} km entfernt` : ''}`));
     }

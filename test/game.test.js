@@ -494,7 +494,7 @@ test('Land: Punkte setzen, Tipps zeigen, Zielort enthüllen, nächster gewinnt',
   activate(db, 'land');
   game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
   game.applyAction(db, mod(), 'play.open', { taskIndex: 0 }); // Paris
-  game.applyAction(db, team(a), 'play.guess', { lat: 48.0, lng: 2.0 });
+  game.applyAction(db, team(a), 'play.guess', { lat: 47.6, lng: 1.8 });
   game.applyAction(db, team(b), 'play.guess', { lat: 52.5, lng: 13.4 });
   assert.throws(() => game.applyAction(db, team(a), 'play.guess', { lat: 1, lng: 1 }), /gesperrt/);
   assert.throws(() => game.applyAction(db, team(c), 'play.guess', { lat: 200, lng: 1 }), /Ungültig/);
@@ -506,7 +506,7 @@ test('Land: Punkte setzen, Tipps zeigen, Zielort enthüllen, nächster gewinnt',
   assert.equal(game.beamerView(db).gameView.guesses.length, 3);
   assert.throws(() => game.applyAction(db, team(c), 'play.guess', { lat: 48.8, lng: 2.3 }), /gesperrt|nicht freigegeben/);
   game.applyAction(db, mod(), 'play.revealTarget');
-  // bis 50 km: 3 Punkte, bis 100 km: 2 Punkte (a liegt ~98 km entfernt), Berlin nichts
+  // Europakarte: bis 100 km 3 Punkte, bis 200 km 2 Punkte (a liegt ~145 km entfernt), Berlin nichts
   assert.deepEqual(game.beamerView(db).gameView.awards, { [c]: 3, [a]: 2 });
   assert.deepEqual([a, b, c].map((t) => game.totals(db)[t]), [2, 0, 3]);
   game.applyAction(db, mod(), 'play.setWinner', { teamId: b });

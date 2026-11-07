@@ -104,7 +104,7 @@ function land(v, teamOf) {
     return `${n} · ${g.km.toLocaleString('de-DE')} km`;
   };
   const markers = (v.guesses || []).map((g) => ({ lat: g.lat, lng: g.lng, color: teamOf(g.teamId).color, label: tag(g), showLabel: true }));
-  if (v.target && !v.target.country) markers.push({ lat: v.target.lat, lng: v.target.lng, kind: 'target', label: v.target.name, radii: [{ km: 100, pts: pv(v, 'r100', 2) }, { km: 50, pts: pv(v, 'r50', 3) }] });
+  if (v.target && !v.target.country) markers.push({ lat: v.target.lat, lng: v.target.lng, kind: 'target', label: v.target.name, radii: [{ km: (v.target.radii || {}).outer || 100, pts: pv(v, 'r100', 2) }, { km: (v.target.radii || {}).inner || 50, pts: pv(v, 'r50', 3) }] });
   const map = h('div', { class: 'map-box beamer-map' }, mapView(v.map, { markers, area: v.target && v.target.country ? v.target.shape : null, fit: !!v.target }));
   let out;
   if (v.image) {
