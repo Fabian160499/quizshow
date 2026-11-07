@@ -12,7 +12,7 @@ const S = (key, label, def) => ({ key, label, def });
 const SCORING = {
   leichte5: [S('correct', 'Richtige Antwort', 1)],
   dummes: [S('correct', 'Richtige Antwort', 1)],
-  land: [S('winner', 'Am nächsten dran / im gesuchten Land', 1)],
+  land: [S('r50', 'Gesuchter Punkt: bis 50 km entfernt', 3), S('r100', 'Gesuchter Punkt: bis 100 km entfernt', 2), S('winner', 'Am nächsten dran (wenn kein Team innerhalb 100 km) / im gesuchten Land', 1)],
   kassenschlager: [S('divisor', 'Umrechnung am Ende: so viele $ ergeben 1 Punkt (aufgerundet)', 2)],
   trumpf5: [1, 2, 3, 4, 5].map((n) => S(`hint${n}`, `Richtig nach Hinweis ${n}`, 6 - n)),
   musik: [1, 2, 3].map((n) => S(`field${n}`, `Feld ${n} (Zeile ${n} im Spielbrett)`, n)),

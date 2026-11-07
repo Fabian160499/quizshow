@@ -2,7 +2,8 @@
 
 // Spiel „Ich sehe ein Land, das du nicht siehst“: jedes Team setzt einen Punkt
 // auf der Karte. Erst werden alle Tipps gleichzeitig gezeigt, dann der Zielort.
-// Gesuchter Punkt: das Team mit dem kleinsten Abstand bekommt 1 Punkt.
+// Gesuchter Punkt: bis 50 km 3 Punkte, bis 100 km 2 Punkte (jedes Team); liegt kein
+// Team innerhalb von 100 km, bekommt das Team am nächsten dran 1 Punkt.
 // Gesuchtes Land (Welt-/Europakarte): jedes Team, das im Land tippt, bekommt 1 Punkt.
 
 const { fail, log, effect, teamName, teamIds, bookTarget, distanceKm } = require('./core');
@@ -86,12 +87,27 @@ function distances(game, task, r) {
   });
 }
 
-function bookWinners(db, ctx, game, st, r, winners, why) {
+// awards: { teamId: Punkte } – ohne Angabe bekommt jeder Gewinner den Punkt „winner“.
+function bookWinners(db, ctx, game, st, r, winners, why, awards = null) {
   const before = r.winners || [];
   r.winners = winners;
+  r.awards = awards || Object.fromEntries(winners.map((id) => [id, pv(game, 'winner')]));
   for (const id of new Set([...Object.keys(r.guesses), ...before, ...winners])) {
-    bookTarget(db, ctx, `land:${game.id}:${st.taskIndex}:${id}`, id, winners.includes(id) ? pv(game, 'winner') : 0, `${game.title}, Aufgabe ${st.taskIndex + 1}${why}`);
+    bookTarget(db, ctx, `land:${game.id}:${st.taskIndex}:${id}`, id, r.awards[id] || 0, `${game.title}, Aufgabe ${st.taskIndex + 1}${why}`);
   }
+}
+// Gesuchter Punkt: Radien 50 km / 100 km, sonst das nächste Team.
+function pointAwards(game, d) {
+  const awards = {};
+  for (const x of d) {
+    if (x.km <= 50) awards[x.teamId] = pv(game, 'r50');
+    else if (x.km <= 100) awards[x.teamId] = pv(game, 'r100');
+  }
+  if (!Object.keys(awards).length && d.length) {
+    const best = Math.min(...d.map((x) => x.km));
+    for (const x of d) if (x.km === best) awards[x.teamId] = pv(game, 'winner');
+  }
+  return awards;
 }
 
 // Karte je Aufgabe: eigene Wahl oder die Standard-Karte des Spiels.
@@ -118,6 +134,7 @@ function publicView(db, game, st) {
       : c ? { name: task.target || c.name, country: true, lat: c.label[1], lng: c.label[0], shape: c.draw }
         : { name: task.target, lat: task.lat, lng: task.lng },
     winners: r.showTarget ? r.winners : [],
+    awards: r.showTarget ? r.awards || Object.fromEntries((r.winners || []).map((id) => [id, pv(game, 'winner')])) : null,
   };
 }
 
@@ -180,9 +197,9 @@ module.exports = {
         bookWinners(db, ctx, game, st, r, d.filter((x) => x.hit).map((x) => x.teamId), '');
         log(db, ctx, 'ablauf', `Land enthüllt (${c.name}), im Land: ${r.winners.map((id) => teamName(db, id)).join(', ') || 'niemand'}`);
       } else {
-        const best = Math.min(...d.map((x) => x.km));
-        bookWinners(db, ctx, game, st, r, d.filter((x) => x.km === best).map((x) => x.teamId), '');
-        log(db, ctx, 'ablauf', `Zielort enthüllt, am nächsten: ${r.winners.map((id) => teamName(db, id)).join(', ')} (${best} km)`);
+        const awards = pointAwards(game, d);
+        bookWinners(db, ctx, game, st, r, Object.keys(awards), '', awards);
+        log(db, ctx, 'ablauf', `Zielort enthüllt: ${r.winners.map((id) => `${teamName(db, id)} +${awards[id]}`).join(', ')}`);
       }
       effect(db, 'correct');
     },

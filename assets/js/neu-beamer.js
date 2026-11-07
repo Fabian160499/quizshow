@@ -54,7 +54,7 @@ function sortieren(v, teamOf) {
 const hpPct = (val, start) => Math.max(0, Math.min(100, (val / (start || 100)) * 100));
 // Vier Stufen in 25er-Schritten: über 75 grün, 51–75 gelb, 26–50 orange, bis 25 rot.
 const hpColor = (pct) => (pct > 75 ? 'var(--ok, #2bd96b)' : pct > 50 ? '#ffd23f' : pct > 25 ? '#ff8a1f' : 'var(--bad, #ff4a4a)');
-export function hpBar({ name = null, color = '#888', before, after, start = 100, diff = null, bonus = 0, out = false, delay = 0, points = null, animate = true }) {
+export function hpBar({ name = null, color = '#888', before, after, start = 100, diff = null, bonus = 0, out = false, delay = 0, points = null, animate = true, note = null }) {
   const from = hpPct(before, start), to = hpPct(after, start);
   const num = h('b', { class: 'hp-num' }, fmtNum(animate ? before : after));
   // Farbe wechselt mit dem Treffer (Grün → Gelb → Orange → Rot).
@@ -64,7 +64,9 @@ export function hpBar({ name = null, color = '#888', before, after, start = 100,
     h('span', { class: 'hp-track' },
       h('i', { class: 'hp-ghost' }), fill, h('i', { class: 'hp-ticks' }),
       animate && diff ? h('em', { class: 'hp-dmg' }, `−${fmtNum(diff)}`) : null,
-      animate && bonus ? h('em', { class: 'hp-dmg hp-heal' }, `+${fmtNum(bonus)} ❤ Volltreffer!`) : null),
+      animate && bonus ? h('em', { class: 'hp-dmg hp-heal' }, `+${fmtNum(bonus)} ❤ Volltreffer!`) : null,
+      // Bleibt stehen: Tipp und wie weit daneben.
+      note ? h('span', { class: 'hp-note' }, note) : null),
     num,
     out ? h('span', { class: 'hp-ko' }, 'K.O.') : null,
     points !== null ? h('span', { class: 'hp-pts' }, `+${points}`) : null);
@@ -79,13 +81,15 @@ export function hpBar({ name = null, color = '#888', before, after, start = 100,
   return bar;
 }
 
+const GIER_STEP = 1.6; // Sekunden zwischen den Teams bei der Auflösung (langsamer, gut lesbar)
 function gier(v, teamOf) {
   const placed = Object.fromEntries((v.placed || []).map((p) => [p.teamId, p]));
   const bars = h('div', { class: 'nb-gier-bars' }, v.teams.map((t, i) => {
     const team = teamOf(t.teamId);
     const res = v.results ? v.results.find((x) => x.teamId === t.teamId) : null;
-    return hpBar({ name: team.name, color: team.color, before: res ? res.before : t.balance, after: t.balance, start: v.start, diff: res ? res.diff : null, bonus: res ? res.bonus || 0 : 0,
-      out: t.out, delay: 0.8 + i * 0.7, points: placed[t.teamId] ? placed[t.teamId].points : null, animate: !!res });
+    const note = res ? `${res.fun ? 'außer Wertung · ' : ''}Tipp ${fmtNum(res.value)}${v.unit ? ` ${v.unit}` : ''} · ${res.diff === 0 ? 'genau richtig!' : `${fmtNum(res.diff)} daneben`}` : null;
+    return hpBar({ name: team.name, color: team.color, before: res ? res.before : t.balance, after: t.balance, start: v.start, diff: res && !res.fun ? res.diff : null, bonus: res ? res.bonus || 0 : 0, note,
+      out: t.out, delay: 0.8 + i * GIER_STEP, points: placed[t.teamId] ? placed[t.teamId].points : null, animate: !!res });
   }));
   if (v.waiting) return [...waitTitle('Riskier die Gier', 'Jedes Team startet mit 100 Lebenspunkten – jede Abweichung kostet Energie, ein Volltreffer bringt 5 Leben dazu.'), bars];
   const out = [banner(v.question, 'compact slim')];
@@ -98,7 +102,7 @@ function gier(v, teamOf) {
   out.push(bars);
   // Spiel entschieden: Endstand erscheint, nachdem alle Balken gelaufen sind.
   if (v.standings) {
-    const delay = 1.2 + v.teams.length * 0.7 + 1.4;
+    const delay = 1.2 + v.teams.length * GIER_STEP + 2;
     out.push(h('div', { class: 'nb-gier-final', style: { animationDelay: `${delay}s` } }, h('div', { class: 'nb-gier-final-title' }, 'Endstand'),
       v.standings.map((s, k) => h('div', { class: 'nb-gier-place', '--team': teamOf(s.teamId).color, style: { animationDelay: `${delay + 0.3 + k * 0.25}s` } },
         h('b', { class: 'pl' }, `${s.place}.`), h('span', { class: 'nm' }, teamOf(s.teamId).name), h('b', { class: 'p' }, `+${s.points}`)))));

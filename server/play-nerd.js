@@ -158,7 +158,9 @@ module.exports = {
     },
     notes(db, ctx, game, st, p) {
       const r = current(st);
-      if (r.phase !== 'bidding') fail('Notizen sind nur während der Gebotsphase möglich.');
+      // Notizen: in der Gebotsphase – und für das Team, das gerade dran ist (z. B. Genanntes durchstreichen).
+      const playing = r.attempt && !r.attempt.done && r.attempt.teamId === ctx.teamId;
+      if (r.phase !== 'bidding' && !playing) fail('Notizen sind nur während der Gebotsphase möglich.');
       if (!r.notes) r.notes = {};
       r.notes[ctx.teamId] = cleanInk(p.ink);
     },

@@ -59,11 +59,33 @@ function leichte5(v, teamOf) {
 // ---------- 2 ----------
 function dummes(v, teamOf) {
   const marks = {};
-  for (const f of v.finals) (marks[f.choice] ||= []).push(dot(teamOf(f.teamId)));
+  // Bei der Auflösung: Teamnamen an der Antwort (getauschte Teams mit 🔁).
+  const swapped = new Set((v.swapDetail || []).map((x) => x.teamId));
+  for (const f of v.finals) {
+    const t = teamOf(f.teamId);
+    (marks[f.choice] ||= []).push(h('span', { class: `dm-name${swapped.has(f.teamId) ? ' swapped' : ''}`, '--team': t.color }, swapped.has(f.teamId) ? `🔁 ${t.name}` : t.name));
+  }
   const out = [h('div', { class: 'q compact' }, v.question), options(v, { correct: v.correct, marks, compact: v.evaluated })];
   if (!v.evaluated) out.push(sub(`${v.submittedCount} von ${v.teamCount} Teams haben gesperrt`, { marginTop: '2vh' }));
   if (v.buzz && !v.evaluated) out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, chip(teamOf(v.buzz), 'answering', ' 🔔 war am schnellsten'), v.windowEnds ? h('span', { class: 'chip' }, '⏱ ', h('b', { 'data-deadline': v.windowEnds }, '')) : null));
-  if (v.swap) out.push(h('div', { class: 'solution' }, `🔁 ${teamOf(v.swap.by).name} hat mit ${teamOf(v.swap.with).name} getauscht`));
+  if (v.swapDetail) {
+    // Wer mit wem getauscht hat und was es gebracht hat.
+    const eff = (x) => {
+      const was = x.before === v.correct, now = x.after === v.correct;
+      if (was === now) return now ? ['same ok', 'bleibt richtig'] : ['same', 'bleibt falsch'];
+      return now ? ['win', 'Punkt gewonnen 🎉'] : ['lose', 'Punkt verloren 😱'];
+    };
+    const card = (x) => {
+      const t = teamOf(x.teamId);
+      const [cls, txt] = eff(x);
+      return h('div', { class: `dm-swap-card ${cls}`, '--team': t.color },
+        h('div', { class: 'dm-swap-name' }, t.name),
+        h('div', { class: 'dm-swap-move' }, h('span', { class: x.before === v.correct ? 'ok' : 'bad' }, x.before), ' → ', h('span', { class: x.after === v.correct ? 'ok' : 'bad' }, x.after)),
+        h('div', { class: 'dm-swap-eff' }, txt));
+    };
+    const [a, b] = v.swapDetail;
+    out.push(h('div', { class: 'dm-swap' }, card(a), h('div', { class: 'dm-swap-icon', title: `${teamOf(a.teamId).name} hat mit ${teamOf(b.teamId).name} getauscht` }, '🔁', h('small', {}, 'getauscht')), card(b)));
+  } else if (v.evaluated && v.buzz) out.push(sub(`${teamOf(v.buzz).name} war am schnellsten und hat nicht getauscht`, { marginTop: '1.5vh' }));
   return out;
 }
 
@@ -92,9 +114,16 @@ function land(v, teamOf) {
   if (!v.guesses) out.push(sub(`${v.submittedCount} von ${v.teamCount} Teams haben ihren Punkt gesetzt`, { marginTop: '2vh' }));
   if (v.target) {
     const w = v.winners.map((id) => teamOf(id).name).join(', ');
+    const aw = v.awards || {};
+    const pointText = () => {
+      const ids = Object.keys(aw).sort((a, b) => aw[b] - aw[a]);
+      if (!ids.length) return '';
+      const near = (v.guesses || []).every((g) => !ids.includes(g.teamId) || g.km <= 100);
+      return near ? ` – ${ids.map((id) => `${teamOf(id).name} +${aw[id]}`).join(' · ')}` : ` – keiner im 100-km-Radius, am nächsten: ${ids.map((id) => `${teamOf(id).name} +${aw[id]}`).join(' · ')}`;
+    };
     out.push(h('div', { class: 'solution' }, v.target.country
       ? `🗺 ${v.target.name}${w ? ` – im Land: ${w}` : ' – kein Team im Land'}`
-      : `📍 ${v.target.name}${w ? ` – am nächsten: ${w}` : ''}`));
+      : `📍 ${v.target.name}${pointText()}`));
   } else if (v.mode === 'country' && !v.guesses) {
     out.push(sub('Gesucht ist ein ganzes Land – jedes Team, das darin landet, bekommt einen Punkt.', { marginTop: '1vh' }));
   }
@@ -111,6 +140,19 @@ function kassenschlager(v, teamOf) {
   if (v.waiting) return [h('div', { class: 'mega', style: { fontSize: 'clamp(2rem,5vw,5rem)' } }, 'Das ist ein echter Kassenschlager'), sub('Jedes Team startet mit 20 $', { marginTop: '3vh' })];
   const out = [h('div', { class: 'q' }, '🎬 Welcher Film ist gesucht?')];
   if (v.finished) out.push(h('div', { class: 'solution' }, v.title));
+  if (v.finished && v.paywall) {
+    // Alle Kacheln aufgedeckt, nacheinander; Punkte zeigen, wer den Hinweis gekauft hatte.
+    out[0] = h('div', { class: 'q compact slim' }, '🎬 Der Film war …');
+    out.push(h('div', { class: 'ks-wall' }, v.paywall.map((x, i) => {
+      const photo = x.photo ? h('img', { class: 'ks-wall-photo', alt: x.label }) : null;
+      if (photo) mediaUrl(x.photo.id).then((u) => { if (u) photo.src = u; });
+      const showText = x.text && !/^\(.*\)$/.test(x.text.trim()); // Platzhalter wie „(Bild ergänzen)“ nicht zeigen
+      return h('div', { class: `ks-tile${x.boughtBy.length ? ' bought' : ''}`, style: { animationDelay: `${0.4 + i * 0.18}s` } },
+        h('div', { class: 'ks-tile-head' }, h('b', {}, `${x.price} $`), h('span', {}, `${i + 1}. ${x.label}`)),
+        photo, showText ? h('div', { class: 'ks-tile-text' }, x.text) : null,
+        x.boughtBy.length ? h('div', { class: 'ks-tile-by' }, x.boughtBy.map((id) => h('span', { class: 'dot', title: teamOf(id).name, style: { background: teamOf(id).color } }))) : null);
+    })));
+  }
   if (v.status) {
     // Alle Teams gleichzeitig: wer noch kauft/schreibt, wer fertig ist.
     const LBL = { buy: '💸 kauft', answer: '✍ schreibt', done: '✓ fertig' };
@@ -157,8 +199,13 @@ function musik(v, teamOf) {
   const c = v.current;
   const board = h('div', { class: 'jeopardy' }, v.board.map((cat, i) => h('div', { class: 'col' },
     h('div', { class: 'cat' }, cat.name || `Kategorie ${i + 1}`),
-    cat.fields.map((f) => h('div', { class: `cell ${f.played ? 'played' : ''}`, style: f.winner ? { borderColor: teamOf(f.winner).color, color: teamOf(f.winner).color } : null }, f.played ? (f.winner ? teamOf(f.winner).name : '–') : String(f.value))))));
+    cat.fields.map((f) => h('div', { class: `cell ${f.played ? 'played' : ''}${f.current ? ' current' : ''}`, style: f.winner ? { borderColor: teamOf(f.winner).color, color: teamOf(f.winner).color } : null }, f.played ? (f.winner ? teamOf(f.winner).name : '–') : String(f.value))))));
   if (!c || (c.resolved && !c.answer)) return [board, v.picker ? sub(`${teamOf(v.picker).name} wählt ein Feld`, { marginTop: '2vh' }) : null];
+  // Feld gewählt, Frage noch nicht freigegeben: Spielbrett mit dem gewählten Feld zeigen.
+  if (!c.started && !c.resolved) {
+    return [board, h('div', { class: 'mus-picked' }, c.pickedBy ? h('b', { style: { color: teamOf(c.pickedBy).color } }, teamOf(c.pickedBy).name) : null,
+      c.pickedBy ? ' wählt ' : 'Gewählt: ', h('b', {}, c.category || 'Kategorie'), ` für ${pts(c.value)}`)];
+  }
   const out = [sub(`${c.category} · ${pts(c.value)}${c.mashup ? ' · beide Songtitel nennen!' : ''}`)];
   out.push(h('div', { class: 'q' }, c.task || (c.kind === 'sound' ? (c.started ? '🎵 Hört genau hin …' : '🎵') : '')));
   if (c.image && !c.resolved) out.push(mediaImg(c.image, 'musik-img'));

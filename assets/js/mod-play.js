@@ -46,7 +46,7 @@ function buzzList(ui, round, judgeLabel, onJudge) {
   if (!round.buzzes.length) return h('p', { class: 'muted' }, 'Noch kein Buzzer.');
   return h('ol', { class: 'list' }, round.buzzes.map((b) => h('li', { class: b === pending ? 'active' : '' },
     ui.dot(ui.teamColor(b.teamId)), h('span', { class: 'grow' }, h('b', {}, ui.teamName(b.teamId)), h('span', { class: 'muted' }, ` · +${b.at - first} ms${b.hint ? ` · Hinweis ${b.hint}` : ''}`)),
-    b.status === 'correct' ? badge('ok', '✓ richtig') : b.status === 'wrong' ? badge('bad', '✗ falsch') : null,
+    b.status === 'correct' ? badge('ok', '✓ richtig') : b.status === 'wrong' ? badge('bad', '✗ falsch') : b.status === 'skipped' ? badge('', 'nicht mehr dran') : null,
     b === pending ? [
       btn('small ok', judgeLabel(b), () => onJudge(true)),
       btn('small bad', '✗ Falsch', () => onJudge(false)),
@@ -131,9 +131,7 @@ function dummes(ui, g, st) {
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
     const a = r.answers[t.id];
     if (!a) {
-      const late = r.late.includes(t.id);
-      return h('li', {}, ui.dot(t.color), h('span', { class: 'grow' }, t.name, h('span', { class: 'muted' }, late ? ' – darf nachträglich abgeben' : ' – noch nicht abgegeben')),
-        r.windowEnds && !late && !r.evaluated ? btn('small', 'Noch abgeben lassen', () => ui.act('play.allowLate', { teamId: t.id })) : null);
+      return h('li', {}, ui.dot(t.color), h('span', { class: 'grow' }, t.name, h('span', { class: 'muted' }, ' – noch nicht abgegeben')));
     }
     const fin = finals[t.id];
     return h('li', {}, ui.dot(t.color), h('span', { class: 'grow' }, h('b', {}, t.name), `: ${a.choice}`, fin !== a.choice ? ` → nach Tausch ${fin}` : ''),
@@ -184,7 +182,7 @@ function land(ui, g, st) {
       : country ? (x.hit ? ' · im Land ✓' : ` · nicht im Land (${x.km.toLocaleString('de-DE')} km daneben)`)
         : ` · ${x.km.toLocaleString('de-DE')} km`;
     return h('li', {}, ui.dot(tm.color), h('span', { class: 'grow' }, h('b', {}, tm.name), info),
-      win ? badge('ok', '✓ 1 Punkt') : null,
+      win ? badge('ok', `✓ ${(r.awards && r.awards[tm.id]) || 1} ${((r.awards && r.awards[tm.id]) || 1) === 1 ? 'Punkt' : 'Punkte'}`) : null,
       r.showTarget && country ? btn('small ghost', win ? 'Punkt wegnehmen' : 'Punkt geben', () => ui.act('play.toggleWinner', { teamId: tm.id })) : null,
       r.showTarget && !country && !win ? btn('small ghost', 'Punkt geben', () => ui.confirmAct(`Korrektur: Den Punkt dieser Aufgabe an ${tm.name} geben (statt bisher)?`, 'play.setWinner', { teamId: tm.id })) : null);
   })));
@@ -302,7 +300,7 @@ function musik(ui, g, st) {
   out.push(h('p', {}, field.task || h('span', { class: 'muted' }, '(keine Aufgabe eingetragen)')));
   out.push(h('p', {}, h('span', { class: 'muted' }, 'Lösung: '), h('b', {}, field.answer || '–'), field.audio ? h('span', { class: 'muted' }, ` · Clip: ${field.audio}`) : null));
   out.push(row(
-    round.started ? badge('ok', '● Buzzer frei') : btn('pink', '▶ Aufgabe starten, Buzzer frei', () => ui.act('play.start'), round.resolved),
+    round.started ? badge('ok', '● Buzzer frei') : btn('pink', '▶ Frage freigeben, Buzzer frei', () => ui.act('play.start'), round.resolved),
     btn('small ghost', 'Ohne Punkte beenden', () => ui.confirmAct('Feld ohne Punkte beenden?', 'play.close'), round.resolved || round.buzzes.some((b) => b.status === 'pending')),
     round.resolved ? badge('ok', 'Feld beendet') : null));
   // Musik-Clip: startet mit „Aufgabe starten“, pausiert beim Buzzern.
@@ -394,7 +392,8 @@ function nerd(ui, g, st) {
   }
   const a = r.attempt;
   if (a) {
-    const valid = cat.answers.split('\n').map((l) => l.trim()).filter(Boolean);
+    // Alphabetisch sortiert, damit die Moderation genannte Begriffe schnell findet.
+    const valid = cat.answers.split('\n').map((l) => l.trim()).filter(Boolean).sort((x, y) => x.localeCompare(y, 'de', { sensitivity: 'base' }));
     const named = a.given.filter((x) => x.ok).map((x) => x.text);
     out.push(h('p', {}, h('b', { style: { color: ui.teamColor(a.teamId) } }, ui.teamName(a.teamId)), ` · ${a.which === 'first' ? 'erster' : 'zweiter'} Versuch · Ziel ${a.target} · `,
       h('b', {}, `${a.correct} richtig`), ` · ${a.errors} von ${a.maxErrors} Fehlern`, a.done ? ` · ${a.done === 'success' ? 'geschafft ✓' : 'gescheitert ✗'}` : ''));

@@ -63,7 +63,7 @@ const TYPES = {
   land: {
     title: 'Ich sehe ein Land, das du nicht siehst',
     playable: true,
-    summary: 'Teams setzen einen Punkt auf der Karte: beim gesuchten Ort gewinnt der nächste, beim gesuchten Land jedes Team im Land 1 Punkt.',
+    summary: 'Teams setzen einen Punkt auf der Karte: beim gesuchten Ort bis 50 km 3 Punkte, bis 100 km 2 Punkte, sonst 1 Punkt für das nächste Team; beim gesuchten Land jedes Team im Land 1 Punkt.',
     schema: [
       { key: 'map', label: 'Standard-Karte (gilt für alle Aufgaben ohne eigene Karte)', type: 'select', options: ['Welt', 'Europa', 'Deutschland'] },
       { key: 'tasks', label: 'Aufgaben', type: 'list', min: 1, max: 15, itemLabel: (i) => `Aufgabe ${i + 1}`, addLabel: 'Aufgabe hinzufügen',

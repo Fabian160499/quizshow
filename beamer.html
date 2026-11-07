@@ -265,7 +265,23 @@
       const views = { start, video, intro, pyramid, title, game, ranking, coin, pause, stageTitle, hosts, finaleTitle, finale, blank: () => [] };
       if (s.view !== 'finale') prevFin = null;
       stage.replaceChildren(...(views[s.view] || start)(s, replayTitle));
+      fitAll();
     }
+
+    // Text, der in ein festes Feld passen muss (Finale: Frage, Lösung, getippte Antworten):
+    // umbrechen und so weit verkleinern, bis alles vollständig sichtbar ist.
+    function fitAll() {
+      requestAnimationFrame(() => document.querySelectorAll('.fit').forEach((el) => {
+        const max = parseFloat(el.dataset.fitMax || getComputedStyle(el).fontSize);
+        el.dataset.fitMax = String(max);
+        let size = max;
+        el.style.fontSize = `${size}px`;
+        const over = () => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+        while (over() && size > 8) { size -= Math.max(0.5, size * 0.05); el.style.fontSize = `${size}px`; }
+      }));
+    }
+    window.addEventListener('resize', () => { document.querySelectorAll('.fit').forEach((el) => { el.style.fontSize = ''; delete el.dataset.fitMax; }); fitAll(); });
+    document.fonts?.ready?.then(() => fitAll());
 
     // ---- Neon-Studiobühne als Hintergrund (SVG, skaliert mit dem Bildschirm) ----
     (function studio() {
@@ -668,6 +684,8 @@
         setTimeout(grow, (0.6 + start.length * 0.12) * 1000 * speed);
         setTimeout(reorder, (3.4 + start.length * 0.12) * 1000 * speed);
       }
+      // Nach jedem Spiel: nur die Punkte dieses Spiels.
+      if (s.rankGame) return [h('div', { class: 'q rank-title' }, 'Punkte in diesem Spiel'), h('div', { class: 'rank-sub' }, `Spiel ${s.rankGame.pos} · ${s.rankGame.title}`), ol];
       return [h('div', { class: 'q rank-title' }, 'Zwischenstand'), ol];
     }
 
@@ -762,8 +780,8 @@
         tris(Math.min(score, f.target), who));
       const question = !r
         ? h('div', { class: 'fx-q' }, h('span', {}, `${f.team.name} gegen ${f.host || 'die Moderation'}`), h('b', {}, `Wer zuerst ${f.target} Punkte hat, gewinnt`))
-        : h('div', { class: `fx-q${an(isNew.question, 'enter')}${r.revealed ? '' : ' no-answer'}${r.question.length > 70 ? ' long' : ''}` }, h('span', {}, r.question),
-          r.revealed ? h('b', { class: an(isNew.revealed, 'enter').trim() }, r.solution || '–',
+        : h('div', { class: `fx-q${an(isNew.question, 'enter')}${r.revealed ? '' : ' no-answer'}${r.question.length > 70 ? ' long' : ''}` }, h('span', { class: 'fit' }, r.question),
+          r.revealed ? h('b', { class: `fit ${an(isNew.revealed, 'enter').trim()}`.trim() }, r.solution || '–',
             r.resolved && r.challenged ? h('em', { class: r.coinLost ? 'bad' : 'ok' }, r.coinLost ? 'Münze verloren' : 'Münze zurück') : null) : null);
       // Münzfeld auf der Pultfront: verlorene Münzen bleiben liegen, die eingesetzte glänzt.
       const deskCoins = [];
@@ -806,7 +824,7 @@
     // transparentem Grund umrechnen – Strichstärke bleibt wie geschrieben.
     const inkCache = new Map();
     function boardInk(a) {
-      if (!a || !a.ink) return h('span', { class: 'fx-text' }, a ? a.text : '');
+      if (!a || !a.ink) return h('span', { class: 'fx-text fit' }, a ? a.text : '');
       const img = h('img', { class: 'fx-ink', alt: 'Handschriftliche Antwort' });
       if (inkCache.has(a.ink)) { img.src = inkCache.get(a.ink); return img; }
       const src = new Image();

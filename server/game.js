@@ -124,6 +124,7 @@ function newProject(library, name = 'Wer stiehlt uns die Show') {
   return {
     id: newId('proj'),
     hostsStepAdded: true,
+    gameScoreSteps: true,
     hostsStage1Added: true,
     name,
     date: '',
@@ -189,6 +190,8 @@ function migrate(db) {
     if (db.project.host === 'Moderation') db.project.host = 'Fabian';
     if (!db.project.coHostDefaulted) { if (!db.project.coHost) db.project.coHost = 'Alexia'; db.project.coHostDefaulted = true; }
     if (!db.project.finale) db.project.finale = clone(FINALE.EXAMPLE);
+    // Nach jedem Spiel: Punkte dieses Spiels, dann Moderation am Pult (Wunsch von Fabian, einmalig ergänzt).
+    for (const pr of [db.project, ...db.shows.map((x) => x.project)]) addGameScoreSteps(pr);
     // Spielname korrigiert: „DankeGleichFalsch“ → „Danke, gleichfalsch!“ (nur unveränderte Namen).
     for (const e of [...db.library, ...db.project.games, ...db.shows.flatMap((x) => x.project.games)]) {
       if (e.type === 'dgf' && e.title === 'DankeGleichFalsch') e.title = 'Danke, gleichfalsch!';
@@ -623,8 +626,8 @@ function requireEditable(db) {
 // Jeder Schritt ist eine „Folie“: Beamer-Ansicht plus nötige Spielaktion.
 // Ohne eigenen Ablauf gilt der Standardablauf aus den Spielen der Show.
 
-const RUN_KINDS = ['start', 'video', 'intro', 'pyramid', 'title', 'game', 'coin', 'pause', 'ranking', 'stageTitle', 'hosts', 'finaleTitle', 'finale', 'end'];
-const RUN_NEEDS_POS = ['title', 'game', 'coin'];
+const RUN_KINDS = ['start', 'video', 'intro', 'pyramid', 'title', 'game', 'gameScore', 'coin', 'pause', 'ranking', 'stageTitle', 'hosts', 'finaleTitle', 'finale', 'end'];
+const RUN_NEEDS_POS = ['title', 'game', 'gameScore', 'coin'];
 const RUN_MAX = 120;
 
 function defaultRundown(project) {
@@ -636,11 +639,36 @@ function defaultRundown(project) {
     // Nach jeder Gewinnstufen-Folie die Moderation am Pult (Überleitung, Erklärungen) – auch vor dem ersten Spiel.
     if (STAGE_START[pos]) steps.push({ kind: 'hosts', stage: STAGE_START[pos] });
     steps.push({ kind: 'title', pos }, { kind: 'game', pos });
+    // Nach jedem Spiel: Punkte nur dieses Spiels, dann die Moderation am Pult.
+    steps.push({ kind: 'gameScore', pos }, { kind: 'hosts' });
     // Nach Spiel 4, 6 und 8 erst eine Pause, dann die Münzvergabe (mehr Spannung).
     if (COIN_POSITIONS.includes(pos)) steps.push({ kind: 'pause' }, { kind: 'coin', pos });
   });
   steps.push({ kind: 'ranking' }, { kind: 'finaleTitle' }, { kind: 'finale' }, { kind: 'end' });
   return steps.map((st, i) => ({ id: `std${i}`, ...st }));
+}
+
+// Gespeicherte Abläufe einmalig ergänzen: hinter jedem Spiel „Punkte des Spiels“ + „Moderation am Pult“.
+function addGameScoreSteps(project) {
+  if (project.gameScoreSteps) return;
+  project.gameScoreSteps = true;
+  if (!Array.isArray(project.rundown) || !project.rundown.length) return;
+  const out = [];
+  project.rundown.forEach((st, i) => {
+    out.push(st);
+    const next = project.rundown[i + 1];
+    if (st.kind === 'game' && !(next && next.kind === 'gameScore')) {
+      out.push({ id: newId('step'), kind: 'gameScore', pos: st.pos }, { id: newId('step'), kind: 'hosts' });
+    }
+  });
+  project.rundown = out.slice(0, RUN_MAX);
+}
+
+// Punkte, die jedes Team in einem einzelnen Spiel geholt hat (nicht der Gesamtstand).
+function gameScoreSnapshot(db, game) {
+  const sums = Object.fromEntries(db.project.teams.map((t) => [t.id, 0]));
+  for (const e of db.ledger) if (sums[e.teamId] !== undefined && String(e.ref || '').split(':')[1] === game.id) sums[e.teamId] += e.points;
+  return db.project.teams.map((t) => ({ teamId: t.id, name: t.name, color: t.color, points: sums[t.id] })).sort((a, b) => b.points - a.points);
 }
 
 function rundown(db) {
@@ -657,6 +685,7 @@ function stepLabel(db, st) {
     pyramid: st.pos ? `Übersicht Kategorien → ${game}` : 'Übersicht Kategorien',
     title: `${game} – Spieltitel${g && g.intro ? ' ♪' : ''}`,
     game: `${game} – spielen`,
+    gameScore: `${game} – Punkte dieses Spiels`,
     coin: `Münzvergabe nach Spiel ${st.pos}${STAGE_LABEL[st.pos] ? ` (Gewinnstufe ${STAGE_LABEL[st.pos]})` : ''}`,
     pause: `Pause${st.songs && st.songs.length ? ` · ${st.songs.length} ${st.songs.length === 1 ? 'eigenes Lied' : 'eigene Lieder'}` : ''}`,
     ranking: 'Zwischenstand / Rangliste',
@@ -752,6 +781,10 @@ function runStep(db, ctx, index) {
     // Münze der richtigen Position zeigen (auch beim Zurückblättern).
     db.live.beamer = { view: 'coin', data: { position: coin.position, teamId: coin.teamId } };
     effect(db, 'coin');
+  } else if (st.kind === 'gameScore') {
+    // Nur die Punkte dieses Spiels (nicht der Gesamtstand).
+    db.live.beamer = { view: 'ranking', data: { ranking: gameScoreSnapshot(db, game), at: ctx.now, game: { pos: st.pos, title: game.title } } };
+    effect(db, 'reveal');
   } else if (st.kind === 'ranking' && isFinalRanking(steps, index)) {
     // Vor dem Finale: erst der Rückblick auf den Abend, dann die Rangliste von hinten.
     db.live.beamer = { view: 'ranking', data: { ranking: rankingSnapshot(db), at: ctx.now, final: { slides: recapSlides(db), step: 0 } } };
@@ -1746,7 +1779,7 @@ function beamerView(db) {
     view.rankFinal = fin.step < S
       ? { slide: fin.slides[fin.step], index: fin.step, of: S }
       : { board: list.map((r, i) => (i >= list.length - shown ? { place: pl[i], teamId: r.teamId, name: r.name, color: r.color, points: r.points } : { place: pl[i], hidden: true })), shown, all: shown === list.length, max: Math.max(1, ...list.map((r) => r.points)) };
-  } else if (b.view === 'ranking') view.ranking = b.data.ranking;
+  } else if (b.view === 'ranking') { view.ranking = b.data.ranking; view.rankGame = b.data.game || null; }
   if (b.view === 'coin') view.coin = b.data;
   if (b.view === 'finale') view.finale = FINALE.beamerView(db);
   if (b.view === 'stageTitle') {

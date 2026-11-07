@@ -3,6 +3,7 @@
 // Spiel „Dumm ist der, der Dummes kriegt“: alle Teams sperren A–D, danach
 // darf gebuzzert werden. Bei jeder Frage darf das schnellste Team seine
 // Antwort mit einem anderen Team tauschen. Richtige finale Antwort: 1 Punkt.
+// Das Buzzern sperrt die anderen Teams nicht: sie können bis zur Auflösung abgeben.
 
 const { fail, log, effect, teamName, teamIds, bookTarget, cleanChoice } = require('./core');
 const { pv } = require('./scoring');
@@ -49,7 +50,6 @@ module.exports = {
       const r = current(st);
       if (!r.open) fail('Die Frage ist nicht freigegeben.');
       if (r.answers[ctx.teamId]) fail('Eure Antwort ist bereits gesperrt.');
-      if (windowOver(r, ctx.now) && !r.late.includes(ctx.teamId)) fail('Die 10 Sekunden sind abgelaufen. Die Moderation kann euch noch einmal freigeben.');
       r.answers[ctx.teamId] = { choice: cleanChoice(p.choice), at: ctx.now };
       log(db, ctx, 'antwort', `${teamName(db, ctx.teamId)} hat Frage ${st.qIndex + 1} gesperrt`);
     },
@@ -73,7 +73,6 @@ module.exports = {
       if (!swapReady(db, r, ctx.now)) fail('Erst wenn alle Teams abgegeben haben, wird getauscht.');
       if (p.teamId === ctx.teamId || !r.answers[p.teamId]) fail('Bitte ein anderes Team mit abgegebener Antwort wählen.');
       r.swap = { by: ctx.teamId, with: p.teamId };
-      r.open = false;
       log(db, ctx, 'tausch', `${teamName(db, ctx.teamId)} tauscht die Antwort mit ${teamName(db, p.teamId)}`);
     },
   },
@@ -142,7 +141,7 @@ module.exports = {
       open: r.open,
       choice: own ? own.choice : null,
       late: r.late.includes(teamId),
-      tooLate: !own && windowOver(r, now) && !r.late.includes(teamId),
+      tooLate: false, // Buzzern sperrt niemanden mehr
       windowEnds: r.windowEnds,
       buzzTaken: !!r.buzz,
       isBuzzer,
@@ -175,6 +174,8 @@ module.exports = {
       evaluated: r.evaluated,
       correct: r.evaluated ? q.correct : null,
       swap: r.evaluated ? r.swap : null,
+      // Tausch mit Wirkung: Antwort vorher → nachher je beteiligtem Team.
+      swapDetail: r.evaluated && r.swap ? [r.swap.by, r.swap.with].map((id) => ({ teamId: id, before: r.answers[id].choice, after: finals[id] })) : null,
       finals: finals ? Object.entries(finals).map(([teamId, choice]) => ({ teamId, choice })) : [],
     };
   },

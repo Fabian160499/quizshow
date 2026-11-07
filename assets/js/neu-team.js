@@ -146,13 +146,15 @@ function gier(g, ui) {
     const r = g.result;
     out.push(stateBox('', '💡', `Lösung: ${fmtNum(g.solution)} ${g.unit}`.trim()));
     if (r) {
-      out.push(stateBox(r.out ? 'bad' : 'ok', r.out ? '✗' : r.bonus ? '❤' : '−', `Eure Schätzung ${fmtNum(r.value)} · ${r.bonus ? `Volltreffer! +${fmtNum(r.bonus)} Leben` : `Abweichung ${fmtNum(r.diff)}`} · Guthaben ${fmtNum(r.before)} → ${fmtNum(r.after)}${r.out ? ' – ausgeschieden' : ''}`));
+      if (r.fun) out.push(stateBox('', '🎲', `Außer Wertung: euer Tipp ${fmtNum(r.value)} lag ${r.diff === 0 ? 'genau richtig!' : `${fmtNum(r.diff)} daneben`}`));
+      else out.push(stateBox(r.out ? 'bad' : 'ok', r.out ? '✗' : r.bonus ? '❤' : '−', `Eure Schätzung ${fmtNum(r.value)} · ${r.bonus ? `Volltreffer! +${fmtNum(r.bonus)} Leben` : `Abweichung ${fmtNum(r.diff)}`} · Guthaben ${fmtNum(r.before)} → ${fmtNum(r.after)}${r.out ? ' – ausgeschieden' : ''}`));
     }
     if (g.standings && g.standings[0]) out.push(stateBox('ok', '🏆', `Platz ${g.standings[0].place}: ${pts(g.standings[0].points)}`));
     return out;
   }
-  if (g.out) return [...out, stateBox('bad', '✗', `Game Over – ihr seid ausgeschieden${g.standings && g.standings[0] ? ` (Platz ${g.standings[0].place}, ${pts(g.standings[0].points)})` : ''}. Schaut zu, wie es weitergeht.`)];
+  if (g.out) out.push(stateBox('bad', '✗', `Game Over – ihr seid ausgeschieden${g.standings && g.standings[0] ? ` (Platz ${g.standings[0].place}, ${pts(g.standings[0].points)})` : ''}. Ihr dürft aber aus Spaß weiter mittippen – zählt nicht.`));
   if (g.answered) return [...out, stateBox('', '🔒', `Abgegeben: ${fmtNum(g.value)} ${g.unit} – gesperrt`.trim())];
+  if (g.out && !g.canAnswer) return out;
   if (!g.canAnswer) return [...out, stateBox('', '⏱', 'Zeit abgelaufen – wartet auf die Moderation')];
   const deadline = g.graceEndsAt && Date.now() > g.endsAt ? g.graceEndsAt : g.endsAt;
   out.push(h('p', { class: 'gier-time' }, g.graceEndsAt ? 'Nachfrist: ' : 'Noch ', h('b', { 'data-deadline': deadline }, '')));

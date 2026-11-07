@@ -9,6 +9,7 @@
 // +5 Leben (EXACT_BONUS). Bei 0 oder darunter
 // scheidet das Team aus. Jedes Team muss antworten (ausgewertet wird erst, wenn
 // alle abgegeben haben; die Nachfrist kann dafür erneut freigegeben werden).
+// Ausgeschiedene Teams dürfen aus Spaß weiter tippen (außer Wertung, ohne Einfluss).
 // Platzierung → Showpunkte 10 / 6 / 4 / 3 / 2 / 1 (letztes verbleibendes Team
 // zuerst), automatisch in der Reihenfolge des Ausscheidens gebucht. Mehrere Ausscheidungen in derselben Runde: das Restguthaben
 // entscheidet (stärker negativ = schlechter); gleiches Guthaben teilt sich die
@@ -40,7 +41,7 @@ const active = (db, st) => teamIds(db).filter((id) => st.teams[id] && st.teams[i
 function canAnswer(st, r, teamId, now) {
   if (!r.open || r.evaluated) return false;
   if (r.answers[teamId] !== undefined) return false;
-  if (!st.teams[teamId] || st.teams[teamId].outRound !== null) return false;
+  if (!st.teams[teamId]) return false; // auch Ausgeschiedene dürfen (außer Wertung) tippen
   if (now <= r.endsAt) return true;
   return r.graceEndsAt !== null && now <= r.graceEndsAt;
 }
@@ -90,13 +91,13 @@ module.exports = {
     answer(db, ctx, game, st, p) {
       const r = current(st);
       ensureTeams(db, st);
-      if (st.teams[ctx.teamId].outRound !== null) fail('Ihr seid ausgeschieden.');
       if (r.answers[ctx.teamId] !== undefined) fail('Eure Antwort ist schon abgegeben.');
       if (!canAnswer(st, r, ctx.teamId, ctx.now)) fail(r.endsAt && ctx.now > r.endsAt ? 'Die Zeit ist abgelaufen.' : 'Die Frage ist nicht offen.');
       const v = Number(p.value);
       if (!Number.isFinite(v) || v < 0 || v > MAX_VALUE || String(p.value).trim() === '') fail('Bitte eine Zahl eingeben.');
-      r.answers[ctx.teamId] = { value: v, at: ctx.now, grace: ctx.now > r.endsAt };
-      log(db, ctx, 'antwort', `${teamName(db, ctx.teamId)} hat geschätzt`);
+      const fun = st.teams[ctx.teamId].outRound !== null;
+      r.answers[ctx.teamId] = { value: v, at: ctx.now, grace: ctx.now > r.endsAt, ...(fun ? { fun: true } : {}) };
+      log(db, ctx, 'antwort', `${teamName(db, ctx.teamId)} hat geschätzt${fun ? ' (außer Wertung)' : ''}`);
     },
   },
 
@@ -145,6 +146,13 @@ module.exports = {
         const out = t.balance <= 0;
         if (out) t.outRound = st.index;
         results.push({ teamId: id, value: a.value, diff, bonus, before, after: t.balance, out, missing: false });
+      }
+      // Ausgeschiedene, die aus Spaß getippt haben: nur zeigen, nichts verändern.
+      for (const id of teamIds(db)) {
+        const a = r.answers[id];
+        if (!a || act.includes(id) || !st.teams[id]) continue;
+        const bal = st.teams[id].balance;
+        results.push({ teamId: id, value: a.value, diff: Math.abs(a.value - answer), bonus: 0, before: bal, after: bal, out: false, missing: false, fun: true });
       }
       r.results = results;
       r.open = false;
@@ -205,7 +213,7 @@ module.exports = {
       open: r.open,
       endsAt: r.endsAt,
       graceEndsAt: r.graceEndsAt,
-      answeredCount: Object.keys(r.answers).length,
+      answeredCount: active(db, st).filter((id) => r.answers[id] !== undefined).length,
       activeCount: active(db, st).length + (r.evaluated ? r.results.filter((x) => x.out).length : 0),
       evaluated: r.evaluated,
       solution: r.evaluated ? Number(q.answer) : null,
