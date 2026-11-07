@@ -5,6 +5,19 @@
 import { h, run, ask, toast, shield } from './client.js';
 import { inkPad, clearInkDraft } from './ink.js';
 import { TEAM_NEU } from './neu-team.js';
+import { podiumRow } from './studio.js';
+
+// Teamauswahl über die Pulte (wie beim Tausch in Spiel 2), mit Avataren.
+// Nicht wählbare Teams sind ausgegraut; Antippen löst sofort aus.
+function teamPodiums(ui, ids, onPick, label, marks) {
+  const all = (ui.teams || []).length ? ui.teams : ids.map((id) => ({ id, name: ui.teamName(id), color: ui.teamColor(id) }));
+  const allowed = new Set(ids);
+  return h('div', { class: 'swap-podiums' }, podiumRow(all, {
+    onPick, marks,
+    pickLabel: (t) => `${t.name}${label ? ` – ${label}` : ''}`,
+    disabledIds: all.filter((t) => !allowed.has(t.id)).map((t) => t.id),
+  }));
+}
 
 // Punktwerte aus dem Editor (über den Server), sonst Standard.
 const pv = (g, k, d = 1) => (g && g.scoring && typeof g.scoring[k] === 'number' ? g.scoring[k] : d);
@@ -120,7 +133,7 @@ function weissnicht(g, ui) {
   if (g.isTarget) return [...out, stateBox('', '🎤', h('span', {}, `${ui.teamName(g.buzzer)} glaubt, ihr wisst es nicht. Antwortet laut – noch `, countdown(g.deadline)))];
   if (g.choose) {
     out.push(stateBox('ok', '🔔', 'Ihr wart am schnellsten! Welches Team weiß es eurer Meinung nach NICHT?'));
-    out.push(h('div', { class: 'team-pick' }, g.choose.map((id) => h('button', { class: 'btn huge', style: { '--team': ui.teamColor(id) }, onclick: () => run(ui.conn, 'play.pick', { teamId: id }) }, ui.teamName(id)))));
+    out.push(teamPodiums(ui, g.choose, (id) => run(ui.conn, 'play.pick', { teamId: id }), 'weiß es nicht'));
     return out;
   }
   if (g.target) return [...out, stateBox('', '⏳', h('span', {}, `${ui.teamName(g.target)} antwortet – `, countdown(g.deadline)))];
@@ -151,6 +164,7 @@ function weissnicht2(g, ui) {
     out.push(stateBox('ok', '🔔', 'Ihr wart am schnellsten! Schätzt ein: Wer hat richtig, wer falsch geantwortet? Mindestens ein Team, beliebig viele. Eine falsche Einschätzung = 0 Punkte für alle Einschätzungen!'));
     if (g.pendingTeams && g.pendingTeams.length) out.push(muted('Ihr könnt auch Teams einschätzen, die noch schreiben – ihre Antwort folgt. Teams, die ihr auslasst, zählen nicht.'));
     const rows = h('div', { class: 'guess-list' });
+    const pods = h('div', {});
     const send = h('button', { class: 'btn pink huge', style: { width: '100%' } }, 'Einschätzung abschicken');
     const draw = () => {
       rows.replaceChildren(...g.guessTeams.map((id) => h('div', { class: 'guess-row', style: { '--team': ui.teamColor(id) } },
@@ -160,11 +174,13 @@ function weissnicht2(g, ui) {
           return h('button', { class: `btn small ${d[id] === val ? 'pink' : 'ghost'}`, onclick: () => { if (val === undefined) delete d[id]; else d[id] = val; draw(); } }, lab);
         }))));
       for (const id of Object.keys(d)) if (!g.guessTeams.includes(id)) delete d[id];
+      const marks = Object.fromEntries(Object.entries(d).map(([id, v]) => [id, v ? { text: '✓', cls: 'ok' } : { text: '✗', cls: 'bad' }]));
+      pods.replaceChildren(teamPodiums(ui, g.guessTeams, (id) => { if (d[id] === true) d[id] = false; else if (d[id] === false) delete d[id]; else d[id] = true; draw(); }, 'antippen: richtig, falsch, auslassen', marks));
       send.disabled = !Object.keys(d).length;
     };
     send.onclick = async () => { send.disabled = true; if (await run(ui.conn, 'play.guess', { guesses: d })) delete guessDraft[g.index]; else send.disabled = false; };
     draw();
-    out.push(rows, send);
+    out.push(pods, rows, send);
     return out;
   }
   if (g.guessed) return [...out, stateBox('', '⏳', 'Einschätzung abgegeben – die Moderation bewertet.')];
@@ -458,7 +474,7 @@ function brain(g, ui) {
   if (g.wheel) {
     if (g.redirect) {
       out.push(stateBox('ok', '↪️', `Umleitung! Wen soll „${g.redirect.field.name}“ treffen?`),
-        h('div', { class: 'team-pick' }, g.targets.map((id) => h('button', { class: 'btn huge', style: { '--team': ui.teamColor(id) }, onclick: () => run(ui.conn, 'play.redirect', { target: id }) }, ui.teamName(id)))));
+        teamPodiums(ui, g.targets, (id) => run(ui.conn, 'play.redirect', { target: id }), 'umleiten'));
     } else if (g.wheel.spin) out.push(stateBox(g.wheel.spin.field.good ? 'ok' : 'bad', g.wheel.spin.field.icon, g.wheel.spin.text && !g.wheel.spin.field.good ? `${g.wheel.spin.field.name}: ${g.wheel.spin.text}` : `${g.wheel.spin.field.name}: ${g.wheel.spin.field.text}`));
     else if (g.wheel.mine) out.push(stateBox('ok', '🎡', 'Ihr dürft drehen!'), h('button', { class: 'btn pink huge', style: { width: '100%' }, onclick: () => run(ui.conn, 'play.spin') }, 'Glücksrad drehen'));
     else if (g.wheel.banned) out.push(stateBox('bad', '🚫', 'Rad-Sperre: Diesmal dürft ihr nicht ans Glücksrad.'));
@@ -486,8 +502,8 @@ function pickTeam(ui, ids, title) {
   return new Promise((resolve) => {
     const close = (v) => { overlay.remove(); resolve(v); };
     const overlay = h('div', { class: 'modal-backdrop', role: 'dialog', 'aria-modal': 'true' },
-      h('div', { class: 'modal card' }, h('h3', {}, title),
-        h('div', { class: 'team-pick' }, ids.map((id) => h('button', { class: 'btn huge', style: { '--team': ui.teamColor(id) }, onclick: () => close(id) }, ui.teamName(id)))),
+      h('div', { class: 'modal card modal-podiums' }, h('h3', {}, title),
+        teamPodiums(ui, ids, (id) => close(id), 'auswählen'),
         h('p', {}, h('button', { class: 'btn ghost', onclick: () => close(null) }, 'Abbrechen'))));
     document.body.append(overlay);
   });

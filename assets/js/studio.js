@@ -58,17 +58,32 @@ export function podiumRow(teams, opts = {}) {
       defs.append(clip);
       const w = r - l, hgt = desk - top;
       const holder = el('g', { 'clip-path': `url(#${clipId})` });
-      holder.append(el('image', {
+      const av = el('image', {
         href: t.avatar, class: 'podium-avatar',
         x: l - w * 0.04, y: top + hgt * 0.08, width: w * 1.08, height: hgt * 1.3,
         preserveAspectRatio: 'xMidYMin meet',
-      }));
+      });
+      holder.append(av);
+      // Figur so groß, dass sie den Bogen in der Breite füllt; was unter die
+      // Pultkante reicht, verschwindet dahinter. Bei sehr schmalen Bildern
+      // begrenzt, damit nicht nur noch der Kopf zu sehen ist.
+      const probe = new Image();
+      probe.onload = () => {
+        const ratio = probe.naturalHeight / Math.max(1, probe.naturalWidth);
+        if (!ratio) return;
+        const bw = w * 1.08;
+        av.setAttribute('height', String(Math.max(hgt * 1.3, Math.min(bw * ratio, hgt * 2.6))));
+      };
+      probe.src = t.avatar;
       g.append(holder);
     }
     // Punktefeld: im Bild steht „0“ – immer überdecken, Punkte nur bei der Münzvergabe.
     const [sx0, sy0, sx1, sy1] = p.score;
     const winner = t && opts.winnerId === t.id;
     g.append(el('rect', { x: sx0, y: sy0, width: sx1 - sx0 + 1, height: sy1 - sy0 + 1, fill: '#000', class: winner ? 'podium-score winner' : 'podium-score' }));
+    // Markierung im Punktefeld (z. B. ✓/✗ bei Einschätzungen auf dem iPad).
+    const mark = t && opts.marks ? opts.marks[t.id] : null;
+    if (mark) g.append(el('text', { x: (sx0 + sx1 + 1) / 2, y: (sy0 + sy1) / 2 + 19 * 0.36, 'text-anchor': 'middle', class: `podium-points mark ${mark.cls || ''}`, 'font-size': 19 }, mark.text));
     if (t && opts.points) {
       const pts = String(t.points ?? 0);
       const fs = pts.length > 2 ? 11 : pts.length > 1 ? 15 : 19;
@@ -93,7 +108,7 @@ export function podiumRow(teams, opts = {}) {
       if (!off) {
         g.setAttribute('role', 'button');
         g.setAttribute('tabindex', '0');
-        g.setAttribute('aria-label', `Mit ${t.name} tauschen`);
+        g.setAttribute('aria-label', opts.pickLabel ? opts.pickLabel(t) : `Mit ${t.name} tauschen`);
         g.addEventListener('click', () => opts.onPick(t.id));
         g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); opts.onPick(t.id); } });
       }

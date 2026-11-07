@@ -98,7 +98,7 @@ module.exports = {
     return {
       index: st.index,
       count: game.content.chats.length,
-      messages: bubbles(chat, r.shown),
+      messages: bubbles(chat, r.resolved ? N : r.shown), // Bei der Auflösung alle Nachrichten zeigen
       shown: r.shown,
       resolved: r.resolved,
       person: r.resolved ? chat.person : null,
@@ -114,7 +114,7 @@ module.exports = {
     const cur = currentBuzz(r);
     return {
       index: st.index,
-      messages: bubbles(chat, r.shown),
+      messages: bubbles(chat, r.resolved ? N : r.shown), // Bei der Auflösung alle Nachrichten zeigen
       shown: r.shown,
       total: N,
       buzzOrder: r.buzzes.map((b) => ({ teamId: b.teamId, status: b.status })),

@@ -681,6 +681,25 @@ let coinsOpen = false;
 // (Flutfüllung), wird durchsichtig; am Übergang zur Figur weich ausgeblendet. Helle Stellen
 // innerhalb der Figur (z. B. weißes Hemd) bleiben, weil sie nicht mit dem Rand verbunden sind.
 // Bilder, die schon transparent sind oder keinen hellen Rand haben, bleiben unverändert.
+// Durchsichtige Ränder rundum abschneiden (kleiner Rand bleibt).
+function trimTransparent(c) {
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  const { width: w, height: h } = c;
+  const d = ctx.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (d[(y * w + x) * 4 + 3] > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return c;
+  const pad = 2;
+  x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+  if (x0 === 0 && y0 === 0 && x1 === w - 1 && y1 === h - 1) return c;
+  const out = document.createElement('canvas');
+  out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+  out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out;
+}
+
 function removeLightBackground(ctx, w, h) {
   const im = ctx.getImageData(0, 0, w, h);
   const d = im.data;
@@ -791,13 +810,15 @@ async function shrinkImage(file) {
     let data = '';
     for (const max of [760, 600, 480, 360]) {
       const scale = Math.min(1, max / img.naturalHeight, max / img.naturalWidth);
-      const c = document.createElement('canvas');
+      let c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(img.naturalWidth * scale));
       c.height = Math.max(1, Math.round(img.naturalHeight * scale));
       const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(img, 0, 0, c.width, c.height);
       // Weißen (oder sehr hellen, einfarbigen) Hintergrund automatisch entfernen.
       removeLightBackground(ctx, c.width, c.height);
+      // Leere (durchsichtige) Ränder abschneiden, damit die Figur das Pult ausfüllt.
+      c = trimTransparent(c);
       // WebP behält Transparenz und ist klein; Safari kann es nicht erzeugen → PNG.
       data = c.toDataURL('image/webp', 0.86);
       if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/png');

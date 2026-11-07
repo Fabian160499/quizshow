@@ -1774,10 +1774,22 @@ function teamView(db, teamId, now = Date.now()) {
     const play = PLAY[g.type].teamView(db, g, gameState(db, g), teamId, now);
     if (play) view.play = { type: g.type, ...play, scoring: scoringOf(g) };
     if (play) view.timer = timerInfo(db, now);
+    // Teamauswahl über die Pulte: dann die Avatare mitschicken (sonst nicht, die Bilder sind groß).
+    if (play && picksTeam(play)) view.teams = db.project.teams.map((t) => (t.avatar ? { id: t.id, name: t.name, color: t.color, avatar: t.avatar } : { id: t.id, name: t.name, color: t.color }));
   } else if (db.live.finale) {
     view.finale = FINALE.teamView(db, teamId);
   }
   return view;
+}
+
+// Darf das Team gerade ein oder mehrere Teams auswählen (Tausch, Ziel, Umleitung, Joker)?
+function picksTeam(play) {
+  if (Array.isArray(play.swapTargets) && play.swapTargets.length) return true;
+  if (Array.isArray(play.choose) && play.choose.length) return true;
+  if (Array.isArray(play.guessTeams) && play.guessTeams.length) return true;
+  if (play.redirect && Array.isArray(play.targets)) return true;
+  if (play.canUseJoker && Array.isArray(play.jokers) && play.jokers.some((j) => j.needsTarget && j.usable)) return true;
+  return false;
 }
 
 function publicTeams(db) {

@@ -2475,3 +2475,14 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .beamer .rank.rank-board.tv.rank-final li.winner { animation: finalIn calc(0.9s * var(--speed, 1)) cubic-bezier(.2, 1.3, .4, 1) both; box-shadow: none; }
 /* Münzvergabe: Gesamtpunkte im TV-Stil, Zeilen bauen sich von unten auf. */
 .beamer .rank.rank-board.tv.coin-board li { animation: rise calc(0.5s * var(--speed, 1)) ease-out both; }
+/* Teamauswahl über die Pulte (iPad): auch im Joker-Dialog volle Breite. */
+.modal.modal-podiums { width: min(96vw, 900px); max-width: none; }
+.podium-points.mark { font-weight: 800; }
+.podium-points.mark.ok { fill: #3ddc84; }
+.podium-points.mark.bad { fill: #ff5a6e; }
+/* Namensschilder statt Farbpunkte (Jauch, Dumm³, Host du, Joker, Kassenschlager) */
+.beamer .wwm-a .marks, .beamer .nb-hd-opt .votes { flex-wrap: wrap; justify-content: flex-end; gap: 0.5vh 0.4vw; max-width: 55%; }
+.beamer .wwm-a .marks .dm-name { font-size: clamp(0.7rem, min(1.1vw, 2vh), 1.3rem); padding: 0.3vh 0.6vw; }
+.beamer .wwm-joker-teams { display: flex; flex-direction: column; gap: 0.4vh; align-items: center; }
+.beamer .wwm-joker-teams .dm-name, .beamer .ks-tile-by .dm-name { font-size: clamp(0.6rem, min(0.9vw, 1.6vh), 1.1rem); padding: 0.2vh 0.5vw; }
+.beamer .ks-tile-by { left: 0.4vw; flex-wrap: wrap; gap: 0.3vh 0.3vw; justify-content: flex-end; }

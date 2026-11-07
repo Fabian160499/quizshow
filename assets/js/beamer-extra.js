@@ -260,7 +260,7 @@ const waitTitle = (t, small) => [h('div', { class: 'mega', style: { fontSize: 'c
 function dumm3(v, teamOf) {
   if (v.waiting) return waitTitle('Dumm, dumm, dumm', 'Antwort wählen, Einsatz von 1 bis 5 setzen – jeden nur einmal!');
   const marks = {};
-  for (const r of v.results) (marks[r.choice] ||= []).push(h('span', { class: 'stake-dot', '--chip': teamOf(r.teamId).color, title: teamOf(r.teamId).name }, String(r.stake)));
+  for (const r of v.results) (marks[r.choice] ||= []).push(h('span', { class: 'dm-name', '--team': teamOf(r.teamId).color }, `${teamOf(r.teamId).name} · ${r.stake}`));
   const out = [h('div', { class: 'level-tag' }, v.level), banner(v.question, 'compact'), options(v, { correct: v.correct, marks })];
   if (!v.evaluated) out.push(sub(`${v.submittedCount} von ${v.teamCount} Teams haben verbindlich abgegeben`, { marginTop: '2vh' }));
   else out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.results.map((r) => chip(teamOf(r.teamId), r.ok ? '' : 'wrong-soft', h('b', {}, ` ${r.ok ? '+' : '−'}${r.stake}`)))));

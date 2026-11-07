@@ -31,7 +31,8 @@ function buzzRow(v, teamOf, order, answering) {
   }));
 }
 
-const dot = (t) => h('span', { class: 'dot', title: t.name, style: { background: t.color } });
+// Team immer mit Namen zeigen (nie nur ein Farbpunkt).
+const dot = (t) => h('span', { class: 'dm-name', '--team': t.color }, t.name);
 
 // ---------- 1 ----------
 function leichte5(v, teamOf) {
@@ -150,7 +151,7 @@ function kassenschlager(v, teamOf) {
       return h('div', { class: `ks-tile${x.boughtBy.length ? ' bought' : ''}`, style: { animationDelay: `${0.4 + i * 0.18}s` } },
         h('div', { class: 'ks-tile-head' }, h('b', {}, `${x.price} $`), h('span', {}, `${i + 1}. ${x.label}`)),
         photo, showText ? h('div', { class: 'ks-tile-text' }, x.text) : null,
-        x.boughtBy.length ? h('div', { class: 'ks-tile-by' }, x.boughtBy.map((id) => h('span', { class: 'dot', title: teamOf(id).name, style: { background: teamOf(id).color } }))) : null);
+        x.boughtBy.length ? h('div', { class: 'ks-tile-by' }, x.boughtBy.map((id) => h('span', { class: 'dm-name', '--team': teamOf(id).color }, teamOf(id).name))) : null);
     })));
   }
   if (v.status) {
