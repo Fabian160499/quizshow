@@ -29,6 +29,7 @@ const SCORING = {
   gier: [1, 2, 3, 4, 5, 6].map((n, i) => S(`place${n}`, `Platz ${n}`, [10, 6, 4, 3, 2, 1][i])),
   top100: [['1–20', 1], ['21–40', 2], ['41–60', 3], ['61–80', 4], ['81–100', 5]].map(([r, d], i) => S(`group${i + 1}`, `Rang ${r}`, d)),
   lippen: [S('correct', 'Richtige Antwort', 1)],
+  cover: [S('correct', 'Richtige Antwort', 1)],
   jeopardy: [1, 2, 3].map((n) => S(`level${n}`, `Frage der Stufe ${n}`, n)),
   lecker: [S('right', 'Je richtig zugeordneter Begriff (links/rechts)', 1), S('wrong', 'Abzug je falsch zugeordnetem Begriff (neutral zählt nie)', 1)],
   sekunden: [S('correct', 'Je richtige Antwort (nur bei Stopp im Zeitfenster)', 1)],

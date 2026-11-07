@@ -381,6 +381,34 @@ const EXTRA_TYPES = {
     example: { items: [{ reveal: null, image: null, zoom: 1, fx: null, fy: null, question: 'Wessen Lippen sind das?', answer: '' }] },
   },
 
+  cover: {
+    title: 'Das Cover ist besser als das Original',
+    playable: true,
+    summary: 'Großer Hintergrund (Farbe oder Bild), darauf erscheinen per Klick nach und nach bis zu 12 Bilder. Wer zuerst buzzert, antwortet; richtig 1 Punkt, falsch sperrt das Team für diese Runde und das nächstschnellste ist dran.',
+    schema: [
+      { key: 'rounds', label: 'Runden', type: 'list', min: 1, max: 20, itemLabel: (i) => `Runde ${i + 1}`, addLabel: 'Runde hinzufügen',
+        fields: [
+          { key: 'bgMode', label: 'Hintergrund', type: 'select', options: ['Farbe', 'Bild'], rerender: true },
+          { key: 'bgColor', label: 'Hintergrundfarbe', type: 'color', showIf: { key: 'bgMode', prefix: 'Farbe' } },
+          { ...media('bgImage', 'Hintergrundbild', 'image'), showIf: { key: 'bgMode', prefix: 'Bild' } },
+          text('solution', 'Lösung (sieht die Regie, erscheint am Rundenende groß auf dem Beamer)', 160),
+          { key: 'layout', label: 'Anordnung: Elemente auf dem Hintergrund verschieben, Größe und Ebene einstellen', type: 'stage' },
+          { key: 'elements', label: 'Elemente (erscheinen in dieser Reihenfolge per Klick)', type: 'list', min: 0, max: 12, itemLabel: (i) => `Element ${i + 1}`, addLabel: 'Element hinzufügen', noPreview: true, noSummary: true,
+            fields: [
+              media('image', 'Bild', 'image'),
+              num('x', 'Position waagerecht (Mitte, % von links)', 0, 100),
+              num('y', 'Position senkrecht (Mitte, % von oben)', 0, 100),
+              num('size', 'Breite (% der Bildbreite)', 3, 100),
+              num('z', 'Ebene (höher = liegt oben)', 1, 99),
+            ] },
+        ] },
+    ],
+    example: { rounds: [
+      { bgMode: 'Farbe', bgColor: '#1b1d3a', bgImage: null, solution: '', layout: null, elements: [] },
+      { bgMode: 'Farbe', bgColor: '#3a1b2e', bgImage: null, solution: '', layout: null, elements: [] },
+    ] },
+  },
+
   telepa2: {
     title: 'Wir sind ein Telepa-Team 2.0',
     playable: true,
@@ -590,6 +618,6 @@ const EXTRA_TYPES = {
 };
 
 // Reihenfolge in der Spiele-Datenbank.
-const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'lippen', 'telepa2', 'jeopardy', 'lecker'];
+const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'lippen', 'telepa2', 'jeopardy', 'lecker', 'cover'];
 
 module.exports = { EXTRA_TYPES, EXTRA_ORDER, WHEEL, WHEEL_SLOTS, migrateBrainContent };

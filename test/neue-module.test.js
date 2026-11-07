@@ -876,3 +876,35 @@ test('Neue Spiele: Inhalte bleiben nach Speichern und Neuladen erhalten', () => 
   assert.equal(c.rounds.length, 7);
   assert.ok(!db.project.games.some((g) => ['lippen', 'telepa2', 'jeopardy', 'lecker'].includes(g.type)));
 });
+
+test('Das Cover ist besser als das Original: Elemente nach und nach, schnellster Buzzer, Auflösung zeigt alles', () => {
+  const { db, ids } = setup(3);
+  const el = (k) => ({ image: { ...IMG, id: `media_cccccccccccc${String(k).padStart(2, '0')}` }, x: 10 * k, y: 50, size: 20, z: k });
+  use(db, 'cover', { rounds: [{ bgMode: 'Farbe', bgColor: '#112233', bgImage: null, solution: 'Abbey Road', layout: null, elements: [el(1), el(2), el(3)] }, { bgMode: 'Farbe', bgColor: '#000000', bgImage: null, solution: 'Thriller', layout: null, elements: [] }] });
+  act(db, mod(), 'open', { index: 0 });
+  assert.equal(bv(db).elements.length, 0);
+  assert.equal(bv(db).bg.color, '#112233');
+  assert.equal(bv(db).solution, null);
+  act(db, mod(), 'show');
+  assert.equal(bv(db).elements.length, 1);
+  // Teams sehen nur den Buzzer
+  assert.equal(tv(db, ids[0]).canBuzz, true);
+  assert.equal(JSON.stringify(tv(db, ids[0])).includes('Abbey'), false);
+  act(db, team(ids[1]), 'buzz');
+  act(db, team(ids[0]), 'buzz');
+  act(db, mod(), 'judge', { correct: false }); // schnellstes Team falsch → gesperrt
+  assert.equal(tv(db, ids[1]).locked, true);
+  assert.equal(bv(db).answering, ids[0]); // zweitschnellstes ist dran
+  act(db, team(ids[2]), 'buzz');
+  act(db, mod(), 'judge', { correct: true });
+  assert.equal(pts(db, ids[0]), 1);
+  assert.equal(pts(db, ids[2]), 0, 'übrige Buzzer werden nicht bewertet');
+  assert.equal(bv(db).solution, 'Abbey Road');
+  assert.equal(bv(db).elements.length, 3, 'Auflösung zeigt auch die restlichen Elemente');
+  assert.throws(() => act(db, mod(), 'judge', { correct: true }), /beendet/);
+  // Runde 2: manuell beenden
+  act(db, mod(), 'open', { index: 1 });
+  assert.throws(() => act(db, mod(), 'show'), /schon zu sehen/);
+  act(db, mod(), 'close');
+  assert.equal(bv(db).solution, 'Thriller');
+});

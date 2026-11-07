@@ -1569,6 +1569,11 @@ function formField(f, holder, k, save, rerender, id) {
     }
     case 'media':
       return mediaField(f, holder, k, save, rerender, id);
+    case 'color':
+      return h('div', { class: 'field' }, h('label', { for: id }, f.label),
+        h('input', { id, type: 'color', class: 'color-input', value: holder[k] || '#1b1d3a', oninput: (ev) => { holder[k] = ev.target.value; save(); }, onchange: () => rerender() }));
+    case 'stage':
+      return stageEditor(holder, save, rerender, id);
     default:
       return null;
   }
@@ -1636,6 +1641,80 @@ function mediaField(f, holder, k, save, rerender, id) {
             m ? h('button', { type: 'button', class: 'btn small ghost', onclick: () => { holder[k] = null; rerender(); } }, 'Entfernen') : null))));
 }
 
+// „Das Cover ist besser als das Original“: Elemente direkt auf dem Hintergrund anordnen.
+// Ziehen = Position, Regler = Größe, Knöpfe = Ebene (was liegt oben).
+const STAGE_SEL = new Map(); // Editor-ID -> gewähltes Element
+function stageEditor(round, save, rerender, id) {
+  const els = round.elements || (round.elements = []);
+  const num = (v, d) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? d : Number(v));
+  const pos = (e, i) => ({ x: num(e.x, 50), y: num(e.y, 50), size: num(e.size, 30), z: num(e.z, i + 1) });
+  const stage = h('div', { class: 'cover-stage editor', style: { background: /^#[0-9a-f]{6}$/i.test(round.bgColor || '') ? round.bgColor : '#1b1d3a' } });
+  if (String(round.bgMode || '').startsWith('Bild') && round.bgImage) {
+    const bg = h('img', { class: 'cover-bg', alt: '' });
+    mediaUrl(round.bgImage.id).then((u) => { if (u) bg.src = u; });
+    stage.append(bg);
+  }
+  let sel = STAGE_SEL.get(id);
+  if (sel === undefined || !els[sel] || !els[sel].image) sel = els.findIndex((e) => e && e.image);
+  els.forEach((e, i) => {
+    if (!e || !e.image) return;
+    const p = pos(e, i);
+    const el = h('div', { class: `cover-el-edit${i === sel ? ' sel' : ''}`, title: `Element ${i + 1} – ziehen zum Verschieben`, style: { left: `${p.x}%`, top: `${p.y}%`, width: `${p.size}%`, zIndex: String(p.z) } },
+      h('img', { alt: '', draggable: 'false' }), h('span', { class: 'cover-num' }, String(i + 1)));
+    mediaUrl(e.image.id).then((u) => { if (u) el.querySelector('img').src = u; });
+    el.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      STAGE_SEL.set(id, i);
+      stage.querySelectorAll('.cover-el-edit').forEach((x) => x.classList.toggle('sel', x === el));
+      const r = stage.getBoundingClientRect();
+      const start = { x: ev.clientX, y: ev.clientY, px: p.x, py: p.y };
+      let moved = false;
+      el.setPointerCapture?.(ev.pointerId);
+      const move = (m) => {
+        moved = true;
+        const nx = Math.max(0, Math.min(100, start.px + ((m.clientX - start.x) / r.width) * 100));
+        const ny = Math.max(0, Math.min(100, start.py + ((m.clientY - start.y) / r.height) * 100));
+        el.style.left = `${nx}%`; el.style.top = `${ny}%`;
+        e.x = Math.round(nx * 10) / 10; e.y = Math.round(ny * 10) / 10;
+      };
+      const up = () => {
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+        if (moved) save();
+        rerender();
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    });
+    stage.append(el);
+  });
+  const withImg = els.map((e, i) => (e && e.image ? i : -1)).filter((i) => i >= 0);
+  let tools;
+  if (sel >= 0 && els[sel]) {
+    const e = els[sel];
+    const p = pos(e, sel);
+    const zs = withImg.map((i) => pos(els[i], i).z);
+    const sizeOut = h('b', {}, `${Math.round(p.size)} %`);
+    tools = h('div', { class: 'stage-tools' },
+      h('b', {}, `Element ${sel + 1}`),
+      h('label', { class: 'stage-size' }, 'Größe ', h('input', { type: 'range', min: '3', max: '100', step: '1', value: String(p.size),
+        oninput: (ev) => { e.size = Number(ev.target.value); sizeOut.textContent = `${e.size} %`; const node = stage.querySelectorAll('.cover-el-edit')[withImg.indexOf(sel)]; if (node) node.style.width = `${e.size}%`; },
+        onchange: () => { save(); rerender(); } }), sizeOut),
+      h('button', { type: 'button', class: 'btn small', onclick: () => { e.z = Math.min(99, Math.max(...zs) + 1); save(); rerender(); } }, '⬆ Nach vorne'),
+      h('button', { type: 'button', class: 'btn small ghost', onclick: () => {
+        const min = Math.min(...zs);
+        if (min > 1) e.z = min - 1;
+        else { withImg.forEach((i) => { if (i !== sel) els[i].z = Math.min(99, pos(els[i], i).z + 1); }); e.z = 1; }
+        save(); rerender();
+      } }, '⬇ Nach hinten'),
+      h('span', { class: 'muted' }, `Ebene ${p.z}`));
+  } else tools = h('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Erst unten bei „Elemente“ Bilder hinzufügen – dann hier verschieben.');
+  return h('div', { class: 'field stage-field' }, h('label', {}, 'Anordnung auf dem Hintergrund (so wie auf dem Beamer)'), stage, tools,
+    h('p', { class: 'muted', style: { margin: '6px 0 0', fontSize: '0.85rem' } }, 'Element antippen und ziehen. Die Nummer zeigt die Reihenfolge, in der die Elemente erscheinen.'));
+}
+
 function emptyItem(fields) {
   const out = {};
   for (const f of fields) {
@@ -1644,6 +1723,8 @@ function emptyItem(fields) {
     else if (f.type === 'select') out[f.key] = f.options[0];
     else if (f.type === 'number') out[f.key] = null;
     else if (f.type === 'media') out[f.key] = null;
+    else if (f.type === 'stage') out[f.key] = null;
+    else if (f.type === 'color') out[f.key] = '#1b1d3a';
     else out[f.key] = '';
   }
   return out;

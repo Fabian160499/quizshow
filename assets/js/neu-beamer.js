@@ -173,6 +173,32 @@ function lippen(v, teamOf) {
     buzzRow(v, teamOf) || (v.resolved ? null : sub('Wer es weiß, buzzert!', { marginTop: '1.4vh' }))];
 }
 
+// ---------- Das Cover ist besser als das Original ----------
+// Großer Hintergrund (Farbe oder Bild), Elemente an ihren Stellen; das neueste wird
+// weichgezeichnet eingeblendet. Buzzer-Reihenfolge und Lösung darunter.
+const coverSeen = { key: null, n: 0 };
+export function coverStage(bg, elements, { animateFrom = Infinity, cls = '' } = {}) {
+  const stage = h('div', { class: `cover-stage ${cls}`, style: { background: bg.color } });
+  if (bg.image) stage.append(img(bg.image, 'cover-bg'));
+  elements.forEach((e, i) => {
+    const el = img(e.image, `cover-el${i >= animateFrom ? ' blur-in' : ''}`);
+    Object.assign(el.style, { left: `${e.x}%`, top: `${e.y}%`, width: `${e.size}%`, zIndex: String(e.z) });
+    stage.append(el);
+  });
+  return stage;
+}
+function cover(v, teamOf) {
+  if (v.waiting) return waitTitle('Das Cover ist besser als das Original', 'Erkennt ihr, was sich hier nach und nach zusammensetzt?');
+  const key = `r${v.index}`;
+  const from = coverSeen.key === key ? coverSeen.n : 0;
+  coverSeen.key = key;
+  coverSeen.n = v.elements.length;
+  const out = [h('div', { class: 'cover-wrap' }, coverStage(v.bg, v.elements, { animateFrom: from }),
+    v.resolved ? h('div', { class: 'cover-solution' }, h('b', {}, v.solution || '–'), v.winner ? h('span', {}, `${teamOf(v.winner).name} ${plus(pv(v, 'correct'))}`) : null) : null)];
+  out.push(buzzRow(v, teamOf) || (v.resolved ? null : sub(`Runde ${v.index + 1} von ${v.count} · Wer es weiß, buzzert!`, { marginTop: '1.2vh' })));
+  return out;
+}
+
 // ---------- Wir sind ein Telepa-Team 2.0 ----------
 function telepa2(v, teamOf) {
   if (v.waiting) return waitTitle('Wir sind ein Telepa-Team 2.0', 'Zwei Köpfe, ein Gedanke?');
@@ -386,4 +412,4 @@ function hostdu(v, teamOf) {
   return out;
 }
 
-export const BEAMER_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, telepa2, jeopardy, lecker };
+export const BEAMER_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, cover, telepa2, jeopardy, lecker };

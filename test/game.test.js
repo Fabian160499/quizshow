@@ -172,7 +172,7 @@ test('Spiele-Datenbank: alle acht Spiele vorhanden, Show frei zusammenstellbar, 
   const { db } = setup();
   assert.deepEqual(db.library.map((e) => e.type).slice(0, 8), ['leichte5', 'dummes', 'land', 'kassenschlager', 'trumpf5', 'musik', 'jauch', 'nerd']);
   // Die neuen Spielarten stehen nur in der Datenbank, nicht in der Show.
-  assert.equal(db.library.length, 32);
+  assert.equal(db.library.length, 33);
   assert.deepEqual(db.project.games.map((g) => g.type), ['leichte5', 'dummes', 'land', 'kassenschlager', 'trumpf5', 'musik', 'jauch', 'nerd']);
   const trumpf = db.library.find((e) => e.type === 'trumpf5');
   assert.throws(() => game.applyAction(db, mod(), 'game.add', { libraryId: trumpf.id }), /schon 8 Spiele/);
@@ -1476,4 +1476,27 @@ test('Gespeicherter Ablauf bekommt einmalig nach jedem Spiel „Punkte dieses Sp
   db.project.rundown.splice(2, 2);
   game.migrate(db);
   assert.deepEqual(db.project.rundown.map((s) => s.kind), ['title', 'game', 'pause', 'game', 'gameScore', 'hosts']);
+});
+
+test('Rückblick vor dem Finale: Buzzer-König, schnellster Buzzer, Treffsicherheit, Pechvogel', () => {
+  const { db, ids } = setup(3);
+  const g = db.project.games.find((x) => x.type === 'trumpf5');
+  db.live.games[g.id] = { rounds: {
+    0: { openAt: 1000, buzzes: [{ teamId: ids[0], at: 1800, status: 'correct' }, { teamId: ids[1], at: 1900, status: 'skipped' }] },
+    1: { openAt: 5000, buzzes: [{ teamId: ids[0], at: 6500, status: 'wrong' }, { teamId: ids[1], at: 6600, status: 'correct' }] },
+    2: { openAt: 9000, buzzes: [{ teamId: ids[0], at: 9700, status: 'correct' }, { teamId: ids[2], at: 9900, status: 'wrong' }] },
+    3: { openAt: 20000, buzzes: [{ teamId: ids[2], at: 21000, status: 'wrong' }] },
+  } };
+  db.ledger.push({ id: 'l1', teamId: ids[0], points: 4, ref: `trumpf5:${g.id}:0`, at: 1 });
+  const steps = game.moderatorView(db).rundown;
+  game.applyAction(db, mod(), 'run.goto', { index: steps.findIndex((s) => s.kind === 'ranking') });
+  const fin = db.live.beamer.data.final;
+  const titles = fin.slides.map((s) => s.title);
+  assert.ok(!titles.includes('Punktesammler'));
+  const by = (t) => fin.slides.find((s) => s.title === t);
+  assert.equal(by('Buzzer-König').rows[0].teamId, ids[0]);
+  assert.equal(by('Schnellster Buzzer').rows[0].teamId, ids[0]);
+  assert.match(by('Schnellster Buzzer').rows[0].text, /0,70 Sekunden/);
+  assert.equal(by('Treffsicherheit am Buzzer').rows[0].teamId, ids[0]);
+  assert.equal(by('Pechvogel des Abends').rows[0].teamId, ids[2]);
 });

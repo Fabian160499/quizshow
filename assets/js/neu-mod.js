@@ -140,6 +140,22 @@ function lippen(ui, g, st) {
   return out;
 }
 
+// ---------- Das Cover ist besser als das Original ----------
+function cover(ui, g, st) {
+  const i = st.index ?? -1;
+  const r = (st.rounds || {})[i];
+  const out = [tabs(g.content.rounds.map((_, k) => `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.resolved)];
+  if (i < 0 || !r) return [...out, help(`Runde starten: Hintergrund erscheint, Buzzer sind frei. Mit „Weiter“ erscheint ein Element nach dem anderen. Richtig ${plus(pvc(g, 'correct'))}, falsch sperrt das Team für diese Runde – dann ist das nächstschnellste dran.`)];
+  const rd = g.content.rounds[i];
+  const els = (rd.elements || []).filter((e) => e && e.image);
+  out.push(h('p', {}, 'Lösung: ', h('b', {}, rd.solution || '–'), h('span', { class: 'muted' }, ` · ${r.shown} von ${els.length} Elementen gezeigt`)));
+  out.push(row(btn('pink', r.shown < els.length ? `▶ Element ${r.shown + 1} zeigen` : 'Alle Elemente gezeigt', () => ui.act('play.show'), r.resolved || r.shown >= els.length)));
+  out.push(buzzList(ui, r.buzzes.filter((b) => b.status !== 'skipped'), (c) => ui.act('play.judge', { correct: c })));
+  if (r.resolved) out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(pvc(g, 'correct'))}` : 'Kein Punkt'), badge('', 'Runde beendet – Lösung auf dem Beamer')));
+  else out.push(row(btn('ghost', 'Runde beenden (Lösung zeigen)', () => ui.act('play.close'), r.buzzes.some((b) => b.status === 'pending'))));
+  return out;
+}
+
 // ---------- Wir sind ein Telepa-Team 2.0 ----------
 function telepa2(ui, g, st) {
   const i = st.index ?? -1;
@@ -415,4 +431,4 @@ function hostdu(ui, g, st) {
   return out;
 }
 
-export const MOD_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, telepa2, jeopardy, lecker };
+export const MOD_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, cover, telepa2, jeopardy, lecker };

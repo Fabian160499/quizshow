@@ -36,6 +36,7 @@ const PLAY = {
   allein: require('./play-allein'),
   sekunden: require('./play-sekunden'),
   lippen: require('./play-lippen'),
+  cover: require('./play-cover'),
   telepa2: require('./play-telepa2'),
   jeopardy: require('./play-jeopardy'),
   lecker: require('./play-lecker'),
@@ -144,7 +145,7 @@ function newProject(library, name = 'Wer stiehlt uns die Show') {
 // (alle Varianten einer Spielart gehören dazu). Die Ordner sind frei benennbar.
 const DEFAULT_FOLDERS = [
   ['Startspiele', ['leichte5', 'dummes', 'dumm3']],
-  ['Musik', ['musik', 'songsong', 'konsequenz']],
+  ['Musik', ['musik', 'songsong', 'konsequenz', 'cover']],
   ['Film & Promis', ['kassenschlager', 'filmab', 'lippen', 'star', 'chat']],
   ['Wissen & Schätzen', ['jauch', 'land', 'zuweit', 'gier', 'top100', 'timeline', 'sortieren', 'nerd', 'trumpf5', 'sekunden', 'weissnicht', 'weissnicht2']],
   ['Brett & Risiko', ['brain', 'zocken', 'jeopardy', 'dgf']],
@@ -226,6 +227,9 @@ function migrate(db) {
       db.libraryFolderOf = d.folderOf;
     }
     db.libraryFolderOf = db.libraryFolderOf || {};
+    // Neue Spielart „Das Cover …“ einmalig in den Musik-Ordner (wenn es ihn noch gibt).
+    if (!db.libraryFolderOf.cover && !db.coverFoldered && db.libraryFolders.some((f) => f.id === 'folder_std2')) db.libraryFolderOf.cover = 'folder_std2';
+    db.coverFoldered = true;
     // Neue Folie „Moderation am Pult“ nach den Gewinnstufen 2 und 3 – einmalig auch in eigene Abläufe.
     for (const pr of [db.project, ...db.shows.map((x) => x.project)]) addHostsSteps(pr);
     for (const sh of db.shows) {
@@ -339,11 +343,54 @@ function recapSlides(db) {
     const rows = [...per].filter(([, v]) => v === best).map(([k]) => { const [tid, gid] = k.split('|'); const g = db.project.games.find((x) => x.id === gid); return row(tid, `${best} ${best === 1 ? 'Punkt' : 'Punkte'} in „${g.title}“`); }).filter(Boolean);
     slides.push({ icon: '🔥', title: 'Bestes Spiel des Abends', rows: rows.slice(0, 4) });
   }
-  // Punktesammler: am häufigsten gepunktet.
-  const hits = {};
-  for (const e of ledger) if (e.points > 0 && !String(e.ref).startsWith('manual:')) hits[e.teamId] = (hits[e.teamId] || 0) + 1;
-  const most = Math.max(0, ...Object.values(hits));
-  if (most > 1) slides.push({ icon: '🏅', title: 'Punktesammler', rows: Object.keys(hits).filter((id) => hits[id] === most).map((id) => row(id, `hat ${most}-mal gepunktet`)).filter(Boolean).slice(0, 4) });
+  // Buzzer-Daten aller Spiele dieser Show (Reihenfolge, richtig/falsch, Zeit ab Freigabe).
+  const rounds = [];
+  const walk = (o, type, depth) => {
+    if (!o || typeof o !== 'object' || depth > 4) return;
+    if (Array.isArray(o.buzzes)) { rounds.push({ r: o, type }); return; }
+    for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v, type, depth + 1);
+  };
+  for (const [gid, st] of Object.entries(db.live.games || {})) {
+    const g = db.project.games.find((x) => x.id === gid);
+    if (g) walk(st, g.type, 0);
+  }
+  const isTeam = (id) => teams.some((t) => t.id === id);
+  const tops = (map, cmp = (a, b) => b - a) => {
+    const vals = Object.values(map);
+    if (!vals.length) return { best: null, ids: [] };
+    const best = vals.sort(cmp)[0];
+    return { best, ids: Object.keys(map).filter((id) => map[id] === best) };
+  };
+  // Buzzer-König: am häufigsten als Erstes gebuzzert.
+  const firsts = {};
+  for (const { r } of rounds) { const b = r.buzzes[0]; if (b && isTeam(b.teamId)) firsts[b.teamId] = (firsts[b.teamId] || 0) + 1; }
+  const fk = tops(firsts);
+  if (fk.best >= 2) slides.push({ icon: '👑', title: 'Buzzer-König', rows: fk.ids.map((id) => row(id, `war ${fk.best}-mal als Erstes am Buzzer`)).filter(Boolean).slice(0, 3) });
+  // Schnellster Buzzer: kürzeste Zeit von der Freigabe bis zum Buzzern (Spiele, bei denen vorher abgegeben wird, zählen nicht).
+  let fast = null;
+  for (const { r, type } of rounds) {
+    if (type === 'dummes' || typeof r.openAt !== 'number') continue;
+    const b = r.buzzes[0];
+    if (!b || !isTeam(b.teamId) || typeof b.at !== 'number') continue;
+    const ms = b.at - r.openAt;
+    if (ms >= 150 && ms <= 120000 && (!fast || ms < fast.ms)) fast = { ms, id: b.teamId };
+  }
+  if (fast) slides.push({ icon: '⚡', title: 'Schnellster Buzzer', rows: [row(fast.id, `${(fast.ms / 1000).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Sekunden nach der Freigabe`)].filter(Boolean) });
+  // Treffsicherheit am Buzzer: höchste Quote richtiger Antworten (mindestens 2 Antworten).
+  const right = {}, tries = {}, wrong = {};
+  for (const { r } of rounds) for (const b of r.buzzes) {
+    if (!isTeam(b.teamId) || (b.status !== 'correct' && b.status !== 'wrong')) continue;
+    tries[b.teamId] = (tries[b.teamId] || 0) + 1;
+    if (b.status === 'correct') right[b.teamId] = (right[b.teamId] || 0) + 1;
+    else wrong[b.teamId] = (wrong[b.teamId] || 0) + 1;
+  }
+  const quote = {};
+  for (const id of Object.keys(tries)) if (tries[id] >= 2 && right[id]) quote[id] = right[id] / tries[id];
+  const tq = tops(quote);
+  if (tq.best !== null) slides.push({ icon: '🏹', title: 'Treffsicherheit am Buzzer', rows: tq.ids.map((id) => row(id, `${right[id]} von ${tries[id]} Buzzer-Antworten richtig (${Math.round(tq.best * 100)} %)`)).filter(Boolean).slice(0, 3) });
+  // Pechvogel (augenzwinkernd): am häufigsten daneben gebuzzert.
+  const pv2 = tops(wrong);
+  if (pv2.best >= 2) slides.push({ icon: '🍀', title: 'Pechvogel des Abends', rows: pv2.ids.map((id) => row(id, `${pv2.best}-mal daneben gebuzzert – Kopf hoch!`)).filter(Boolean).slice(0, 3) });
   // Aufholjagd: wer lag zwischendurch am weitesten hinten? (verrät die aktuelle Platzierung nicht)
   const sums = Object.fromEntries(teams.map((t) => [t.id, 0]));
   const worst = {};
@@ -504,6 +551,10 @@ function sanitizeField(f, v) {
       return v;
     case 'object':
       return sanitizeFields(f.fields, v);
+    case 'color':
+      return typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : (f.def || '#1b1d3a');
+    case 'stage':
+      return null; // nur Editor-Ansicht, speichert nichts eigenes
     case 'media': {
       // Verweis auf eine hochgeladene Datei (Video, Audio oder Bild) im Medienspeicher.
       if (v === undefined || v === null || v === '') return null;
@@ -1560,6 +1611,7 @@ function applyAction(db, ctx, name, payload, actionId) {
   if (ctx.role === 'moderator' && typeof name === 'string' && (name.startsWith('run.') || name === 'show.activate')) delete db.live.timer;
   rememberFinale(db, name, before);
   teamReaction(db, ctx, name, payload || {}, fxBefore);
+  markBuzzOpen(db, ctx);
   if (snap) {
     const added = db.log.slice(snap.logLen);
     snap.label = (added.length ? added[added.length - 1].detail : name).slice(0, 140);
@@ -1591,6 +1643,22 @@ function buzzTeamNow(db) {
   }
   return null;
 }
+// Buzzer-Runden: Zeitpunkt der Freigabe merken (für die Reaktionszeit im Rückblick).
+// Runden mit „started“ zählen erst ab dem Start (z. B. Musikquiz).
+function markBuzzOpen(db, ctx) {
+  const g = db.live.activeGame && db.live.games[db.live.activeGame];
+  if (!g || typeof g !== 'object') return;
+  const visit = (o, depth) => {
+    if (!o || typeof o !== 'object' || depth > 3) return;
+    if (Array.isArray(o.buzzes)) {
+      if (o.openAt === undefined && o.started !== false && !o.resolved && !o.buzzes.length) o.openAt = ctx.now;
+      return;
+    }
+    for (const v of Object.values(o)) if (v && typeof v === 'object') visit(v, depth + 1);
+  };
+  visit(g, 0);
+}
+
 function teamReaction(db, ctx, name, payload, before) {
   // Neustart, Rückgängig usw. ersetzen Spielstand/Punkte – dann keine Reaktion.
   if (db.ledger !== before.ledger || db.live !== before.live || db.ledger.length < before.len) return;

@@ -220,6 +220,19 @@ function lippen(g, ui) {
   return out;
 }
 
+// ---------- Das Cover ist besser als das Original ----------
+// Auf dem iPad nur der Buzzer – das Bild ist auf dem Beamer.
+function cover(g, ui) {
+  const out = [muted(`Runde ${g.index + 1} von ${g.count} · Schaut auf den Beamer!`)];
+  if (g.resolved) return [...out, g.won ? stateBox('ok', '★', `Richtig! ${plus(pv(g, 'correct'))}`) : g.ownStatus === 'wrong' ? stateBox('bad', '✗', 'Leider daneben') : stateBox('', '■', 'Runde beendet')];
+  if (g.answering) return [...out, stateBox('ok', '🎤', 'Ihr seid dran – sagt laut eure Antwort!')];
+  if (g.locked) return [...out, stateBox('bad', '✗', 'Falsch – für diese Runde gesperrt')];
+  if (g.buzzed) out.push(stateBox('', '⏳', 'Gebuzzert – ihr seid gleich dran, falls das Team vor euch falsch liegt.'));
+  else if (g.someoneAnswering) out.push(stateBox('', '⏳', 'Ein anderes Team antwortet – ihr könnt euch trotzdem anstellen.'));
+  out.push(buzzButton('Buzzer', g.canBuzz, (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.buzz'); }));
+  return out;
+}
+
 // ---------- Wir sind ein Telepa-Team 2.0 ----------
 // Ein iPad, zwei Personen nacheinander: Spieler 1 schreibt und gibt ab, das Feld ist
 // danach leer und zeigt die Antwort nie wieder; dann ist Spieler 2 dran.
@@ -471,4 +484,4 @@ function hostdu(g, ui) {
   return out;
 }
 
-export const TEAM_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, telepa2, jeopardy, lecker };
+export const TEAM_NEU = { sortieren, gier, top100, star, timeline, chat, hostdu, allein, sekunden, lippen, cover, telepa2, jeopardy, lecker };

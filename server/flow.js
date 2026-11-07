@@ -291,6 +291,21 @@ const FLOW = {
     return nextOf(it, st.index, 'Aufgabe', 'open');
   },
 
+  cover(db, game, st) {
+    const rs = game.content.rounds;
+    if (st.index < 0) return first(rs, 'Runde', 'open', 'index', 'Runde 1 starten (Buzzer frei)');
+    const r = st.rounds[st.index];
+    if (!r) return step(`Runde ${st.index + 1} starten`, 'open', { index: st.index });
+    if (!r.resolved) {
+      const w = buzzWait(db, r);
+      if (w) return w;
+      const n = require('./play-cover').elementsOf(rs[st.index]).length;
+      if (r.shown < n) return step(`Element ${r.shown + 1} von ${n} zeigen`, 'show');
+      return step('Runde beenden (Lösung zeigen)', 'close');
+    }
+    return nextOf(rs, st.index, 'Runde', 'open', 'index', `Runde ${st.index + 2} starten`);
+  },
+
   chat(db, game, st) {
     const cs = game.content.chats;
     if (st.index < 0) return first(cs, 'Chat', 'open', 'index', 'Chat 1 starten');
