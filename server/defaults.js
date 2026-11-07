@@ -12,11 +12,11 @@ const optionsField = { key: 'options', label: 'Antwortmöglichkeiten', type: 'ob
 const correctField = { key: 'correct', label: 'Richtige Antwort', type: 'select', options: ABCD };
 
 // Hinweisfelder bei „Das ist ein echter Kassenschlager“ (Kategorie und Preis laut Spielregel).
-const MOVIE_HINTS = [
-  ['Erscheinungsjahr', 1], ['Genre', 2], ['Regie', 2], ['Hauptdarsteller/in', 4], ['Nebenfigur', 2],
-  ['Schauplatz / Ort', 1], ['Filmzitat', 3], ['IMDb-Bewertung', 1], ['Verpixeltes/unscharfes Standbild', 3],
-  ['Filmskizze (frühe, grobe Idee, kein Musikhinweis)', 2],
-];
+// Standardnamen schlicht „Hinweis 1“ … „Hinweis 10“ (Wunsch von Fabian);
+// eigene Namen gibt man im Editor der Show. Preise bleiben.
+const MOVIE_HINTS = [1, 2, 2, 4, 2, 1, 3, 1, 3, 2].map((price, i) => [`Hinweis ${i + 1}`, price]);
+// Frühere Standardnamen (für die einmalige Umstellung der Datenbank).
+const OLD_MOVIE_HINT_NAMES = ['Erscheinungsjahr', 'Genre', 'Regie', 'Hauptdarsteller/in', 'Nebenfigur', 'Schauplatz / Ort', 'Filmzitat', 'IMDb-Bewertung', 'Verpixeltes/unscharfes Standbild', 'Filmskizze (frühe, grobe Idee, kein Musikhinweis)'];
 
 // Punkteleiter bei „Ein Hauch von Günther Jauch“.
 const JAUCH_LADDER = [1, 2, 4, 5, 6, 8, 10, 15];
@@ -94,14 +94,14 @@ const TYPES = {
     summary: 'Vier Filme, je zehn kaufbare Hinweise, 20 $ Startguthaben.',
     schema: [
       // Namen der zehn Hinweis-Kategorien – für alle Filme dieses Spiels; Preise bleiben gleich.
-      { key: 'hintCats', label: 'Hinweis-Kategorien: Name und Preis (gelten für alle Filme dieses Spiels)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true, noSummary: true,
-        itemLabel: (i) => `Kategorie ${i + 1}`, defaultItems: MOVIE_HINTS.map(([name, price]) => ({ name, price })),
+      { key: 'hintCats', label: 'Hinweise: Name und Preis (gelten für alle Filme dieses Spiels)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true, noSummary: true,
+        itemLabel: (i) => `Hinweis ${i + 1}`, defaultItems: MOVIE_HINTS.map(([name, price]) => ({ name, price })),
         fields: [text('name', 'Name', 60), { key: 'price', label: 'Preis in $', type: 'number', min: 0, max: 100, step: 1 }] },
       { key: 'movies', label: 'Filme und Serien', type: 'list', min: 4, max: 4, itemLabel: (i) => `Film ${i + 1}`,
         fields: [
           text('title', 'Titel (Lösung)'),
           text('aliases', 'Auch richtig (Varianten mit Komma trennen)', 300),
-          { key: 'hints', label: 'Hinweise (Text – bei einem Foto unten optional, dann als Bildunterschrift)', type: 'list', min: 10, max: 10, itemLabel: (i) => `Hinweis ${i + 1} (Kategorie ${i + 1})`, of: 'text', maxLength: 300 },
+          { key: 'hints', label: 'Hinweise (Text – bei einem Foto unten optional, dann als Bildunterschrift)', type: 'list', min: 10, max: 10, itemLabel: (i) => `Hinweis ${i + 1}`, of: 'text', maxLength: 300 },
           { key: 'hintPhotos', label: 'Foto als Hinweis (optional – statt oder zusätzlich zum Text)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true,
             itemLabel: (i) => `Foto zu Hinweis ${i + 1}`, defaultItems: MOVIE_HINTS.map(() => ({ photo: null })),
             fields: [{ key: 'photo', label: 'Foto', type: 'media', accept: 'image' }] },
@@ -260,4 +260,4 @@ function publicTypes() {
   return out;
 }
 
-module.exports = { TYPES, DEFAULT_ORDER, LIBRARY_ORDER, EXTRA_ORDER, WHEEL, COIN_POSITIONS, SHOW_SIZE, TEAM_COLORS, JAUCH_LADDER, MOVIE_HINTS, publicTypes };
+module.exports = { TYPES, DEFAULT_ORDER, LIBRARY_ORDER, EXTRA_ORDER, WHEEL, COIN_POSITIONS, SHOW_SIZE, TEAM_COLORS, JAUCH_LADDER, MOVIE_HINTS, OLD_MOVIE_HINT_NAMES, publicTypes };

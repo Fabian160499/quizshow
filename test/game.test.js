@@ -1138,7 +1138,7 @@ test('Kassenschlager: alte umbenannte Hinweis-Namen werden beim Start zu Name + 
   e.content.hintNames = ['Jahr', '', 'Regie'];
   game.migrate(db);
   assert.equal(e.content.hintCats[0].name, 'Jahr');
-  assert.equal(e.content.hintCats[1].name, 'Genre');
+  assert.equal(e.content.hintCats[1].name, 'Hinweis 2');
   assert.equal(e.content.hintCats[3].price, 4);
   assert.equal(e.content.hintNames, undefined);
 });
@@ -1499,4 +1499,16 @@ test('Rückblick vor dem Finale: Buzzer-König, schnellster Buzzer, Treffsicherh
   assert.match(by('Schnellster Buzzer').rows[0].text, /0,70 Sekunden/);
   assert.equal(by('Treffsicherheit am Buzzer').rows[0].teamId, ids[0]);
   assert.equal(by('Pechvogel des Abends').rows[0].teamId, ids[2]);
+});
+
+test('Kassenschlager: Datenbank-Hinweise heißen „Hinweis N“, Wand-Anordnung nach Fotos und Textlänge', () => {
+  const db = game.createState();
+  const e = db.library.find((x) => x.type === 'kassenschlager');
+  e.content.hintCats[2].name = 'Regie';
+  e.content.hintCats[4].name = 'Mein Name';
+  delete db.ksHintNames2;
+  game.migrate(db);
+  assert.equal(e.content.hintCats[2].name, 'Hinweis 3');
+  assert.equal(e.content.hintCats[4].name, 'Mein Name');
+  assert.equal(e.content.hintCats[0].name, 'Hinweis 1');
 });

@@ -96,6 +96,20 @@ function solvedHint(tm) {
   return tm.bought.length ? tm.bought[tm.bought.length - 1] : null;
 }
 
+// Anordnung der Hinweis-Wand (Mosaik) je Film: Foto-Hinweise bekommen die großen
+// Felder, lange Texte die breiten, kurze die kleinen. Beamer und iPad nutzen dieselbe.
+// Felder (siehe style.css): a, i groß · c, e, h, j breit · d, g hoch · b, f klein.
+const SLOTS = ['a', 'i', 'c', 'e', 'h', 'j', 'd', 'g', 'b', 'f'];
+function wallLayout(content) {
+  const hasPhoto = (i) => !!(content.hintPhotos && content.hintPhotos[i] && content.hintPhotos[i].photo);
+  const len = (i) => String((content.hints || [])[i] || '').trim().length;
+  const idx = MOVIE_HINTS.map((_, i) => i);
+  const order = [...idx.filter(hasPhoto), ...idx.filter((i) => !hasPhoto(i)).sort((x, y) => len(y) - len(x) || x - y)];
+  const out = [];
+  order.forEach((hint, k) => { out[hint] = SLOTS[k]; });
+  return out;
+}
+
 function lastAnswer(tm) {
   return tm.answers[tm.answers.length - 1] || null;
 }
@@ -241,6 +255,7 @@ module.exports = {
       // Wie viele Teams im Durchgang noch kaufen/raten (für „wartet auf die anderen“).
       othersOpen: m.order.filter((id) => id !== teamId && !['done'].includes(teamMovie(m, id).phase)).length,
       maxBuys: MAX_BUYS,
+      layout: wallLayout(content),
       boughtCount: tm.bought.length,
       hints: MOVIE_HINTS.map((_, i) => {
         const price = hintPrice(game, i);
@@ -267,15 +282,18 @@ module.exports = {
       movieCount: game.content.movies.length,
       cycle: Math.min(m.cycle, MAX_CYCLES),
       maxCycles: MAX_CYCLES,
+      layout: wallLayout(game.content.movies[st.movieIndex]),
       // Nur „kauft/schreibt/fertig“ – ob richtig, bleibt privat.
       status: m.finished ? null : m.order.map((id) => ({ teamId: id, phase: { buy: 'buy', answer: 'answer' }[teamMovie(m, id).phase] || 'done' })),
       order: m.order,
       finished: m.finished,
       title: m.finished ? game.content.movies[st.movieIndex].title : null,
+      // Während des Ratens: nur Namen und Preise der Hinweise (verdeckt).
       // Film aufgelöst: die ganze Paywall aufdecken – welche Hinweise es noch gegeben hätte.
-      paywall: m.finished ? MOVIE_HINTS.map((_, i) => {
+      paywall: MOVIE_HINTS.map((_, i) => {
         const content = game.content.movies[st.movieIndex];
         const photo = content.hintPhotos && content.hintPhotos[i] && content.hintPhotos[i].photo;
+        if (!m.finished) return { label: hintName(game, i), price: hintPrice(game, i) };
         return {
           label: hintName(game, i), price: hintPrice(game, i), text: content.hints[i] || '',
           photo: photo ? { id: photo.id, type: photo.type } : null,
@@ -283,7 +301,7 @@ module.exports = {
           // Teams, die nach genau diesem Hinweis richtig geraten haben.
           solvedBy: m.order.filter((id) => solvedHint(m.teams[id]) === i),
         };
-      }) : null,
+      }),
       // Bilanz dieses Films je Team: ausgegeben, verdient, Guthaben jetzt.
       money: m.finished ? m.order.map((id) => {
         const tm = m.teams[id] || { bought: [], solved: false };

@@ -6,7 +6,7 @@
 const crypto = require('crypto');
 const { DATASETS } = require('./datasets');
 const { migrateBrainContent } = require('./defaults-extra');
-const { MOVIE_HINTS } = require('./defaults');
+const { MOVIE_HINTS, OLD_MOVIE_HINT_NAMES } = require('./defaults');
 const { TYPES, DEFAULT_ORDER, LIBRARY_ORDER, EXTRA_ORDER, COIN_POSITIONS, SHOW_SIZE, TEAM_COLORS, publicTypes } = require('./defaults');
 const { checkShow } = require('./check');
 const { scoringOf } = require('./scoring');
@@ -208,6 +208,15 @@ function migrate(db) {
       if (e.type === 'allein' && ['Allein, allein', 'Wir sind ein Telepathie-Team'].includes(e.title)) e.title = 'Wir sind ein Telepa-Team';
       // Brain or Dreh'n: Joker getrennt nach positiv/negativ (6 + 6 aufs Rad).
       if (e.type === 'brain') migrateBrainContent(e.content);
+    }
+    // Kassenschlager in der Spiele-Datenbank: Hinweise heißen schlicht „Hinweis 1“ … „Hinweis 10“
+    // (einmalig; nur die alten Standardnamen, eigene Namen bleiben). Shows bleiben unverändert.
+    if (!db.ksHintNames2) {
+      for (const e of db.library) {
+        if (e.type !== 'kassenschlager' || !e.content || !Array.isArray(e.content.hintCats)) continue;
+        e.content.hintCats.forEach((c, i) => { if (c && OLD_MOVIE_HINT_NAMES.includes(String(c.name || '').trim())) c.name = `Hinweis ${i + 1}`; });
+      }
+      db.ksHintNames2 = true;
     }
     // Datenbank-Einträge von Spielarten, die es nicht mehr gibt (z. B. „All About That Bass“), entfernen.
     db.library = db.library.filter((e) => TYPES[e.type]);

@@ -4,6 +4,7 @@ import { h, mediaUrl } from './client.js';
 import { answerContent } from './ink.js';
 import { mapView } from './map.js';
 import { BEAMER_EXTRA } from './beamer-extra.js';
+import { ksWall } from './ks-wall.js';
 
 const ABCD = ['A', 'B', 'C', 'D'];
 const pts = (n) => `${n} ${Math.abs(n) === 1 ? 'Punkt' : 'Punkte'}`;
@@ -139,23 +140,22 @@ function kassenschlager(v, teamOf) {
         h('span', {}, '💰'), h('span', {}, teamOf(id).name), h('span', { class: 'pts' }, `${c.money} $ → ${c.points}`))))];
   }
   if (v.waiting) return [h('div', { class: 'mega', style: { fontSize: 'clamp(2rem,5vw,5rem)' } }, 'Das ist ein echter Kassenschlager'), sub('Jedes Team startet mit 20 $', { marginTop: '3vh' })];
-  const out = [h('div', { class: 'q' }, '🎬 Welcher Film ist gesucht?')];
-  if (v.finished) out.push(h('div', { class: 'solution' }, v.title));
-  if (v.finished && v.paywall) {
-    // Alle Kacheln aufgedeckt, nacheinander; Punkte zeigen, wer den Hinweis gekauft hatte.
-    out[0] = h('div', { class: 'q compact slim' }, '🎬 Der Film war …');
-    out.push(h('div', { class: 'ks-wall' }, v.paywall.map((x, i) => {
-      const photo = x.photo ? h('img', { class: 'ks-wall-photo', alt: x.label }) : null;
-      if (photo) mediaUrl(x.photo.id).then((u) => { if (u) photo.src = u; });
-      const showText = x.text && !/^\(.*\)$/.test(x.text.trim()); // Platzhalter wie „(Bild ergänzen)“ nicht zeigen
+  // Platz sparen: die Lösung steht bei der Auflösung direkt in der Kopfzeile.
+  const out = [v.finished
+    ? h('div', { class: 'q compact slim ks-head' }, '🎬 Der Film war: ', h('b', { class: 'ks-title' }, v.title))
+    : h('div', { class: 'q compact slim' }, `🎬 Welcher Film ist gesucht? · Film ${v.movieIndex + 1} von ${v.movieCount}`)];
+  if (v.paywall) {
+    // Die Hinweis-Wand: während des Ratens verdeckt (nur Name und Preis),
+    // bei der Auflösung Kachel für Kachel aufgedeckt – mit Käufern und ✓ beim gelösten Hinweis.
+    out.push(ksWall(v.paywall.map((x) => {
       const solved = x.solvedBy || [];
-      return h('div', { class: `ks-tile${x.boughtBy.length ? ' bought' : ''}${solved.length ? ' solved' : ''}`, style: { animationDelay: `${0.4 + i * 0.18}s` } },
-        h('div', { class: 'ks-tile-head' }, h('b', {}, `${x.price} $`), h('span', {}, `${i + 1}. ${x.label}`)),
-        photo, showText ? h('div', { class: 'ks-tile-text' }, x.text) : null,
-        x.boughtBy.length ? h('div', { class: 'ks-tile-by' }, x.boughtBy.map((id) => h('span', { class: `dm-name${solved.includes(id) ? ' solved' : ''}`, '--team': teamOf(id).color }, solved.includes(id) ? `✓ ${teamOf(id).name}` : teamOf(id).name))) : null);
-    })));
+      return {
+        label: x.label, price: x.price, text: x.text, photo: x.photo, open: !!v.finished, solved: solved.length > 0,
+        by: (x.boughtBy || []).map((id) => h('span', { class: `dm-name${solved.includes(id) ? ' solved' : ''}`, '--team': teamOf(id).color }, solved.includes(id) ? `✓ ${teamOf(id).name}` : teamOf(id).name)),
+      };
+    }), { reveal: !!v.finished, layout: v.layout, cls: `beamer-wall${v.finished ? ' done' : ''}` }));
     // Bilanz des Films: ausgegeben, verdient, Guthaben jetzt.
-    if (v.money) out.push(h('div', { class: 'ks-money', style: { animationDelay: `${0.6 + v.paywall.length * 0.18}s` } }, v.money.map((x) => h('div', { class: 'ks-money-team', '--team': teamOf(x.teamId).color },
+    if (v.money) out.push(h('div', { class: 'ks-money', style: { animationDelay: `${0.6 + v.paywall.length * 0.22}s` } }, v.money.map((x) => h('div', { class: 'ks-money-team', '--team': teamOf(x.teamId).color },
       h('b', { class: 'nm' }, teamOf(x.teamId).name),
       h('span', { class: 'out' }, `−${x.spent} $`), h('span', { class: `in${x.earned ? '' : ' zero'}` }, `+${x.earned} $`),
       h('span', { class: 'sum' }, `${x.total} $`)))),
@@ -164,8 +164,7 @@ function kassenschlager(v, teamOf) {
   if (v.status) {
     // Alle Teams gleichzeitig: wer noch kauft/schreibt, wer fertig ist.
     const LBL = { buy: '💸 kauft', answer: '✍ schreibt', done: '✓ fertig' };
-    out.push(sub(`Durchgang ${v.cycle} von ${v.maxCycles}`, { marginTop: '2vh' }));
-    out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh', gap: '1.2vw', flexWrap: 'wrap' } }, v.status.map((x) =>
+    out.push(h('div', { class: 'ks-status' }, h('span', { class: 'ks-cycle' }, `Durchgang ${v.cycle} von ${v.maxCycles}`), v.status.map((x) =>
       h('div', { class: `ks-st ${x.phase}`, '--team': teamOf(x.teamId).color }, h('span', {}, teamOf(x.teamId).name), h('b', {}, LBL[x.phase])))));
   }
   return out;

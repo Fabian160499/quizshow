@@ -7,10 +7,7 @@ import { mapView, zoomState } from './map.js';
 const modLandZoom = {};
 import { MOD_EXTRA } from './mod-extra.js';
 
-const MOVIE_HINTS = [
-  ['Erscheinungsjahr', 1], ['Genre', 2], ['Regie', 2], ['Hauptdarsteller/in', 4], ['Nebenfigur', 2],
-  ['Schauplatz / Ort', 1], ['Filmzitat', 3], ['IMDb-Bewertung', 1], ['Standbild', 3], ['Filmskizze', 2],
-];
+const MOVIE_HINTS = [1, 2, 2, 4, 2, 1, 3, 1, 3, 2].map((price, i) => [`Hinweis ${i + 1}`, price]);
 const JAUCH_LADDER = [1, 2, 4, 5, 6, 8, 10, 15];
 
 export function buildPlay(ui, g, st, pos) {

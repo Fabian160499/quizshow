@@ -6,6 +6,7 @@ import { inkPad, answerContent } from './ink.js';
 import { mapView, zoomState } from './map.js';
 import { podiumRow } from './studio.js';
 import { TEAM_EXTRA } from './team-extra.js';
+import { ksWall } from './ks-wall.js';
 
 // Punktwerte aus dem Editor (über den Server), sonst Standard.
 const pv = (g, k, d = 1) => (g && g.scoring && typeof g.scoring[k] === 'number' ? g.scoring[k] : d);
@@ -245,24 +246,22 @@ function kassenschlager(g, ui) {
   // Querformat: Paywall links, Aufgabe/Schreibfeld rechts (siehe .ks-split).
   const wall = [];
   wall.push(h('p', { class: 'muted' }, `Paywall · ${g.boughtCount} von ${g.maxBuys} Hinweisen gekauft`));
-  wall.push(h('div', { class: 'paywall' }, g.hints.map((x, i) => {
+  // Hinweis-Wand wie auf dem Beamer: verdeckte Kacheln zeigen Namen und Preis,
+  // gekaufte sind aufgedeckt. Kauf nur mit Rückfrage (bewusste Ausnahme).
+  wall.push(ksWall(g.hints.map((x, i) => {
     const affordable = x.price <= g.wallet && left > 0;
-    // Gekaufte Hinweise sind kein Knopf mehr (sonst ließe sich das Foto nicht antippen).
-    return h(x.bought ? 'div' : 'button', {
-      class: `hint ${x.bought ? 'bought' : ''}`,
-      disabled: x.bought ? null : !buying || !affordable,
-      // Gekaufte Hinweise lassen sich nicht noch einmal kaufen (Antippen öffnet höchstens das Foto).
-      onclick: x.bought ? null : async () => {
-        if (x.bought || busyBuy) return;
+    return {
+      label: x.label, price: x.price, text: x.text, photo: x.photo, open: x.bought, mine: x.bought,
+      onZoom: photoZoom,
+      disabled: !buying || !affordable,
+      onBuy: x.bought ? null : async () => {
+        if (busyBuy) return;
         const msg = `Möchtest du diesen Hinweis kaufen?\n${x.label} kostet ${x.price} $. Danach habt ihr noch ${g.wallet - x.price} $.`;
         busyBuy = true;
         try { if (await ask(msg, { confirmLabel: 'Ja, kaufen', cancelLabel: 'Abbrechen' })) await run(ui.conn, 'play.buy', { hint: i }); } finally { busyBuy = false; }
       },
-    }, h('span', { class: 'price' }, `${x.price} $`), h('span', { class: 'label' }, `${i + 1}. ${x.label}`),
-      x.bought && x.photo ? (() => { const im = h('img', { class: 'hint-photo', alt: x.label, title: 'Antippen zum Vergrößern', onclick: () => photoZoom(im.src, x.label) }); mediaUrl(x.photo.id).then((u) => { if (u) im.src = u; }); return im; })() : null,
-      // Bei Foto-Hinweisen keinen Platzhaltertext wie „(Bild ergänzen)“ zeigen.
-      x.bought && ((x.text && !(x.photo && /^\(.*\)$/.test(x.text.trim()))) || !x.photo) ? h('span', { class: 'text' }, x.text || '–') : null);
-  })));
+    };
+  }), { cls: 'ipad-wall', layout: g.layout }));
   if (g.finished || g.solved) return [...out, ...wall];
   const side = [];
   if (!g.myTurn) side.push(stateBox('', '⏳', g.othersOpen ? 'Fertig für diesen Durchgang – die anderen Teams sind noch dran.' : 'Gleich startet der nächste Durchgang.'));
