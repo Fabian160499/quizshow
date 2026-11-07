@@ -173,7 +173,7 @@ function land(ui, g, st) {
   modLandZoom[zk] = modLandZoom[zk] || zoomState();
   out.push(h('div', { class: 'map-box' }, mapView(mapName, {
     zoom: modLandZoom[zk],
-    markers: [...list.map((x) => ({ lat: x.lat, lng: x.lng, color: ui.teamColor(x.id), label: `${ui.teamName(x.id)} · ${country ? (x.hit ? '✓' : `${x.km.toLocaleString('de-DE')} km daneben`) : `${x.km.toLocaleString('de-DE')} km`}`, showLabel: true })), ...(country ? [] : [{ lat: task.lat, lng: task.lng, kind: 'target', label: task.target }])],
+    markers: [...list.map((x) => ({ lat: x.lat, lng: x.lng, color: ui.teamColor(x.id), label: `${ui.teamName(x.id)} · ${country ? (x.hit ? '✓' : `${x.km.toLocaleString('de-DE')} km daneben`) : `${x.km.toLocaleString('de-DE')} km`}`, showLabel: true })), ...(country ? [] : [{ lat: task.lat, lng: task.lng, kind: 'target', label: task.target, radii: r.showTarget ? [100, 50] : null }])],
   })));
   out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((tm) => {
     const x = list.find((y) => y.id === tm.id);

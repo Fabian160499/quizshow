@@ -2351,11 +2351,21 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .beamer .dm-swap-card.lose .dm-swap-eff { color: var(--bad, #ff4d5e); }
 .beamer .dm-swap-icon { display: grid; place-items: center; align-content: center; font-size: clamp(2rem, 7vh, 5rem); }
 .beamer .dm-swap-icon small { font-size: clamp(0.8rem, 2vh, 1.4rem); color: var(--text-muted, #c9c9e0); font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
-/* Riskier die Gier: Tipp und Abweichung bleiben am Balken stehen */
-.hp-note { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 2; font-weight: 800; font-size: 1rem; color: #fff; text-shadow: 0 1px 0 #000, 0 0 8px #000; white-space: nowrap; opacity: 0; animation: fadeIn 0.6s ease-out calc(var(--d) + 0.2s) both; pointer-events: none; }
-.beamer .hp-note { font-size: 2.4vh; right: 1vw; }
+/* Riskier die Gier: Auflösung in klaren Spalten – Name | Lebensbalken | Tipp | Abweichung | Leben | K.O./Punkte */
 .hp.hit .hp-dmg { animation-duration: 3.2s; }
-.hp.ko .hp-note { color: #ffd6da; }
+.beamer .hp.wide { grid-template-columns: 19% minmax(0, 1fr) 10% 9% 7% 11%; }
+.beamer .hp-tip { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; opacity: 0; animation: fadeIn 0.5s ease-out calc(var(--d) + 0.1s) both; }
+.beamer .hp-tip small { font-size: 1.4vh; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted, #b9bde0); font-weight: 700; }
+.beamer .hp-tip b { font-size: 2.8vh; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.beamer .hp-dev { justify-self: center; padding: 0.5vh 0.9vw; border-radius: 99px; font-size: 2.3vh; font-weight: 900; white-space: nowrap; font-variant-numeric: tabular-nums; opacity: 0; animation: pop 0.5s cubic-bezier(.2,1.5,.4,1) calc(var(--d) + 0.4s) both; }
+.beamer .hp-dev.miss { background: rgba(255, 74, 74, 0.16); color: #ff8a8a; box-shadow: inset 0 0 0 0.2vh rgba(255, 74, 74, 0.55); }
+.beamer .hp-dev.exact { background: var(--ok, #2bd96b); color: #062b14; }
+.beamer .hp-dev.fun { background: rgba(255, 255, 255, 0.08); color: var(--text-muted, #b9bde0); box-shadow: inset 0 0 0 0.2vh rgba(255, 255, 255, 0.2); }
+.beamer .hp-dev.none { display: none; }
+.beamer .hp-tail { display: flex; align-items: center; justify-content: flex-end; gap: 0.6vw; }
+.beamer .hp.wide .hp-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.beamer .hp.ko { background: color-mix(in srgb, var(--box, #2b2d4a) 70%, #000); }
+.beamer .hp.ko .hp-name { text-decoration: none; opacity: 0.6; }
 /* Wer nix werd, werd Nerd: großes Notizfeld */
 .ink.notes-pad .ink-frame { height: max(46vh, 320px); }
 .notes-view .ink-answer { max-height: 46vh; }
@@ -2405,3 +2415,10 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .beamer .jeopardy .cell.current { background: var(--accent-2, #ffc23d); color: #111; box-shadow: 0 0 0 0.5vh #fff, 0 0 5vh rgba(255, 194, 61, 0.8); animation: musPick 1.2s ease-in-out infinite alternate; position: relative; z-index: 1; }
 @keyframes musPick { from { transform: scale(1); } to { transform: scale(1.08); } }
 .beamer .mus-picked { text-align: center; margin-top: 2.4vh; font-size: clamp(1rem, 3.6vh, 2.6rem); color: #fff; font-weight: 700; }
+/* Ich sehe ein Land: Radien 50 km (3 Punkte) und 100 km (2 Punkte) um den Zielort */
+.map .radius { stroke-width: 0.25%; vector-effect: non-scaling-stroke; animation: fadeIn 0.8s ease-out both; }
+.map .radius.r100 { fill: rgba(31, 214, 242, 0.16); stroke: #1fd6f2; stroke-width: 2; stroke-dasharray: 6 4; }
+.map .radius.r50 { fill: rgba(43, 217, 107, 0.26); stroke: #2bd96b; stroke-width: 2.5; animation-delay: 0.3s; }
+.map .radius-label { font-family: var(--font); font-weight: 800; paint-order: stroke; stroke: rgba(0, 0, 0, 0.75); stroke-width: 0.12em; animation: fadeIn 0.8s ease-out 0.5s both; }
+.map .radius-label.r100 { fill: #1fd6f2; }
+.map .radius-label.r50 { fill: #2bd96b; }

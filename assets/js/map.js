@@ -88,6 +88,24 @@ export function mapView(name, { markers = [], onPick = null, label = 'Karte', ar
     const d = area.map((ring) => ring.map(([lng, lat], i) => { const [x, y] = project(m, lat, lng); return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`; }).join('') + 'Z').join('');
     world.append(el('path', { d, class: 'target-area' }));
   }
+  // Punktradien um den Zielort (z. B. 100 km und 50 km), farbig – echte Kilometer auf der Karte.
+  for (const mk of markers) {
+    if (mk.kind !== 'target' || !mk.radii) continue;
+    const [x, y] = project(m, mk.lat, mk.lng);
+    let fs = null; // eine Schriftgröße für alle Radien (nach dem größten Kreis)
+    for (const km of [...mk.radii].sort((a, b) => b - a)) {
+      const [, yn] = project(m, mk.lat + km / 111.2, mk.lng);
+      const [xe] = project(m, mk.lat, mk.lng + km / (111.32 * Math.max(0.05, Math.cos((mk.lat * Math.PI) / 180))));
+      const rx = Math.abs(xe - x), ry = Math.abs(yn - y);
+      world.append(el('ellipse', { cx: x, cy: y, rx, ry, class: `radius r${km}` }));
+      if (fs === null) fs = Math.min(m.width / 60, ry * 0.2);
+      // Größter Kreis: Beschriftung oben rechts, kleinerer: unten links (überdecken sich nicht).
+      const big = km === Math.max(...mk.radii);
+      const t = el('text', { x: big ? x + rx * 0.72 : x - rx * 0.72, y: big ? y - ry * 0.72 : y + ry * 0.72 + fs * 0.8, class: `radius-label r${km}`, 'font-size': fs, 'text-anchor': big ? 'start' : 'end' });
+      t.textContent = `${km} km`;
+      world.append(t);
+    }
+  }
   svg.append(world);
   const marks = el('g', { class: 'map-marks' });
   svg.append(marks);

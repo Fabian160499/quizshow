@@ -154,17 +154,24 @@ export function inkPad({ draftKey, label, button, onSubmit, ask, toast, onChange
   function exportPng() {
     // Schwarze Schrift auf Weiß, auf den beschriebenen Bereich zugeschnitten:
     // so füllt die Handschrift auf Beamer und Laptop die Fläche.
-    const W = 1200, H = 600, pad = 36;
+    // Seitenverhältnis wie das Schreibfeld auf diesem iPad (sonst wird die Schrift verzerrt).
+    const rect = canvas.getBoundingClientRect();
+    const W = 1200, H = Math.round(W * (rect.width && rect.height ? rect.height / rect.width : 0.5));
+    let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+    for (const st of strokes) for (const [x, y] of st) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const bw = Math.max(1, (x1 - x0) * W), bh = Math.max(1, (y1 - y0) * H);
+    // Strichstärke passend zur Größe der Schrift: kleine Schrift wird auf dem Beamer stark
+    // vergrößert und darf deshalb nicht zu dick gezeichnet werden (sonst „Klecks-Schrift“).
+    const display = Math.min(bh, bw / 3);
+    const weight = Math.max(0.45, Math.min(1.25, (0.042 * display) / strokeWidth(W, 0.5)));
+    const pad = Math.round(Math.max(18, strokeWidth(W, 1) * weight * 2));
     const full = document.createElement('canvas');
     full.width = W;
     full.height = H;
     const fctx = full.getContext('2d');
     fctx.fillStyle = '#fff';
     fctx.fillRect(0, 0, W, H);
-    // Kräftiger als auf dem iPad, damit die Schrift verkleinert gut lesbar bleibt.
-    drawStrokes(fctx, strokes, W, H, '#111', 1.9);
-    let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
-    for (const st of strokes) for (const [x, y] of st) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    drawStrokes(fctx, strokes, W, H, '#111', weight);
     const sx = Math.max(0, Math.floor(x0 * W - pad)), sy = Math.max(0, Math.floor(y0 * H - pad));
     let sw = Math.min(W, Math.ceil(x1 * W + pad)) - sx, sh = Math.min(H, Math.ceil(y1 * H + pad)) - sy;
     // Nicht zu schmal oder zu flach werden lassen (Seitenverhältnis höchstens 4:1).

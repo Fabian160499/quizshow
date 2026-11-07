@@ -54,7 +54,7 @@ function sortieren(v, teamOf) {
 const hpPct = (val, start) => Math.max(0, Math.min(100, (val / (start || 100)) * 100));
 // Vier Stufen in 25er-Schritten: über 75 grün, 51–75 gelb, 26–50 orange, bis 25 rot.
 const hpColor = (pct) => (pct > 75 ? 'var(--ok, #2bd96b)' : pct > 50 ? '#ffd23f' : pct > 25 ? '#ff8a1f' : 'var(--bad, #ff4a4a)');
-export function hpBar({ name = null, color = '#888', before, after, start = 100, diff = null, bonus = 0, out = false, delay = 0, points = null, animate = true, note = null }) {
+export function hpBar({ name = null, color = '#888', before, after, start = 100, diff = null, bonus = 0, out = false, delay = 0, points = null, animate = true, tip = null }) {
   const from = hpPct(before, start), to = hpPct(after, start);
   const num = h('b', { class: 'hp-num' }, fmtNum(animate ? before : after));
   // Farbe wechselt mit dem Treffer (Grün → Gelb → Orange → Rot).
@@ -64,12 +64,14 @@ export function hpBar({ name = null, color = '#888', before, after, start = 100,
     h('span', { class: 'hp-track' },
       h('i', { class: 'hp-ghost' }), fill, h('i', { class: 'hp-ticks' }),
       animate && diff ? h('em', { class: 'hp-dmg' }, `−${fmtNum(diff)}`) : null,
-      animate && bonus ? h('em', { class: 'hp-dmg hp-heal' }, `+${fmtNum(bonus)} ❤ Volltreffer!`) : null,
-      // Bleibt stehen: Tipp und wie weit daneben.
-      note ? h('span', { class: 'hp-note' }, note) : null),
+      animate && bonus ? h('em', { class: 'hp-dmg hp-heal' }, `+${fmtNum(bonus)} ❤ Volltreffer!`) : null),
+    // Beamer-Auflösung: Tipp und Abweichung in eigenen, sauber ausgerichteten Spalten (bleiben stehen).
+    tip ? h('span', { class: 'hp-tip' }, h('small', {}, tip.fun ? 'außer Wertung' : 'Tipp'), h('b', {}, tip.value)) : null,
+    tip ? h('span', { class: `hp-dev ${tip.cls}` }, tip.dev) : null,
     num,
-    out ? h('span', { class: 'hp-ko' }, 'K.O.') : null,
-    points !== null ? h('span', { class: 'hp-pts' }, `+${points}`) : null);
+    tip ? h('span', { class: 'hp-tail' }, out ? h('span', { class: 'hp-ko' }, 'K.O.') : null, points !== null ? h('span', { class: 'hp-pts' }, `+${points}`) : null)
+      : [out ? h('span', { class: 'hp-ko' }, 'K.O.') : null, points !== null ? h('span', { class: 'hp-pts' }, `+${points}`) : null]);
+  if (tip) bar.classList.add('wide');
   if (animate && before !== after && !document.documentElement.classList.contains('reduced-motion')) {
     setTimeout(() => {
       fill.style.backgroundColor = hpColor(to);
@@ -87,8 +89,13 @@ function gier(v, teamOf) {
   const bars = h('div', { class: 'nb-gier-bars' }, v.teams.map((t, i) => {
     const team = teamOf(t.teamId);
     const res = v.results ? v.results.find((x) => x.teamId === t.teamId) : null;
-    const note = res ? `${res.fun ? 'außer Wertung · ' : ''}Tipp ${fmtNum(res.value)}${v.unit ? ` ${v.unit}` : ''} · ${res.diff === 0 ? 'genau richtig!' : `${fmtNum(res.diff)} daneben`}` : null;
-    return hpBar({ name: team.name, color: team.color, before: res ? res.before : t.balance, after: t.balance, start: v.start, diff: res && !res.fun ? res.diff : null, bonus: res ? res.bonus || 0 : 0, note,
+    const tip = res ? {
+      fun: !!res.fun,
+      value: `${fmtNum(res.value)}${v.unit ? ` ${v.unit}` : ''}`,
+      dev: res.diff === 0 ? (res.bonus ? `genau! +${fmtNum(res.bonus)} ❤` : 'genau!') : res.fun ? `${fmtNum(res.diff)} daneben` : `−${fmtNum(res.diff)}`,
+      cls: res.diff === 0 ? 'exact' : res.fun ? 'fun' : 'miss',
+    } : (v.results ? { fun: false, value: '–', dev: '', cls: 'none' } : null);
+    return hpBar({ name: team.name, color: team.color, before: res ? res.before : t.balance, after: t.balance, start: v.start, diff: res && !res.fun ? res.diff : null, bonus: res ? res.bonus || 0 : 0, tip,
       out: t.out, delay: 0.8 + i * GIER_STEP, points: placed[t.teamId] ? placed[t.teamId].points : null, animate: !!res });
   }));
   if (v.waiting) return [...waitTitle('Riskier die Gier', 'Jedes Team startet mit 100 Lebenspunkten – jede Abweichung kostet Energie, ein Volltreffer bringt 5 Leben dazu.'), bars];
