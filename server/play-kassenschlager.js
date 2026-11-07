@@ -88,6 +88,14 @@ function finishMovie(db, ctx, game, st, m) {
   effect(db, 'reveal');
 }
 
+// Nach welchem Hinweis wurde richtig geraten? (ältere Spielstände: zuletzt gekaufter Hinweis)
+function solvedHint(tm) {
+  if (!tm || !tm.solved) return null;
+  const a = (tm.answers || []).find((x) => x.grade === true);
+  if (a && a.hint !== undefined) return a.hint;
+  return tm.bought.length ? tm.bought[tm.bought.length - 1] : null;
+}
+
 function lastAnswer(tm) {
   return tm.answers[tm.answers.length - 1] || null;
 }
@@ -123,7 +131,8 @@ module.exports = {
       const text = ink ? '' : cleanText(p.text ?? '', 120);
       if (!ink && !text) fail('Bitte zuerst den Filmtitel aufschreiben.');
       const tm = teamMovie(m, ctx.teamId);
-      tm.answers.push({ text, ink, at: ctx.now, grade: null, cycle: m.cycle });
+      // Merken, nach welchem Hinweis geraten wurde (für die Auflösung auf dem Beamer).
+      tm.answers.push({ text, ink, at: ctx.now, grade: null, cycle: m.cycle, hint: tm.bought.length ? tm.bought[tm.bought.length - 1] : null });
       tm.phase = 'grading';
       log(db, ctx, 'antwort', `${teamName(db, ctx.teamId)} hat einen Titel abgegeben`);
     },
@@ -271,7 +280,14 @@ module.exports = {
           label: hintName(game, i), price: hintPrice(game, i), text: content.hints[i] || '',
           photo: photo ? { id: photo.id, type: photo.type } : null,
           boughtBy: m.order.filter((id) => (m.teams[id]?.bought || []).includes(i)),
+          // Teams, die nach genau diesem Hinweis richtig geraten haben.
+          solvedBy: m.order.filter((id) => solvedHint(m.teams[id]) === i),
         };
+      }) : null,
+      // Bilanz dieses Films je Team: ausgegeben, verdient, Guthaben jetzt.
+      money: m.finished ? m.order.map((id) => {
+        const tm = m.teams[id] || { bought: [], solved: false };
+        return { teamId: id, spent: tm.bought.reduce((sum, i) => sum + hintPrice(game, i), 0), earned: tm.solved ? REWARD : 0, total: wallet(db, st, id) };
       }) : null,
       out: st.out,
       converted: st.converted,

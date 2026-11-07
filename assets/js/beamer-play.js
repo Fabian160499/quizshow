@@ -148,11 +148,18 @@ function kassenschlager(v, teamOf) {
       const photo = x.photo ? h('img', { class: 'ks-wall-photo', alt: x.label }) : null;
       if (photo) mediaUrl(x.photo.id).then((u) => { if (u) photo.src = u; });
       const showText = x.text && !/^\(.*\)$/.test(x.text.trim()); // Platzhalter wie „(Bild ergänzen)“ nicht zeigen
-      return h('div', { class: `ks-tile${x.boughtBy.length ? ' bought' : ''}`, style: { animationDelay: `${0.4 + i * 0.18}s` } },
+      const solved = x.solvedBy || [];
+      return h('div', { class: `ks-tile${x.boughtBy.length ? ' bought' : ''}${solved.length ? ' solved' : ''}`, style: { animationDelay: `${0.4 + i * 0.18}s` } },
         h('div', { class: 'ks-tile-head' }, h('b', {}, `${x.price} $`), h('span', {}, `${i + 1}. ${x.label}`)),
         photo, showText ? h('div', { class: 'ks-tile-text' }, x.text) : null,
-        x.boughtBy.length ? h('div', { class: 'ks-tile-by' }, x.boughtBy.map((id) => h('span', { class: 'dm-name', '--team': teamOf(id).color }, teamOf(id).name))) : null);
+        x.boughtBy.length ? h('div', { class: 'ks-tile-by' }, x.boughtBy.map((id) => h('span', { class: `dm-name${solved.includes(id) ? ' solved' : ''}`, '--team': teamOf(id).color }, solved.includes(id) ? `✓ ${teamOf(id).name}` : teamOf(id).name))) : null);
     })));
+    // Bilanz des Films: ausgegeben, verdient, Guthaben jetzt.
+    if (v.money) out.push(h('div', { class: 'ks-money', style: { animationDelay: `${0.6 + v.paywall.length * 0.18}s` } }, v.money.map((x) => h('div', { class: 'ks-money-team', '--team': teamOf(x.teamId).color },
+      h('b', { class: 'nm' }, teamOf(x.teamId).name),
+      h('span', { class: 'out' }, `−${x.spent} $`), h('span', { class: `in${x.earned ? '' : ' zero'}` }, `+${x.earned} $`),
+      h('span', { class: 'sum' }, `${x.total} $`)))),
+      h('div', { class: 'ks-money-legend' }, h('span', { class: 'out' }, '− ausgegeben'), h('span', { class: 'in' }, '+ verdient'), h('span', { class: 'sum' }, 'Guthaben jetzt')));
   }
   if (v.status) {
     // Alle Teams gleichzeitig: wer noch kauft/schreibt, wer fertig ist.
