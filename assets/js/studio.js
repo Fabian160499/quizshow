@@ -71,8 +71,11 @@ export function podiumRow(teams, opts = {}) {
       probe.onload = () => {
         const ratio = probe.naturalHeight / Math.max(1, probe.naturalWidth);
         if (!ratio) return;
-        const bw = w * 1.08;
-        av.setAttribute('height', String(Math.max(hgt * 1.3, Math.min(bw * ratio, hgt * 2.6))));
+        // Größe „B – mittel“ (von Fabian gewählt): 80 % der Bogenbreite, mittig.
+        const bw = w * 1.08 * 0.8;
+        av.setAttribute('x', String(l + w / 2 - bw / 2));
+        av.setAttribute('width', String(bw));
+        av.setAttribute('height', String(Math.min(bw * ratio, hgt * 2.6 * 0.8)));
       };
       probe.src = t.avatar;
       g.append(holder);
