@@ -134,7 +134,7 @@ const FLOW = {
     if (r && !r.resolved) {
       const w = buzzWait(db, r);
       if (w) return w;
-      if (!r.started) return step('Aufgabe starten', 'start');
+      if (!r.started) return step('Frage freigeben (Buzzer frei)', 'start');
       return step('Feld beenden (niemand richtig)', 'close');
     }
     if (Object.keys(st.played).length >= total) return null;

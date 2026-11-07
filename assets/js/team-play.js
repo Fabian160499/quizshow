@@ -117,7 +117,7 @@ function dummes(g, ui) {
   }));
   if (!g.choice) {
     if (g.tooLate) out.push(stateBox('bad', '⏱', 'Die 10 Sekunden sind vorbei. Die Moderation kann euch noch einmal freigeben.'));
-    else if (g.buzzTaken && g.windowEnds) out.push(stateBox('', '⏱', h('span', {}, 'Ein Team hat gebuzzert – noch ', countdown(g.windowEnds), ' zum Abgeben!')));
+    else if (g.buzzTaken && g.open) out.push(stateBox('', '🔔', 'Ein Team hat gebuzzert – ihr könnt trotzdem noch abgeben.'));
     else if (!g.open) out.push(stateBox('', '🔒', 'Abgabe geschlossen'));
     return out;
   }
@@ -203,7 +203,9 @@ function land(g, ui) {
       out.push(g.winners.includes(ui.team.id) ? stateBox('ok', '✓', `Im richtigen Land – ${g.target.name}! ${plus(pv(g, 'winner'))}`)
         : stateBox('', '🗺', `${g.target.name}${own ? ` – ihr lagt ${own.km.toLocaleString('de-DE')} km daneben` : ''}`));
     } else {
-      out.push(g.winners.includes(ui.team.id) ? stateBox('ok', '✓', `Am nächsten dran! ${plus(pv(g, 'winner'))}${own ? ` (${own.km.toLocaleString('de-DE')} km)` : ''}`)
+      const mine = (g.awards || {})[ui.team.id];
+      const why = own && own.km <= 50 ? 'Innerhalb von 50 km!' : own && own.km <= 100 ? 'Innerhalb von 100 km!' : 'Am nächsten dran!';
+      out.push(mine ? stateBox('ok', '✓', `${why} ${plus(mine)}${own ? ` (${own.km.toLocaleString('de-DE')} km)` : ''}`)
         : stateBox('', '📍', `${g.target.name}${own ? ` – ihr wart ${own.km.toLocaleString('de-DE')} km entfernt` : ''}`));
     }
   } else if (g.own) out.push(stateBox('', '🔒', 'Punkt gesperrt – wartet auf die Auflösung'));
@@ -223,6 +225,7 @@ function photoZoom(src, label) {
   document.body.append(box);
 }
 
+let busyBuy = false; // kein zweiter Kauf-Dialog, solange einer offen ist
 function kassenschlager(g, ui) {
   const money = h('span', { class: 'wallet' }, `${g.wallet} $`);
   const head = h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'muted' }, g.movieIndex >= 0 ? `Film ${g.movieIndex + 1} von ${g.movieCount} · Durchgang ${g.cycle} von 4` : 'Kassenschlager'), h('span', {}, 'Guthaben ', money));
@@ -239,32 +242,39 @@ function kassenschlager(g, ui) {
   }
   const buying = g.myTurn && g.phase === 'buy';
   const left = g.maxBuys - g.boughtCount;
-  out.push(h('p', { class: 'muted' }, `Paywall · ${g.boughtCount} von ${g.maxBuys} Hinweisen gekauft`));
-  out.push(h('div', { class: 'paywall' }, g.hints.map((x, i) => {
+  // Querformat: Paywall links, Aufgabe/Schreibfeld rechts (siehe .ks-split).
+  const wall = [];
+  wall.push(h('p', { class: 'muted' }, `Paywall · ${g.boughtCount} von ${g.maxBuys} Hinweisen gekauft`));
+  wall.push(h('div', { class: 'paywall' }, g.hints.map((x, i) => {
     const affordable = x.price <= g.wallet && left > 0;
     // Gekaufte Hinweise sind kein Knopf mehr (sonst ließe sich das Foto nicht antippen).
     return h(x.bought ? 'div' : 'button', {
       class: `hint ${x.bought ? 'bought' : ''}`,
       disabled: x.bought ? null : !buying || !affordable,
-      onclick: async () => {
+      // Gekaufte Hinweise lassen sich nicht noch einmal kaufen (Antippen öffnet höchstens das Foto).
+      onclick: x.bought ? null : async () => {
+        if (x.bought || busyBuy) return;
         const msg = `Möchtest du diesen Hinweis kaufen?\n${x.label} kostet ${x.price} $. Danach habt ihr noch ${g.wallet - x.price} $.`;
-        if (await ask(msg, { confirmLabel: 'Ja, kaufen', cancelLabel: 'Abbrechen' })) run(ui.conn, 'play.buy', { hint: i });
+        busyBuy = true;
+        try { if (await ask(msg, { confirmLabel: 'Ja, kaufen', cancelLabel: 'Abbrechen' })) await run(ui.conn, 'play.buy', { hint: i }); } finally { busyBuy = false; }
       },
     }, h('span', { class: 'price' }, `${x.price} $`), h('span', { class: 'label' }, `${i + 1}. ${x.label}`),
       x.bought && x.photo ? (() => { const im = h('img', { class: 'hint-photo', alt: x.label, title: 'Antippen zum Vergrößern', onclick: () => photoZoom(im.src, x.label) }); mediaUrl(x.photo.id).then((u) => { if (u) im.src = u; }); return im; })() : null,
       // Bei Foto-Hinweisen keinen Platzhaltertext wie „(Bild ergänzen)“ zeigen.
       x.bought && ((x.text && !(x.photo && /^\(.*\)$/.test(x.text.trim()))) || !x.photo) ? h('span', { class: 'text' }, x.text || '–') : null);
   })));
-  if (g.finished || g.solved) return out;
-  if (!g.myTurn) out.push(stateBox('', '⏳', g.othersOpen ? 'Fertig für diesen Durchgang – die anderen Teams sind noch dran.' : 'Gleich startet der nächste Durchgang.'));
-  else if (g.phase === 'buy') out.push(stateBox('ok', '👉', `Durchgang ${g.cycle}: Kauft einen Hinweis.`));
-  else if (g.phase === 'grading') out.push(stateBox('', '🔒', 'Antwort abgegeben – die Moderation prüft.'));
+  if (g.finished || g.solved) return [...out, ...wall];
+  const side = [];
+  if (!g.myTurn) side.push(stateBox('', '⏳', g.othersOpen ? 'Fertig für diesen Durchgang – die anderen Teams sind noch dran.' : 'Gleich startet der nächste Durchgang.'));
+  else if (g.phase === 'buy') side.push(stateBox('ok', '👉', `Durchgang ${g.cycle}: Kauft einen Hinweis.`));
+  else if (g.phase === 'grading') side.push(stateBox('', '🔒', 'Antwort abgegeben – die Moderation prüft.'));
   else {
-    out.push(stateBox('ok', '✍', 'Schreibt jetzt den Filmtitel.'));
-    out.push(inkForm(ui, {
+    side.push(stateBox('ok', '✍', 'Schreibt jetzt den Filmtitel.'));
+    side.push(inkForm(ui, {
       draftKey: `kassen.${g.movieIndex}.${g.cycle}`, label: 'Filmtitel', button: 'Antwort abgeben', action: 'play.answer',
     }));
   }
+  out.push(h('div', { class: 'ks-split' }, h('div', {}, ...wall), h('div', {}, ...side)));
   return out;
 }
 
@@ -383,7 +393,7 @@ function nerdNotesPad(g, ui) {
   const key = `nerd.notes.${g.catIndex}`;
   if (nerdNotes.key === key) return nerdNotes.el;
   let t = null;
-  const pad = inkPad({ draftKey: key, label: 'Eure Notizen (nur ihr seht sie)', button: '', ask, toast, noSubmit: true, small: true,
+  const pad = inkPad({ draftKey: key, label: 'Eure Notizen (nur ihr seht sie)', button: '', ask, toast, noSubmit: true,
     onChange: () => { clearTimeout(t); t = setTimeout(() => run(ui.conn, 'play.notes', { ink: pad.inkApi.hasInk() ? pad.inkApi.png() : null }), 700); } });
   pad.classList.add('notes-pad');
   pad.querySelector('canvas')?.classList.add('notes-canvas');
@@ -409,8 +419,11 @@ function nerd(g, ui) {
     out.push(nerdNotesPad(g, ui));
     return out;
   }
-  // Nach der Gebotsphase: Notizen als Hilfe, nur noch zum Ansehen.
-  if (g.notesInk) out.push(h('div', { class: 'card notes-view' }, h('p', { class: 'muted', style: { margin: '0 0 6px' } }, 'Eure Notizen (nicht mehr änderbar)'), h('img', { class: 'ink-answer', src: g.notesInk, alt: 'Eure Notizen' })));
+  // Seid ihr gerade dran, dürft ihr weiter auf euren Notizen schreiben (z. B. Genanntes durchstreichen).
+  const myTurn = g.attempt && !g.attempt.done && g.attempt.teamId === ui.team.id;
+  if (myTurn) out.push(nerdNotesPad(g, ui));
+  // Sonst: Notizen als Hilfe, nur noch zum Ansehen.
+  else if (g.notesInk) out.push(h('div', { class: 'card notes-view' }, h('p', { class: 'muted', style: { margin: '0 0 6px' } }, 'Eure Notizen (nicht mehr änderbar)'), h('img', { class: 'ink-answer', src: g.notesInk, alt: 'Eure Notizen' })));
   if (g.bids) out.push(h('ul', { class: 'list' }, g.bids.map((b) => h('li', {}, h('span', { class: 'dot', style: { background: ui.teamColor(b.teamId) } }), h('span', { class: 'grow' }, ui.teamName(b.teamId)), h('b', {}, b.bid)))));
   if (g.phase === 'choose') {
     const mine = g.choose && g.choose.which === 'first' && g.choose.teamIds.includes(ui.team.id);

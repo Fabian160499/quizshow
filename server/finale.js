@@ -14,7 +14,8 @@
 //   Ist sie falsch, bekommt die Moderation keinen Punkt und das Team die Münze zurück.
 // Wer zuerst das Ziel erreicht, gewinnt. Erreichen beide es in derselben Frage,
 // folgt Sudden Death: Es entscheidet der erste Fehler (falsche Teamantwort oder
-// aufgedeckte falsche Moderationsantwort). Verliert das Team seine letzte Münze,
+// aufgedeckte falsche Moderationsantwort); liegen beide in derselben Frage falsch,
+// geht es mit der nächsten Frage weiter. Verliert das Team seine letzte Münze,
 // hat es sofort verloren.
 // Das Siegerteam erhält ein Ticket für die große Finalshow.
 
@@ -124,8 +125,12 @@ function finish(db, ctx, f, r) {
   // Keine Münze mehr: Das Team hat automatisch verloren.
   if (r.coinLost && coinsLeft(db, f) === 0) return decide(db, ctx, f, 'mod', 'letzte Münze verloren');
   if (f.sudden) {
-    if (!r.teamGrade) return decide(db, ctx, f, 'mod', 'Fehler des Teams im Sudden Death');
-    if (r.challenged && r.modGrade === false) return decide(db, ctx, f, 'team', 'Fehler der Moderation im Sudden Death');
+    const teamErr = !r.teamGrade;
+    const modErr = r.challenged && r.modGrade === false;
+    // Beide falsch (Team daneben, aufgedeckte Moderation auch): niemand punktet – nächste Frage.
+    if (teamErr && modErr) { log(db, ctx, 'finale', 'Sudden Death: beide falsch – nächste Frage'); return; }
+    if (teamErr) return decide(db, ctx, f, 'mod', 'Fehler des Teams im Sudden Death');
+    if (modErr) return decide(db, ctx, f, 'team', 'Fehler der Moderation im Sudden Death');
     return;
   }
   const t = f.score.team >= target, m = f.score.mod >= target;

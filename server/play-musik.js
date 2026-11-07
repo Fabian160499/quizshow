@@ -40,7 +40,7 @@ function board(game, st) {
     mashup: SONG_SONG_SONG.test(cat.mode),
     fields: cat.fields.map((_, f) => {
       const p = st.played[key(c, f)];
-      return { value: pv(game, `field${f + 1}`), played: !!p, winner: p ? p.winner : null };
+      return { value: pv(game, `field${f + 1}`), played: !!p, winner: p ? p.winner : null, current: st.current === key(c, f) && !p };
     }),
   }));
 }
@@ -53,6 +53,8 @@ function drawPicker(db, st) {
 function resolve(db, ctx, st, winner) {
   const r = active(st);
   r.resolved = true;
+  // Nur der schnellste Buzzer zählt: ist das Feld entschieden, werden die übrigen nicht mehr bewertet.
+  for (const b of r.buzzes) if (b.status === 'pending') b.status = 'skipped';
   st.played[st.current] = { winner };
   // Wer richtig lag, wählt das nächste Feld – sonst wird neu ausgelost.
   if (winner) st.picker = winner;
@@ -65,6 +67,7 @@ function choose(db, ctx, game, st, c, f, by) {
   const k = key(c, f);
   if (st.played[k]) fail('Dieses Feld wurde schon gespielt.');
   st.current = k;
+  st.pickedBy = by || null;
   round(st, k);
   log(db, ctx, 'ablauf', `${by ? `${teamName(db, by)} wählt` : 'Gewählt:'} „${game.content.categories[c].name || `Kategorie ${c + 1}`}“ für ${pv(game, `field${f + 1}`)}`);
 }
@@ -121,6 +124,7 @@ module.exports = {
     },
     judge(db, ctx, game, st, p) {
       const r = active(st);
+      if (r.resolved) fail('Dieses Feld ist bereits entschieden.');
       const buzz = currentBuzz(r);
       if (!buzz) fail('Kein Team hat gerade das Antwortrecht.');
       const info = field(game, st.current);
@@ -154,7 +158,9 @@ module.exports = {
     const info = field(game, st.current);
     const b = buzzTeamView(r, teamId);
     out.current = {
-      category: info.cat.name, value: info.value, mashup: info.mashup, task: info.field.task,
+      category: info.cat.name, value: info.value, mashup: info.mashup,
+      // Frage erst nach der Freigabe durch die Moderation (vorher nur das gewählte Feld).
+      task: r.started ? info.field.task : null, pickedBy: st.pickedBy || null,
       started: r.started, resolved: r.resolved, ...b,
       canBuzz: r.started && !r.resolved && !b.buzzed && !b.locked,
     };
@@ -169,7 +175,9 @@ module.exports = {
     const info = field(game, st.current);
     const current = currentBuzz(r);
     out.current = {
-      category: info.cat.name, value: info.value, mashup: info.mashup, task: info.field.task,
+      category: info.cat.name, value: info.value, mashup: info.mashup,
+      // Frage erst nach der Freigabe durch die Moderation (vorher nur das gewählte Feld).
+      task: r.started ? info.field.task : null, pickedBy: st.pickedBy || null,
       started: r.started, resolved: r.resolved,
       buzzOrder: r.buzzes.map((x) => ({ teamId: x.teamId, status: x.status })),
       answering: current ? current.teamId : null,

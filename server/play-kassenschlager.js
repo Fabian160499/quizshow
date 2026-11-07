@@ -263,6 +263,16 @@ module.exports = {
       order: m.order,
       finished: m.finished,
       title: m.finished ? game.content.movies[st.movieIndex].title : null,
+      // Film aufgelöst: die ganze Paywall aufdecken – welche Hinweise es noch gegeben hätte.
+      paywall: m.finished ? MOVIE_HINTS.map((_, i) => {
+        const content = game.content.movies[st.movieIndex];
+        const photo = content.hintPhotos && content.hintPhotos[i] && content.hintPhotos[i].photo;
+        return {
+          label: hintName(game, i), price: hintPrice(game, i), text: content.hints[i] || '',
+          photo: photo ? { id: photo.id, type: photo.type } : null,
+          boughtBy: m.order.filter((id) => (m.teams[id]?.bought || []).includes(i)),
+        };
+      }) : null,
       out: st.out,
       converted: st.converted,
     };

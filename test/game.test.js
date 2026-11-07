@@ -331,7 +331,7 @@ test('Jauch: Telefonjoker wartet, bis alle anderen gesperrt haben; Antworten ble
   assert.equal(game.totals(db)[ids[0]], 1);
 });
 
-test('Dummes: Buzzer, 10-Sekunden-Fenster, Tausch bei jeder Frage', () => {
+test('Dummes: Buzzer sperrt niemanden, Tausch bei jeder Frage', () => {
   const { db, ids } = setup(3);
   const [a, b, c] = ids;
   activate(db, 'dummes');
@@ -342,10 +342,9 @@ test('Dummes: Buzzer, 10-Sekunden-Fenster, Tausch bei jeder Frage', () => {
   play(a, 'buzz', {}, 50001);
   play(b, 'answer', { choice: 'B' }, 52000);
   assert.throws(() => play(b, 'buzz', {}, 52001), /schneller/);
-  // c verpasst das Fenster und darf erst nach Freigabe abgeben.
-  assert.throws(() => play(c, 'answer', { choice: 'C' }, 70000), /10 Sekunden/);
+  // Das Buzzern sperrt c nicht: nach 10 Sekunden darf a tauschen, c kann trotzdem noch abgeben.
   assert.equal(game.teamView(db, a, 70000).play.swapTargets.length, 1);
-  game.applyAction(db, mod(), 'play.allowLate', { teamId: c });
+  assert.equal(game.teamView(db, c, 70000).play.tooLate, false);
   play(c, 'answer', { choice: 'C' }, 71000);
   // Tauschdetails sind vor der Auswertung geheim.
   play(a, 'swap', { teamId: b }, 72000);
@@ -499,17 +498,31 @@ test('Land: Punkte setzen, Tipps zeigen, Zielort enthüllen, nächster gewinnt',
   game.applyAction(db, team(b), 'play.guess', { lat: 52.5, lng: 13.4 });
   assert.throws(() => game.applyAction(db, team(a), 'play.guess', { lat: 1, lng: 1 }), /gesperrt/);
   assert.throws(() => game.applyAction(db, team(c), 'play.guess', { lat: 200, lng: 1 }), /Ungültig/);
+  game.applyAction(db, team(c), 'play.guess', { lat: 48.85, lng: 2.3 }); // wenige km von Paris
   assert.equal(game.teamView(db, b).play.guesses, null);
   assert.equal(game.beamerView(db).gameView.target, null);
   assert.throws(() => game.applyAction(db, mod(), 'play.revealTarget'), /Zuerst/);
   game.applyAction(db, mod(), 'play.revealGuesses');
-  assert.equal(game.beamerView(db).gameView.guesses.length, 2);
-  assert.throws(() => game.applyAction(db, team(c), 'play.guess', { lat: 48.8, lng: 2.3 }), /nicht freigegeben/);
+  assert.equal(game.beamerView(db).gameView.guesses.length, 3);
+  assert.throws(() => game.applyAction(db, team(c), 'play.guess', { lat: 48.8, lng: 2.3 }), /gesperrt|nicht freigegeben/);
   game.applyAction(db, mod(), 'play.revealTarget');
-  assert.deepEqual(game.beamerView(db).gameView.winners, [a]);
-  assert.deepEqual([a, b, c].map((t) => game.totals(db)[t]), [1, 0, 0]);
+  // bis 50 km: 3 Punkte, bis 100 km: 2 Punkte (a liegt ~98 km entfernt), Berlin nichts
+  assert.deepEqual(game.beamerView(db).gameView.awards, { [c]: 3, [a]: 2 });
+  assert.deepEqual([a, b, c].map((t) => game.totals(db)[t]), [2, 0, 3]);
   game.applyAction(db, mod(), 'play.setWinner', { teamId: b });
   assert.deepEqual([a, b, c].map((t) => game.totals(db)[t]), [0, 1, 0]);
+});
+
+test('Land: liegt kein Team innerhalb von 100 km, bekommt das nächste 1 Punkt', () => {
+  const { db, ids } = setup(2);
+  const [a, b] = ids;
+  activate(db, 'land');
+  game.applyAction(db, mod(), 'play.open', { taskIndex: 0 }); // Paris
+  game.applyAction(db, team(a), 'play.guess', { lat: 50.9, lng: 4.4 }); // Brüssel ~260 km
+  game.applyAction(db, team(b), 'play.guess', { lat: 52.5, lng: 13.4 }); // Berlin
+  game.applyAction(db, mod(), 'play.revealGuesses');
+  game.applyAction(db, mod(), 'play.revealTarget');
+  assert.deepEqual([a, b].map((t) => game.totals(db)[t]), [1, 0]);
 });
 
 test('Spielaktionen gehen nur an das aktive Spiel', () => {
@@ -607,10 +620,15 @@ test('Showablauf: Standardfolge, Weiter/Zurück lösen Spiel, Beamer und Münze 
   assert.equal(steps.filter((s) => s.kind === 'pyramid').length, 1);
   assert.ok(steps.some((s) => s.kind === 'coin' && s.pos === 4));
   assert.ok(steps.some((s) => s.kind === 'pause'));
-  // Nach Spiel 4, 6 und 8: erst Pause, dann Münzvergabe
+  // Nach jedem Spiel: Punkte dieses Spiels, dann Moderation am Pult
+  for (let pos = 1; pos <= 8; pos++) {
+    const gi = steps.findIndex((s) => s.kind === 'game' && s.pos === pos);
+    assert.deepEqual(steps.slice(gi + 1, gi + 3).map((s) => [s.kind, s.pos]), [['gameScore', pos], ['hosts', undefined]]);
+  }
+  // Nach Spiel 4, 6 und 8: danach erst Pause, dann Münzvergabe
   for (const pos of [4, 6, 8]) {
     const gi = steps.findIndex((s) => s.kind === 'game' && s.pos === pos);
-    assert.deepEqual(steps.slice(gi + 1, gi + 3).map((s) => s.kind), ['pause', 'coin']);
+    assert.deepEqual(steps.slice(gi + 3, gi + 5).map((s) => s.kind), ['pause', 'coin']);
   }
   assert.equal(steps.filter((s) => s.kind === 'pause').length, 3);
   assert.equal(steps.at(-1).kind, 'end');
@@ -645,6 +663,13 @@ test('Showablauf: Standardfolge, Weiter/Zurück lösen Spiel, Beamer und Münze 
   game.applyAction(db, mod(), 'rundown.set', { steps: custom });
   assert.equal(game.moderatorView(db).rundown[2].kind, 'pause');
   assert.throws(() => game.applyAction(db, mod(), 'rundown.set', { steps: [{ kind: 'coin', pos: 3 }] }), /4, 6 und 8/);
+  // Punkte dieses Spiels: nur Buchungen des Spiels, nicht der Gesamtstand
+  const g1 = db.project.games[0];
+  db.ledger.push({ id: 'x1', teamId: ids[0], points: 3, ref: `leichte5:${g1.id}:0:${ids[0]}`, at: 1 }, { id: 'x2', teamId: ids[1], points: 5, ref: 'manual:1', at: 2 });
+  const si = game.moderatorView(db).rundown.findIndex((s) => s.kind === 'gameScore' && s.pos === 1);
+  game.applyAction(db, mod(), 'run.goto', { index: si });
+  assert.deepEqual(game.beamerView(db).ranking.map((r) => [r.teamId, r.points]), [[ids[0], 3], [ids[1], 0]]);
+  assert.equal(game.beamerView(db).rankGame.pos, 1);
   assert.throws(() => game.applyAction(db, mod(), 'rundown.set', { steps: [{ kind: 'quatsch' }] }), /Unbekannter/);
   game.applyAction(db, mod(), 'rundown.reset', {});
   assert.equal(game.moderatorView(db).rundownCustom, false);
@@ -694,7 +719,7 @@ test('Finale: Moderation punktet immer, Münze erzwingt Aufdecken, Sudden Death'
   const { db, ids } = setup(2);
   game.applyAction(db, mod(), 'points.adjust', { teamId: ids[1], points: 9, reason: 'x' });
   db.live.coins.push({ position: 4, teamId: ids[1] }, { position: 6, teamId: ids[1] });
-  game.applyAction(db, mod(), 'finale.config', { target: 2, questions: [1, 2, 3, 4, 5, 6].map((n) => ({ question: `F${n}?`, answer: `A${n}` })) });
+  game.applyAction(db, mod(), 'finale.config', { target: 2, questions: [1, 2, 3, 4, 5, 6, 7].map((n) => ({ question: `F${n}?`, answer: `A${n}` })) });
   // Ablaufschritt startet das Finale mit dem Team mit den meisten Punkten
   const idx = game.moderatorView(db).rundown.findIndex((s) => s.kind === 'finale');
   game.applyAction(db, mod(), 'run.goto', { index: idx });
@@ -732,6 +757,10 @@ test('Finale: Moderation punktet immer, Münze erzwingt Aufdecken, Sudden Death'
   assert.equal(db.live.finale.result, null);
   answer(true, false); // Sudden Death: Team richtig, keine Münze eingesetzt → weiter
   assert.equal(db.live.finale.result, null);
+  // Sudden Death: Team falsch, setzt die letzte Münze, Moderation auch falsch → Münze zurück, nächste Frage
+  answer(false, true, false);
+  assert.equal(db.live.finale.result, null);
+  assert.equal(game.beamerView(db).finale.coins, 1);
   answer(true, true, true); // letzte Münze verloren → Team hat automatisch verloren
   assert.equal(db.live.finale.result, 'mod');
   // auch außerhalb des Sudden Death: letzte Münze weg = verloren
@@ -1311,10 +1340,23 @@ test('Musikquiz: Team wählt das Feld auf dem iPad (ausgelost, dann Gewinner, so
   assert.throws(() => game.applyAction(db, team(other), 'play.pick', { cat: 0, field: 0 }), /anderes Team/);
   game.applyAction(db, team(picker), 'play.pick', { cat: 1, field: 2 });
   assert.equal(st().current, '1-2');
+  // Gewählt, aber noch nicht freigegeben: Beamer zeigt das Feld, nicht die Frage.
+  game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
+  assert.equal(game.beamerView(db).gameView.current.task, null);
+  assert.equal(game.beamerView(db).gameView.current.pickedBy, picker);
+  assert.equal(game.beamerView(db).gameView.board[1].fields[2].current, true);
+  assert.equal(game.teamView(db, other).play.current.task, null);
   game.applyAction(db, mod(), 'play.start');
+  assert.ok(game.beamerView(db).gameView.current.task !== null);
+  const third = ids.find((id) => id !== other);
   game.applyAction(db, team(other), 'play.buzz');
+  game.applyAction(db, team(third), 'play.buzz');
   game.applyAction(db, mod(), 'play.judge', { correct: true });
   assert.equal(st().picker, other, 'wer richtig lag, wählt als Nächstes');
+  // Nur der schnellste Buzzer zählt: der zweite wird nicht mehr bewertet.
+  assert.equal(st().rounds['1-2'].buzzes[1].status, 'skipped');
+  assert.equal(game.moderatorView(db).flow?.label?.includes('bewerten') || false, false);
+  assert.throws(() => game.applyAction(db, mod(), 'play.judge', { correct: true }), /entschieden/);
   // Auflösung mit Ton: nur nach dem Beenden des Feldes, wenn hochgeladen.
   game.applyAction(db, mod(), 'beamer.show', { view: 'game' });
   assert.equal(game.beamerView(db).gameView.current.reveal, null);
@@ -1422,4 +1464,16 @@ test('Team-iPad: Ergebnis erst bei der Auflösung (leichte 5), mit Punkten', () 
   assert.equal(fx.ok, true);
   assert.ok(fx.points > 0);
   assert.equal(game.teamView(db, ids[2]).fx, null, 'das letzte richtige Team erfährt es erst bei seiner Auflösung');
+});
+
+test('Gespeicherter Ablauf bekommt einmalig nach jedem Spiel „Punkte dieses Spiels“ + Moderation', () => {
+  const { db } = setup(2);
+  db.project.rundown = [{ id: 'a', kind: 'title', pos: 1 }, { id: 'b', kind: 'game', pos: 1 }, { id: 'c', kind: 'pause' }, { id: 'd', kind: 'game', pos: 2 }];
+  delete db.project.gameScoreSteps;
+  game.migrate(db);
+  assert.deepEqual(db.project.rundown.map((s) => s.kind), ['title', 'game', 'gameScore', 'hosts', 'pause', 'game', 'gameScore', 'hosts']);
+  // Danach nicht erneut: gelöschte Schritte bleiben gelöscht.
+  db.project.rundown.splice(2, 2);
+  game.migrate(db);
+  assert.deepEqual(db.project.rundown.map((s) => s.kind), ['title', 'game', 'pause', 'game', 'gameScore', 'hosts']);
 });

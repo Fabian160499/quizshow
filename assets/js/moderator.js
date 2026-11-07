@@ -195,8 +195,8 @@ function finaleUi() {
 
 // ---------- Showablauf wie eine Präsentation ----------
 
-const RUN_ICON = { start: '★', video: '🎞', intro: '👥', pyramid: '▲', title: '🎬', game: '🎮', coin: '🪙', pause: '☕', ranking: '🏆', stageTitle: '🎬', hosts: '🎙', finaleTitle: '🎬', finale: '★', end: '🏁' };
-const RUN_KIND_LABEL = { start: 'Startbild', video: 'Intro-Video', intro: 'Vorstellung der Teams', pyramid: 'Übersicht Kategorien', title: 'Spieltitel', game: 'Spiel spielen', coin: 'Münzvergabe', pause: 'Pause', ranking: 'Zwischenstand / Rangliste', stageTitle: 'Gewinnstufe – Spieltitel', hosts: 'Moderation am Pult', finaleTitle: 'Finale – Spieltitel', finale: 'Finale gegen die Moderation', end: 'Abschluss' };
+const RUN_ICON = { start: '★', video: '🎞', intro: '👥', pyramid: '▲', title: '🎬', game: '🎮', gameScore: '🔢', coin: '🪙', pause: '☕', ranking: '🏆', stageTitle: '🎬', hosts: '🎙', finaleTitle: '🎬', finale: '★', end: '🏁' };
+const RUN_KIND_LABEL = { start: 'Startbild', video: 'Intro-Video', intro: 'Vorstellung der Teams', pyramid: 'Übersicht Kategorien', title: 'Spieltitel', game: 'Spiel spielen', gameScore: 'Punkte dieses Spiels', coin: 'Münzvergabe', pause: 'Pause', ranking: 'Zwischenstand / Rangliste', stageTitle: 'Gewinnstufe – Spieltitel', hosts: 'Moderation am Pult', finaleTitle: 'Finale – Spieltitel', finale: 'Finale gegen die Moderation', end: 'Abschluss' };
 
 // Symbol eines Schritts; die Münzvergabe zeigt die Münze der Show.
 const runIcon = (kind) => (kind === 'coin' ? coinImg('run-coin') : RUN_ICON[kind]);
@@ -490,7 +490,7 @@ function rundownInsertForm(i, insertAt) {
     Object.entries(RUN_KIND_LABEL).map(([k, label]) => h('option', { value: k }, k === 'coin' ? label : `${RUN_ICON[k]} ${label}`)));
   const posSel = h('select', { 'aria-label': 'Spiel' }, S.project.games.map((g, k) => h('option', { value: String(k + 1) }, `Spiel ${k + 1} · ${g.title}`)));
   const stageSel = h('select', { 'aria-label': 'Gewinnstufe' }, [1, 2, 3].map((n) => h('option', { value: String(n) }, `Gewinnstufe ${n}`)));
-  const updatePos = () => { posSel.hidden = !['title', 'game', 'coin', 'pyramid'].includes(kindSel.value); stageSel.hidden = !['stageTitle', 'hosts'].includes(kindSel.value); };
+  const updatePos = () => { posSel.hidden = !['title', 'game', 'gameScore', 'coin', 'pyramid'].includes(kindSel.value); stageSel.hidden = !['stageTitle', 'hosts'].includes(kindSel.value); };
   kindSel.onchange = updatePos;
   kindSel.value = 'pause';
   updatePos();

@@ -118,6 +118,31 @@ test('Riskier die Gier: genau richtig geschätzt bringt 5 Leben dazu', () => {
   assert.equal(bv(db).results.find((r) => r.teamId === ids[1]).bonus, 0);
 });
 
+test('Riskier die Gier: Ausgeschiedene tippen außer Wertung mit', () => {
+  const { db, ids } = setup(3);
+  use(db, 'gier', { seconds: 60, questions: [{ question: 'A', answer: 0, unit: '' }, { question: 'B', answer: 10, unit: '' }, { question: 'C', answer: 5, unit: '' }] });
+  let t = clock;
+  act(db, { ...mod(), now: t }, 'open', { index: 0 });
+  act(db, team(ids[0], t + 1), 'answer', { value: 200 }); // raus
+  act(db, team(ids[1], t + 1), 'answer', { value: 1 });
+  act(db, team(ids[2], t + 1), 'answer', { value: 2 });
+  act(db, { ...mod(), now: t + 2 }, 'evaluate');
+  const before = JSON.stringify(db.ledger);
+  t = clock;
+  act(db, { ...mod(), now: t }, 'open', { index: 1 });
+  assert.equal(tv(db, ids[0], t + 1).canAnswer, true, 'ausgeschieden, darf aber mittippen');
+  act(db, team(ids[0], t + 1), 'answer', { value: 10 });
+  act(db, team(ids[1], t + 1), 'answer', { value: 12 });
+  act(db, team(ids[2], t + 1), 'answer', { value: 13 });
+  act(db, { ...mod(), now: t + 2 }, 'evaluate');
+  const res = bv(db).results.find((r) => r.teamId === ids[0]);
+  assert.equal(res.fun, true);
+  assert.equal(res.diff, 0);
+  assert.equal(tv(db, ids[0]).balance, -100, 'Guthaben unverändert');
+  assert.equal(res.bonus, 0, 'kein Volltreffer-Bonus außer Wertung');
+  assert.equal(JSON.stringify(db.ledger), before, 'keine Punkte verändert');
+});
+
 test('Top 100: tolerante Treffer, unsichere Treffer an die Moderation, Ranggruppen 1–5', () => {
   const list = Array.from({ length: 100 }, (_, i) => `Eintrag Nummer ${i + 1}`);
   list[0] = 'Volkswagen / VW'; list[24] = 'Die Ärzte'; list[59] = 'FC Bayern München'; list[99] = 'Mercedes-Benz';
@@ -236,7 +261,7 @@ test('Host du das Zeug dafür: alle müssen einreichen, eigene Option gesperrt, 
   assert.deepEqual(ids.map((id) => pts(db, id)), [3, 2, 0, 1]);
 });
 
-test('Wer nix werd, werd Nerd: Notizen nur in der Gebotsphase, danach privat und nur lesbar', () => {
+test('Wer nix werd, werd Nerd: Notizen in der Gebotsphase und für das Team am Zug, sonst privat und nur lesbar', () => {
   const { db, ids } = setup(2);
   game.applyAction(db, mod(), 'show.activate', { gameId: db.project.games.find((g) => g.type === 'nerd').id });
   db.live.beamer = { view: 'game', data: {} };
@@ -251,7 +276,10 @@ test('Wer nix werd, werd Nerd: Notizen nur in der Gebotsphase, danach privat und
   assert.equal(tv(db, ids[0]).notesInk, ink);
   assert.equal(tv(db, ids[1]).notesInk, null); // fremde Notizen nie sichtbar
   assert.equal(JSON.stringify(game.beamerView(db)).includes(ink), false);
-  assert.throws(() => act(db, team(ids[0]), 'notes', { ink }), /Gebotsphase/);
+  // Das Team, das dran ist, darf weiter schreiben (z. B. Genanntes durchstreichen) – die anderen nicht.
+  assert.equal(game.moderatorView(db).liveState?.attempt?.teamId ?? db.live.games[db.live.activeGame].rounds[0].attempt.teamId, ids[0]);
+  act(db, team(ids[0]), 'notes', { ink });
+  assert.throws(() => act(db, team(ids[1]), 'notes', { ink }), /Gebotsphase/);
 });
 
 test('Punkte je Spiel im Editor änderbar (Regeln bleiben gleich)', () => {
