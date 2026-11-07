@@ -2564,3 +2564,10 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .map .radius-label.outer .pts { fill: #7beeff; }
 .map .radius-label.inner .pts { fill: #ffd0e6; }
 .ksw.ipad-wall { grid-template-rows: repeat(4, minmax(92px, auto)); font-size: 15px; }
+/* Land-Radien: +3 hellgrün, +2 gelb-orange */
+.map .radius.outer { stroke: #ffb020; filter: drop-shadow(0 0 6px rgba(255, 176, 32, 0.75)); }
+.map .radius.inner { stroke: #8dff6a; filter: drop-shadow(0 0 6px rgba(141, 255, 106, 0.8)); }
+.map .radius-label .pts { fill: #fff; }
+.map .radius-label.outer .pts { fill: #fff3cf; }
+.map .radius-label.inner .pts { fill: #f2ffe9; }
+.map .radius-label { stroke-width: 0.16em; }

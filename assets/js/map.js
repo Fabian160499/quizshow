@@ -90,7 +90,7 @@ export function mapView(name, { markers = [], onPick = null, label = 'Karte', ar
     world.append(el('path', { d, class: 'target-area' }));
   }
   // Punktradien um den Zielort (100 km und 50 km): ausgefüllte, leuchtende Flächen
-  // in den Showfarben (außen Cyan, innen Pink), mit Punkten und Entfernung in der Fläche.
+  // (außen gelb-orange = +2, innen hellgrün = +3, Wunsch von Fabian), mit Punkten und Entfernung in der Fläche.
   // radii: Zahlen (km) oder { km, pts }.
   const gid = `mapr${++mapUid}`;
   for (const mk of markers) {
@@ -108,32 +108,35 @@ export function mapView(name, { markers = [], onPick = null, label = 'Karte', ar
       const outer = k === 0;
       const g = el('radialGradient', { id: `${gid}-${k}` });
       g.append(
-        el('stop', { offset: '0%', 'stop-color': outer ? '#1fd6f2' : '#ff2d8a', 'stop-opacity': outer ? 0.18 : 0.55 }),
-        el('stop', { offset: '78%', 'stop-color': outer ? '#1fd6f2' : '#ff2d8a', 'stop-opacity': outer ? 0.32 : 0.5 }),
-        el('stop', { offset: '100%', 'stop-color': outer ? '#1fd6f2' : '#ff2d8a', 'stop-opacity': outer ? 0.55 : 0.75 }));
+        el('stop', { offset: '0%', 'stop-color': outer ? '#ffb020' : '#8dff6a', 'stop-opacity': outer ? 0.22 : 0.5 }),
+        el('stop', { offset: '78%', 'stop-color': outer ? '#ffb020' : '#8dff6a', 'stop-opacity': outer ? 0.36 : 0.58 }),
+        el('stop', { offset: '100%', 'stop-color': outer ? '#ffb020' : '#8dff6a', 'stop-opacity': outer ? 0.6 : 0.8 }));
       defs.append(g);
       world.append(el('ellipse', { cx: x, cy: y, rx: r.rx, ry: r.ry, class: `radius ${outer ? 'outer' : 'inner'} r${r.km}`, fill: `url(#${gid}-${k})` }));
     });
     // Beschriftung: Punkte groß, Kilometer klein – außen im Ring oben, innen unter dem Ziel.
     const [o, i] = [geo[0], geo[1]];
-    // In der Fläche, wenn genug Platz ist; sonst als Schild rechts neben dem Kreis.
-    const minFs = m.width / 62;
-    const inside = (i ? o.ry - i.ry : o.ry) * 0.42 >= minFs * 0.8 && (!i || i.ry * 0.5 >= minFs * 0.8);
-    const fs = inside ? Math.min(m.width / 30, (i ? o.ry - i.ry : o.ry) * 0.42) : minFs;
-    const label = (r, ly, outer, side) => {
-      const t = el('text', { x: side ? x + o.rx + fs * 0.6 : x, y: ly, class: `radius-label ${outer ? 'outer' : 'inner'} r${r.km}${side ? ' side' : ''}`, 'font-size': fs, 'text-anchor': side ? 'start' : 'middle' });
-      if (r.pts !== null && r.pts !== undefined) {
-        const a = el('tspan', { class: 'pts' }); a.textContent = `+${r.pts}`; t.append(a);
-        const b = el('tspan', { class: 'km', dx: fs * 0.25, 'font-size': fs * 0.6 }); b.textContent = `${r.km} km`; t.append(b);
-      } else t.textContent = `${r.km} km`;
+    // Zahl immer in der Fläche: +2 oben im äußeren Ring, +3 im inneren Kreis unter dem Ziel.
+    // Die Kilometer stehen nur dabei, wenn genug Platz ist.
+    const label = (r, ly, fs, outer) => {
+      const t = el('text', { x, y: ly, class: `radius-label ${outer ? 'outer' : 'inner'} r${r.km}`, 'font-size': fs, 'text-anchor': 'middle' });
+      const a = el('tspan', { class: 'pts' });
+      a.textContent = r.pts !== null && r.pts !== undefined ? `+${r.pts}` : `${r.km} km`;
+      t.append(a);
+      if (r.pts !== null && r.pts !== undefined && fs >= m.width / 70) {
+        const b = el('tspan', { class: 'km', dx: fs * 0.2, 'font-size': fs * 0.5 }); b.textContent = `${r.km} km`; t.append(b);
+      }
       world.append(t);
     };
-    if (inside) {
-      label(o, i ? y - (o.ry + i.ry) / 2 + fs * 0.35 : y - o.ry * 0.55, true);
-      if (i) label(i, y + i.ry * 0.62 + fs * 0.35, false);
+    const cap = m.width / 26;
+    if (i) {
+      const fo = Math.min(cap, (o.ry - i.ry) * 0.8);
+      label(o, y - (o.ry + i.ry) / 2 + fo * 0.35, fo, true);
+      const fi = Math.min(cap, i.ry * 0.62);
+      label(i, y + i.ry * 0.55 + fi * 0.35, fi, false);
     } else {
-      label(o, y - fs * 0.25, true, true);
-      if (i) label(i, y + fs * 0.95, false, true);
+      const fo = Math.min(cap, o.ry * 0.6);
+      label(o, y - o.ry * 0.5 + fo * 0.35, fo, true);
     }
   }
   svg.append(world);
