@@ -634,7 +634,7 @@
         return li;
       }));
       ol.classList.add('tv');
-      const out = [tvPanel(f.shown ? 'Rangliste vor dem Finale' : 'Wer steht wo vor dem Finale?', null, ol)];
+      const out = [tvPanel('Vor dem Finale', f.shown ? null : 'Wer steht wo?', ol)];
       if (f.all && fresh && !reduced) out.push(h('div', { class: 'fb-confetti', 'aria-hidden': 'true', style: { zIndex: 5 } }, Array.from({ length: 70 }, (_, i) => h('i', { style: { left: `${(i * 37) % 100}%`, animationDelay: `${0.8 + (i % 14) * 0.18}s`, background: ['#ffc23d', '#ff2d8a', '#1fd6f2', '#fff'][i % 4] }, '--rot': `${(i * 53) % 360}deg` }))));
       return out;
     }
@@ -693,7 +693,7 @@
       }
       // Nach jedem Spiel: nur die Punkte dieses Spiels.
       ol.classList.add('tv');
-      if (s.rankGame) return [tvPanel(`Spiel ${s.rankGame.pos} von 8`, `Punkte in „${s.rankGame.title}“`, ol)];
+      if (s.rankGame) return [tvPanel(`Kategorie ${s.rankGame.pos} von 8`, s.rankGame.title, ol)];
       return [tvPanel('Zwischenstand', null, ol)];
     }
 
@@ -914,12 +914,31 @@
       const showTeams = () => {
         wrap.className = 'coin-sequence';
         wrap.replaceChildren(
-          h('div', { class: 'kicker' }, stage ? `Gewinnstufe ${stage} · Zwischenstand` : 'Zwischenstand'),
+          h('div', { class: 'kicker' }, stage ? `Gewinnstufe ${stage}` : `Münze nach Spiel ${s.coin.position}`),
           h('div', { class: 'coin-teams' },
             teamsScene(s, { points: true, winnerId: t.id, flyPosition: s.coin.position, banner: h('div', { class: 'scene-banner', '--team': t.color }, coinImg('banner-coin'), ` Münze an ${t.name}`) })));
       };
+      // Zwischenschritt: Gesamtpunkte im TV-Stil, bevor die Münze zum Gewinner fliegt.
+      const showBoard = () => {
+        const list = [...s.teams].sort((a, b) => (b.points || 0) - (a.points || 0));
+        const ol = h('ol', { class: `rank rank-board tv done coin-board n${list.length}` });
+        list.forEach((r, i) => {
+          const place = i > 0 && (r.points || 0) === (list[i - 1].points || 0) ? null : i + 1;
+          const pos = place || Number(ol.lastChild.dataset.place);
+          ol.append(h('li', { '--team': r.color, 'data-place': String(pos), class: pos === 1 ? 'lead' : '', style: { animationDelay: `${(list.length - 1 - i) * 0.35}s` } },
+            h('span', { class: 'pos' }, String(pos)), h('span', { class: 'nm' }, r.name), h('span', { class: 'pts' }, String(r.points || 0))));
+        });
+        wrap.className = 'coin-sequence';
+        wrap.replaceChildren(tvPanel(stage ? `Gewinnstufe ${stage}` : `Münze nach Spiel ${s.coin.position}`, 'Zwischenstand', ol));
+      };
+      const speed = Number(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
       if (s.settings.reducedMotion) showTeams();
-      else titleTimer = setTimeout(showTeams, 7600 * (Number(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1));
+      else {
+        titleTimer = setTimeout(() => {
+          showBoard();
+          titleTimer = setTimeout(showTeams, (8000 + s.teams.length * 350) * speed);
+        }, 7600 * speed);
+      }
       return [wrap];
     }
   </script>
