@@ -89,7 +89,7 @@ export function mapView(name, { markers = [], onPick = null, label = 'Karte', ar
     const d = area.map((ring) => ring.map(([lng, lat], i) => { const [x, y] = project(m, lat, lng); return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`; }).join('') + 'Z').join('');
     world.append(el('path', { d, class: 'target-area' }));
   }
-  // Punktradien um den Zielort (100 km und 50 km): ausgefüllte, leuchtende Flächen
+  // Punktradien um den Zielort (je nach Karte, z. B. 100 km und 50 km): ausgefüllte, leuchtende Flächen
   // (außen gelb-orange = +2, innen hellgrün = +3, Wunsch von Fabian), mit Punkten und Entfernung in der Fläche.
   // radii: Zahlen (km) oder { km, pts }.
   const gid = `mapr${++mapUid}`;
@@ -123,7 +123,7 @@ export function mapView(name, { markers = [], onPick = null, label = 'Karte', ar
       const a = el('tspan', { class: 'pts' });
       a.textContent = r.pts !== null && r.pts !== undefined ? `+${r.pts}` : `${r.km} km`;
       t.append(a);
-      if (r.pts !== null && r.pts !== undefined && fs >= m.width / 70) {
+      if (r.pts !== null && r.pts !== undefined) {
         const b = el('tspan', { class: 'km', dx: fs * 0.2, 'font-size': fs * 0.5 }); b.textContent = `${r.km} km`; t.append(b);
       }
       world.append(t);

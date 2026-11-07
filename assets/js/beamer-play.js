@@ -122,8 +122,9 @@ function land(v, teamOf) {
     const pointText = () => {
       const ids = Object.keys(aw).sort((a, b) => aw[b] - aw[a]);
       if (!ids.length) return '';
-      const near = (v.guesses || []).every((g) => !ids.includes(g.teamId) || g.km <= 100);
-      return near ? ` – ${ids.map((id) => `${teamOf(id).name} +${aw[id]}`).join(' · ')}` : ` – keiner im 100-km-Radius, am nächsten: ${ids.map((id) => `${teamOf(id).name} +${aw[id]}`).join(' · ')}`;
+      const outer = (v.target.radii && v.target.radii.outer) || 100;
+      const near = (v.guesses || []).every((g) => !ids.includes(g.teamId) || g.km <= outer);
+      return near ? ` – ${ids.map((id) => `${teamOf(id).name} +${aw[id]}`).join(' · ')}` : ` – keiner im ${outer}-km-Radius, am nächsten: ${ids.map((id) => `${teamOf(id).name} +${aw[id]}`).join(' · ')}`;
     };
     out.push(h('div', { class: 'solution' }, v.target.country
       ? `🗺 ${v.target.name}${w ? ` – im Land: ${w}` : ' – kein Team im Land'}`
