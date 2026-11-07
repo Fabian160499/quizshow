@@ -592,6 +592,12 @@
     // Rangliste von unten nach oben aufbauen: der letzte Platz erscheint zuerst.
     // Zwischenstand mit Animation: Teams stehen zuerst in Pultreihenfolge, die Balken
     // fahren hoch und die Punkte zählen mit; dann tauschen die Teams sichtbar die Plätze.
+    // Punktestand im TV-Stil: dunkle Tafel mit Kopfzeile, Platz als Wimpel in Teamfarbe,
+    // Name auf grauem Band (Führende in Teamfarbe), Punkte in weißer Box.
+    function tvPanel(title, subtitle, ol) {
+      return h('div', { class: 'tv-panel' }, h('div', { class: 'tv-head' }, title), subtitle ? h('div', { class: 'tv-sub' }, subtitle) : null, ol);
+    }
+
     // Vor dem Finale: Rückblick-Folien, dann Rangliste von hinten (Platz 2 und 1 gemeinsam).
     let finalShown = 0;
     function finalRanking(s) {
@@ -627,7 +633,8 @@
         }
         return li;
       }));
-      const out = [h('div', { class: 'q rank-title' }, f.shown ? 'Rangliste vor dem Finale' : 'Wer steht wo vor dem Finale?'), ol];
+      ol.classList.add('tv');
+      const out = [tvPanel(f.shown ? 'Rangliste vor dem Finale' : 'Wer steht wo vor dem Finale?', null, ol)];
       if (f.all && fresh && !reduced) out.push(h('div', { class: 'fb-confetti', 'aria-hidden': 'true', style: { zIndex: 5 } }, Array.from({ length: 70 }, (_, i) => h('i', { style: { left: `${(i * 37) % 100}%`, animationDelay: `${0.8 + (i % 14) * 0.18}s`, background: ['#ffc23d', '#ff2d8a', '#1fd6f2', '#fff'][i % 4] }, '--rot': `${(i * 53) % 360}deg` }))));
       return out;
     }
@@ -685,8 +692,9 @@
         setTimeout(reorder, (3.4 + start.length * 0.12) * 1000 * speed);
       }
       // Nach jedem Spiel: nur die Punkte dieses Spiels.
-      if (s.rankGame) return [h('div', { class: 'q rank-title' }, 'Punkte in diesem Spiel'), h('div', { class: 'rank-sub' }, `Spiel ${s.rankGame.pos} · ${s.rankGame.title}`), ol];
-      return [h('div', { class: 'q rank-title' }, 'Zwischenstand'), ol];
+      ol.classList.add('tv');
+      if (s.rankGame) return [tvPanel(`Spiel ${s.rankGame.pos} von 8`, `Punkte in „${s.rankGame.title}“`, ol)];
+      return [tvPanel('Zwischenstand', null, ol)];
     }
 
     // Intro-Video der Show, bildschirmfüllend. Ohne Video (oder am Ende) das Logo.
