@@ -342,9 +342,9 @@ function teamView(db, teamId) {
     out.round.own = r.team; // eigene Antwort sofort sehen
     out.canChallenge = r.revealed && !r.decided && out.coins > 0;
   }
-  // Zuschauende Teams sehen die verdeckte Antwort der Moderation zum Mitfiebern –
-  // aber erst, wenn das Finalteam selbst abgegeben hat (damit nichts verraten wird).
-  if (!out.player && r && r.mod && r.team) out.round.peekMod = r.mod;
+  // Zuschauende Teams sehen die verdeckte Antwort der Moderation zum Mitfiebern,
+  // sobald die Moderation abgegeben hat (Wunsch von Fabian).
+  if (!out.player && r && r.mod) out.round.peekMod = r.mod;
   return out;
 }
 

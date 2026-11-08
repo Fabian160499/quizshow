@@ -457,14 +457,15 @@ function nerd(g, ui) {
 
 let finalePad = { key: null, el: null };
 
-// Zuschauende Teams: Frage, verdeckte Antwort der Moderation (sobald das Finalteam
-// abgegeben hat) und ob eine Münze gesetzt wird – zum Mitfiebern.
+// Zuschauende Teams: Frage, verdeckte Antwort der Moderation (sobald sie abgegeben
+// hat) und ob eine Münze gesetzt wird – zum Mitfiebern.
 function finaleWatch(f) {
   const r = f.round;
   const host = f.host || 'die Moderation';
   if (!r) return wait(`${f.team.name} spielt das Finale`, 'Drückt die Daumen!');
   const out = [h('p', { class: 'muted' }, `${f.team.name} spielt das Finale · Finalfrage ${f.qIndex + 1}`), h('p', { class: 'question' }, r.question)];
   if (r.peekMod) {
+    if (!r.teamAnswered) out.push(stateBox('', '⏳', `${f.team.name} schreibt noch …`));
     out.push(h('div', { class: 'card fin-peek' }, h('p', { class: 'muted' }, `🤫 Verdeckte Antwort von ${host} – nur für euch, nicht verraten!`), h('div', { style: { fontSize: '1.6rem' } }, answerContent(r.peekMod)),
       r.solution ? h('p', {}, h('span', { class: 'muted' }, 'Lösung: '), h('b', {}, r.solution)) : null));
   } else {
