@@ -55,7 +55,8 @@ export function buildFinaleLive(ui) {
 
     // Antwort der Moderation: kommt verdeckt vom iPad der Moderation
     out.push(h('div', { class: 'fin-answer' }, h('span', { class: 'muted' }, 'Moderation: '),
-      !r.mod ? badge('', '… schreibt auf dem iPad Moderation') : r.challenged ? answerContent(r.mod) : badge('', '🤫 verdeckt abgegeben'),
+      // Die Regie sieht die verdeckte Antwort immer (Beamer und Finalteam nicht).
+      !r.mod ? badge('', '… schreibt auf dem iPad Moderation') : r.challenged ? answerContent(r.mod) : h('span', { class: 'row' }, answerContent(r.mod), badge('', '🤫 verdeckt – nur Regie und zuschauende Teams')),
       r.mod && r.challenged ? (r.modGrade === null
         ? h('span', { class: 'row' }, badge('warn', 'Münze eingesetzt – aufdecken!'), btn('small ok', '✓ Richtig (Münze weg)', () => act('finale.gradeMod', { correct: true })), btn('small bad', '✗ Falsch (kein Punkt)', () => act('finale.gradeMod', { correct: false })))
         : badge(r.modGrade ? 'ok' : 'bad', r.modGrade ? '✓ richtig' : '✗ falsch')) : null));

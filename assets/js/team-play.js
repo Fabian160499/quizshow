@@ -457,6 +457,29 @@ function nerd(g, ui) {
 
 let finalePad = { key: null, el: null };
 
+// Zuschauende Teams: Frage, verdeckte Antwort der Moderation (sobald das Finalteam
+// abgegeben hat) und ob eine Münze gesetzt wird – zum Mitfiebern.
+function finaleWatch(f) {
+  const r = f.round;
+  const host = f.host || 'die Moderation';
+  if (!r) return wait(`${f.team.name} spielt das Finale`, 'Drückt die Daumen!');
+  const out = [h('p', { class: 'muted' }, `${f.team.name} spielt das Finale · Finalfrage ${f.qIndex + 1}`), h('p', { class: 'question' }, r.question)];
+  if (r.peekMod) {
+    out.push(h('div', { class: 'card fin-peek' }, h('p', { class: 'muted' }, `🤫 Verdeckte Antwort von ${host} – nur für euch, nicht verraten!`), h('div', { style: { fontSize: '1.6rem' } }, answerContent(r.peekMod)),
+      r.solution ? h('p', {}, h('span', { class: 'muted' }, 'Lösung: '), h('b', {}, r.solution)) : null));
+  } else {
+    out.push(stateBox('', '⏳', !r.teamAnswered ? `${f.team.name} schreibt noch …` : `${host} schreibt noch …`));
+  }
+  if (r.revealed) {
+    out.push(stateBox(r.teamPoint ? 'ok' : 'bad', r.teamPoint ? '✓' : '✗', `${f.team.name}: ${r.teamPoint ? 'richtig, +1 Punkt' : 'falsch, kein Punkt'}`));
+    if (!r.decided) out.push(stateBox('', '🪙', `Setzt ${f.team.name} eine Münze ein?`));
+    else if (!r.challenged) out.push(stateBox('', '➡', 'Keine Münze gesetzt – die Moderation behält ihren Punkt.'));
+    else if (r.modGrade === null) out.push(stateBox('', '🪙', 'Münze gesetzt – die Moderation deckt auf!'));
+    else out.push(stateBox(r.coinLost ? 'bad' : 'ok', '🪙', r.coinLost ? 'Die Moderation lag richtig – Münze weg.' : 'Die Moderation lag falsch – Münze zurück!'));
+  }
+  return out;
+}
+
 export function renderFinale(f, ui) {
   const scoreRow = h('div', { class: 'fin-head' },
     h('div', { class: 'fin-side', style: { '--team': f.team.color } }, h('b', {}, f.team.name), h('span', { class: 'fin-score' }, String(f.score.team))),
@@ -468,10 +491,7 @@ export function renderFinale(f, ui) {
     out.push(stateBox(won ? 'ok' : '', won ? '🎟' : '🎤', won ? `${f.team.name} stiehlt die Show! Ticket für die große Finalshow.` : 'Die Moderation behält die Show.'));
     return out;
   }
-  if (!f.player) {
-    out.push(...wait(`${f.team.name} spielt das Finale`, 'Drückt die Daumen!'));
-    return out;
-  }
+  if (!f.player) return [...out, ...finaleWatch(f)];
   out.push(h('div', { class: 'fin-coinrow' }, h('span', { class: 'muted' }, 'Eure Münzen: '),
     f.coinsTotal ? Array.from({ length: f.coinsTotal }, (_, i) => coinImg(`fin-coin${i < f.coins ? '' : ' lost'}`)) : h('span', { class: 'muted' }, 'keine')));
   const r = f.round;
