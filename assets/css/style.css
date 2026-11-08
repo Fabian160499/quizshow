@@ -2571,3 +2571,5 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .map .radius-label.outer .pts { fill: #fff3cf; }
 .map .radius-label.inner .pts { fill: #f2ffe9; }
 .map .radius-label { stroke-width: 0.16em; }
+/* Finale: Handschrift der Moderation für zuschauende Teams groß zeigen */
+.fin-peek .ink-answer { width: 100%; max-height: 42dvh; object-fit: contain; }
