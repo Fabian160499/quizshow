@@ -15,6 +15,7 @@
 // Teams bekommen danach per Knopf eine Nachfrist.
 
 const { teamName, teamIds, currentBuzz } = require('./core');
+const SONG = require('./play-songsong');
 
 const step = (label, action, payload = {}) => ({ label, action, payload });
 const wait = (text) => ({ wait: text });
@@ -263,9 +264,17 @@ const FLOW = {
       if (!r.started) return step('Musik abspielen', 'play');
       const pending = r.subs.filter((x) => r.grades[x.teamId] === undefined).sort((a, b) => a.at - b.at)[0];
       if (pending) return wait(`Erst die Abgabe von ${teamName(db, pending.teamId)} prüfen (✓ / ✗)`);
-      return step('Auflösen (niemand hatte beide Titel)', 'reveal');
+      return step(r.subs.length ? 'Auflösung starten (niemand hatte beide Titel)' : 'Auflösen (keine Abgabe)', 'reveal');
     }
-    if (r.revealed === false) return step('Auflösen', 'reveal');
+    if (r.revealed === false) {
+      // Nächster Klick der Auflösung: Team zeigen → Antwort → Bewertung … → Lösung + Song.
+      const nx = SONG.revealState({ ...r, rv: (r.rv || 0) + (r.subs.length ? 1 : 0) || 1 });
+      const name = (i) => teamName(db, nx.list[i].teamId);
+      if (nx.stage === 'name') return step(`${name(nx.k)} zeigen (${nx.k + 1}. Abgabe)`, 'reveal');
+      if (nx.stage === 'answer') return step(`Antwort von ${name(nx.k)} zeigen`, 'reveal');
+      if (nx.stage === 'verdict') return step(`Bewertung von ${name(nx.k)} zeigen`, 'reveal');
+      return step(game.content.puzzles[st.index].reveal ? 'Lösung zeigen + Song starten' : 'Lösung zeigen', 'reveal');
+    }
     return nextOf(ps, st.index, 'Rätsel', 'open');
   },
 

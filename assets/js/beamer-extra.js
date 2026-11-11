@@ -5,6 +5,7 @@
 
 import { pooled, playWithSound } from './media-pool.js';
 import { h, mediaUrl } from './client.js';
+import { answerContent } from './ink.js';
 import { BEAMER_NEU } from './neu-beamer.js';
 
 // Punktwerte aus dem Editor (über den Server), sonst Standard.
@@ -392,13 +393,26 @@ function konsequenz(v, teamOf) {
 function songsong(v, teamOf) {
   if (v.waiting) return waitTitle('Song Song Song', 'Melodie des einen, Text des anderen Songs – schreibt beide Titel!');
   const playing = v.playback.state === 'playing';
-  const out = [h('div', { class: `vinyl${playing ? ' spin' : ''}`, 'aria-hidden': 'true' }, h('div', { class: 'vinyl-label' }, '♪'))];
-  const done = v.revealed !== undefined ? v.revealed : v.done;
-  if (done) out.push(h('div', { class: 'solution' }, v.solution.filter(Boolean).join('  +  ') || 'Aufgelöst'), v.winner ? h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '1vh' } }, chip(teamOf(v.winner), '', ` ${plus(pv(v, 'correct'))}`)) : null);
-  else if (v.done) out.push(sub(v.winner ? `${teamOf(v.winner).name} hat beide Titel! Gleich kommt die Auflösung …` : 'Gleich kommt die Auflösung …', { marginTop: '2vh' }));
-  else if (!v.started) out.push(sub('Gleich läuft das Mash-up …', { marginTop: '2vh' }));
-  if (v.order.length) {
-    out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.order.map((o, i) => chip(teamOf(o.teamId), o.grade === false ? 'wrong' : '', h('b', {}, ` ${i + 1}.`), o.grade === true ? ' ✓' : o.grade === false ? ' ✗' : ''))));
+  const out = [];
+  if (!v.revealing) out.push(h('div', { class: `vinyl${playing ? ' spin' : ''}`, 'aria-hidden': 'true' }, h('div', { class: 'vinyl-label' }, '♪')));
+  if (v.revealed) {
+    out.push(h('div', { class: 'solution' }, v.solution.filter(Boolean).join('  +  ') || 'Aufgelöst'),
+      v.winner ? h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '1vh' } }, chip(teamOf(v.winner), '', ` ${plus(pv(v, 'correct'))}`)) : null);
+  } else if (!v.started) out.push(sub('Gleich läuft das Mash-up …', { marginTop: '2vh' }));
+  if (v.board && v.board.length) {
+    // Auflösung wie bei den leichten 5: aktuelles Team groß (Name → Antwort → Bewertung), frühere klein daneben.
+    const solo = !v.revealed;
+    const cards = solo ? v.board.filter((a) => a.current) : v.board;
+    out.push(h('div', { class: `answers l5-answers n${Math.min(cards.length, 6)}${solo ? ' l5-solo' : ''}` }, cards.map((a) => {
+      const t = teamOf(a.teamId);
+      const mark = a.grade === true ? h('span', { class: 'l5-stamp ok', 'aria-label': 'richtig' }, '✓') : a.grade === false ? h('span', { class: 'l5-stamp bad', 'aria-label': 'falsch' }, '✗') : null;
+      return h('div', { class: `answer fx-card l5-card has-ink${a.current ? ' current' : ''}${a.grade === true ? ' ok' : a.grade === false ? ' bad' : ''}`, '--team': t.color },
+        h('div', { class: 'ans-name l5-name' }, `${a.place}. ${t.name}`),
+        a.hidden ? h('div', { class: 'ans-body l5-hidden' }, h('span', { class: 'l5-q' }, '?')) : h('div', { class: 'ans-body' }, answerContent(a, 'beamer'), mark));
+    })));
+  } else if (v.order.length) {
+    // Live: nur die Reihenfolge der Abgaben, ohne Wertung.
+    out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.order.map((o, i) => chip(teamOf(o.teamId), '', h('b', {}, ` ${i + 1}.`)))));
   }
   return out;
 }

@@ -183,9 +183,16 @@ function songsong(ui, g, st) {
     r.grades[s.teamId] === true ? badge('ok', '✓ beide richtig') : r.grades[s.teamId] === false ? badge('bad', '✗') : null,
     s === next && !r.done ? [btn('small ok', '✓ Beide richtig', () => ui.act('play.judge', { correct: true })), btn('small bad', '✗ Nicht beide', () => ui.act('play.judge', { correct: false }))] : null))
     : h('li', { class: 'muted' }, 'Noch keine Abgabe.')));
-  if (r.done) out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(pvc(g, 'correct'))}` : 'Kein Punkt'),
-    // Auflösung startet per Klick (Lösung + Auflösungs-Ton). Das Mash-up läuft bis dahin weiter.
-    r.revealed === false ? btn('pink', p.reveal ? '▶ Auflösen (mit Ton)' : 'Auflösen', () => ui.act('play.reveal')) : null,
+  // Auflösung per Klick wie bei den leichten 5: je Team Name → Antwort → Bewertung, dann Lösung + Song.
+  // Die Bewertung oben ist bis dahin nur hier in der Regie sichtbar.
+  const allGraded = r.subs.every((s) => r.grades[s.teamId] !== undefined);
+  if (r.revealed === false && (r.done || (r.started && allGraded))) {
+    const n = r.rv || 0;
+    const per = r.winner ? r.subs.findIndex((s) => s.teamId === r.winner) + 1 : r.subs.length;
+    const label = n === 0 && !r.done ? '▶ Auflösung starten (niemand hatte beide Titel)' : n >= per * 3 ? (p.reveal ? '▶ Lösung zeigen + Song starten' : '▶ Lösung zeigen') : '▶ Auflösung: nächster Schritt';
+    out.push(row(btn('pink', label, () => ui.act('play.reveal')), h('span', { class: 'muted' }, `Schritt ${n} von ${per * 3 + 1}`)));
+  }
+  if (r.done) out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(pvc(g, 'correct'))}${r.revealed === false ? ' (noch geheim)' : ''}` : 'Kein Punkt'),
     r.playback.state === 'playing' ? btn('small ghost', '■ Musik stoppen', () => ui.act('play.stop')) : null));
   return out;
 }

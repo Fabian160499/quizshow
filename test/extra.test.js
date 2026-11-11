@@ -194,7 +194,7 @@ test('Hits me baby, one more time: Stufe beim Abschicken zählt, andere bleiben 
   assert.throws(() => act(db, team(ids[2]), 'submit', { ink }), /geschlossen/);
 });
 
-test('Song Song Song: Buzzer sperrt keine anderen Teams, Prüfung in Buzzer-Reihenfolge', () => {
+test('Song Song Song: Buzzer sperrt keine anderen Teams, Prüfung in Buzzer-Reihenfolge, Auflösung Schritt für Schritt', () => {
   const { db, ids } = setup(3);
   use(db, 'songsong', { puzzles: [{ audio: { id: 'media_abcdefabcdef12', type: 'audio/mpeg', name: 's' }, melody: 'A', lyrics: 'B' }] });
   act(db, mod(), 'open', { index: 0 });
@@ -203,20 +203,40 @@ test('Song Song Song: Buzzer sperrt keine anderen Teams, Prüfung in Buzzer-Reih
   act(db, team(ids[0]), 'submit', { ink }); // andere weiterhin frei
   assert.ok(tv(db, ids[1]).canSubmit);
   assert.deepEqual(pv(db).order.map((o) => o.teamId), [ids[2], ids[0]]);
+  act(db, team(ids[1]), 'submit', { ink }); // dritte Abgabe – wird später nicht gezeigt
   act(db, mod(), 'judge', { correct: false }); // ids[2]: nur ein Titel richtig
   act(db, mod(), 'judge', { correct: true }); // ids[0]: beide richtig
   assert.equal(totals(db)[ids[0]], 1);
-  assert.equal(totals(db)[ids[2]], 0);
-  assert.throws(() => act(db, team(ids[1]), 'submit', { ink }), /beendet/);
-  // Musik läuft weiter, Lösung erst nach Klick „Auflösen“.
+  // Noch geheim: Beamer zeigt keine Wertung, iPad kein Ergebnis, Musik läuft weiter.
+  assert.equal(pv(db).winner, null);
+  assert.equal(pv(db).board, null);
+  assert.equal(tv(db, ids[0]).won, false);
+  assert.equal(tv(db, ids[2]).grade, null);
   assert.equal(pv(db).playback.state, 'playing');
+  // 1. Team: Name → Antwort → Bewertung (falsch)
+  act(db, mod(), 'reveal');
+  assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.hidden, b.grade]), [[ids[2], true, null]]);
+  act(db, mod(), 'reveal');
+  assert.equal(pv(db).board[0].hidden, false);
+  assert.equal(pv(db).board[0].grade, null);
+  act(db, mod(), 'reveal');
+  assert.equal(pv(db).board[0].grade, false);
+  assert.equal(tv(db, ids[2]).grade, false);
+  // 2. Team: richtig
+  act(db, mod(), 'reveal'); act(db, mod(), 'reveal'); act(db, mod(), 'reveal');
+  assert.equal(pv(db).board[1].grade, true);
+  assert.equal(tv(db, ids[0]).won, true);
   assert.equal(pv(db).solution, null);
+  // Lösung; das dritte Team wird nicht mehr gezeigt
   act(db, mod(), 'reveal');
   assert.deepEqual(pv(db).solution, ['A', 'B']);
+  assert.deepEqual(pv(db).board.map((b) => b.teamId), [ids[2], ids[0]]);
+  assert.equal(pv(db).winner, ids[0]);
   assert.equal(pv(db).playback.state, 'playing'); // ohne Auflösungs-Ton läuft das Mash-up weiter
+  assert.throws(() => act(db, mod(), 'reveal'), /schon aufgelöst/);
 });
 
-test('Song Song Song: Auflösung mit Ton startet per Klick und stoppt dann das Mash-up', () => {
+test('Song Song Song: niemand richtig – Auflösung zeigt alle, dann Lösung mit Ton (stoppt das Mash-up)', () => {
   const { db, ids } = setup(2);
   use(db, 'songsong', { puzzles: [{ audio: { id: 'media_abcdefabcdef12', type: 'audio/mpeg', name: 's' }, melody: 'A', lyrics: 'B', reveal: { id: 'media_abcdefabcdef13', type: 'video/mp4', name: 'r' } }] });
   act(db, mod(), 'open', { index: 0 });
@@ -224,8 +244,9 @@ test('Song Song Song: Auflösung mit Ton startet per Klick und stoppt dann das M
   act(db, team(ids[0]), 'submit', { ink });
   assert.throws(() => act(db, mod(), 'reveal'), /prüfen/);
   act(db, mod(), 'judge', { correct: false });
+  for (let i = 0; i < 3; i++) act(db, mod(), 'reveal');
   assert.equal(pv(db).reveal, null);
-  act(db, mod(), 'reveal'); // niemand hatte beide Titel
+  act(db, mod(), 'reveal');
   assert.equal(pv(db).reveal.id, 'media_abcdefabcdef13');
   assert.equal(pv(db).playback.state, 'stopped');
   assert.equal(totals(db)[ids[0]], 0);
