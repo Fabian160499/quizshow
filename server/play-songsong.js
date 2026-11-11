@@ -9,9 +9,12 @@ const { fail, log, effect, teamName, bookTarget, cleanInk } = require('./core');
 const { pv } = require('./scoring');
 
 function round(st, i) {
-  if (!st.rounds[i]) st.rounds[i] = { started: false, playback: { state: 'stopped', seq: 0 }, subs: [], grades: {}, winner: null, done: false };
+  if (!st.rounds[i]) st.rounds[i] = { started: false, playback: { state: 'stopped', seq: 0 }, subs: [], grades: {}, winner: null, done: false, revealed: false };
   return st.rounds[i];
 }
+
+// Aufgelöst (Lösung + Auflösungs-Ton)? Ältere Spielstände ohne Feld: mit „beendet“ gleichsetzen.
+const isRevealed = (r) => (r.revealed === undefined ? r.done : r.revealed);
 
 function current(st) {
   if (st.index < 0) fail('Es läuft gerade kein Rätsel.');
@@ -26,6 +29,7 @@ function nextToCheck(r) {
 module.exports = {
   init: () => ({ index: -1, rounds: {} }),
   nextToCheck,
+  isRevealed,
 
   team: {
     submit(db, ctx, game, st, p) {
@@ -76,8 +80,7 @@ module.exports = {
       r.grades[s.teamId] = !!p.correct;
       if (p.correct) {
         r.winner = s.teamId;
-        r.done = true;
-        r.playback = { state: 'stopped', seq: r.playback.seq + 1 };
+        r.done = true; // Mash-up läuft bis zum Ende weiter (Wunsch von Fabian)
         bookTarget(db, ctx, `songsong:${game.id}:${st.index}`, s.teamId, pv(game, 'correct'), `${game.title}, Rätsel ${st.index + 1}`);
         log(db, ctx, 'bewertung', `${teamName(db, s.teamId)}: beide Titel richtig`);
         effect(db, 'correct');
@@ -87,11 +90,23 @@ module.exports = {
       }
     },
 
+    // Auflösung per Klick der Moderation: Lösung zeigen und (falls hochgeladen) den
+    // Auflösungs-Ton starten – dann stoppt das Mash-up. Ohne Auflösungs-Ton läuft es weiter.
+    // Ist das Rätsel noch offen, wird es dabei ohne Punkt beendet.
+    reveal(db, ctx, game, st) {
+      const r = current(st);
+      if (isRevealed(r)) fail('Dieses Rätsel ist schon aufgelöst.');
+      if (!r.done && r.subs.some((s) => r.grades[s.teamId] === undefined)) fail('Erst alle Abgaben prüfen.');
+      r.done = true;
+      r.revealed = true;
+      if (game.content.puzzles[st.index].reveal && r.playback.state === 'playing') r.playback = { state: 'stopped', seq: r.playback.seq + 1 };
+      log(db, ctx, 'ablauf', `Rätsel ${st.index + 1} aufgelöst${r.winner ? '' : ' – kein Punkt'}`);
+    },
+
     // Rätsel ohne Punkt beenden (niemand hatte beide Titel).
     close(db, ctx, game, st) {
       const r = current(st);
-      r.done = true;
-      r.playback = { state: 'stopped', seq: r.playback.seq + 1 };
+      r.done = true; // Mash-up läuft bis zum Ende weiter
       log(db, ctx, 'ablauf', `Rätsel ${st.index + 1} beendet${r.winner ? '' : ' – kein Punkt'}`);
     },
   },
@@ -111,7 +126,7 @@ module.exports = {
       grade: own ? r.grades[teamId] ?? null : null,
       done: r.done,
       won: r.winner === teamId,
-      solution: r.done ? [p.melody, p.lyrics] : null,
+      solution: isRevealed(r) ? [p.melody, p.lyrics] : null,
     };
   },
 
@@ -128,9 +143,10 @@ module.exports = {
       order: r.subs.map((s) => ({ teamId: s.teamId, grade: r.grades[s.teamId] ?? null })),
       done: r.done,
       winner: r.winner,
-      solution: r.done ? [p.melody, p.lyrics] : null,
-      // Auflösung mit Ton (optional): läuft auf dem Beamer ca. 12 Sekunden, nur Ton.
-      reveal: r.done && p.reveal ? { id: p.reveal.id, type: p.reveal.type } : null,
+      revealed: isRevealed(r),
+      solution: isRevealed(r) ? [p.melody, p.lyrics] : null,
+      // Auflösung mit Ton (optional): startet per Klick, läuft auf dem Beamer ca. 12 Sekunden, nur Ton.
+      reveal: isRevealed(r) && p.reveal ? { id: p.reveal.id, type: p.reveal.type } : null,
     };
   },
 };

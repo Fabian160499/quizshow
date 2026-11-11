@@ -183,7 +183,10 @@ function songsong(ui, g, st) {
     r.grades[s.teamId] === true ? badge('ok', '✓ beide richtig') : r.grades[s.teamId] === false ? badge('bad', '✗') : null,
     s === next && !r.done ? [btn('small ok', '✓ Beide richtig', () => ui.act('play.judge', { correct: true })), btn('small bad', '✗ Nicht beide', () => ui.act('play.judge', { correct: false }))] : null))
     : h('li', { class: 'muted' }, 'Noch keine Abgabe.')));
-  if (r.done) out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(pvc(g, 'correct'))}` : 'Kein Punkt')));
+  if (r.done) out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(pvc(g, 'correct'))}` : 'Kein Punkt'),
+    // Auflösung startet per Klick (Lösung + Auflösungs-Ton). Das Mash-up läuft bis dahin weiter.
+    r.revealed === false ? btn('pink', p.reveal ? '▶ Auflösen (mit Ton)' : 'Auflösen', () => ui.act('play.reveal')) : null,
+    r.playback.state === 'playing' ? btn('small ghost', '■ Musik stoppen', () => ui.act('play.stop')) : null));
   return out;
 }
 

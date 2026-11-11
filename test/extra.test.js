@@ -208,7 +208,27 @@ test('Song Song Song: Buzzer sperrt keine anderen Teams, Prüfung in Buzzer-Reih
   assert.equal(totals(db)[ids[0]], 1);
   assert.equal(totals(db)[ids[2]], 0);
   assert.throws(() => act(db, team(ids[1]), 'submit', { ink }), /beendet/);
+  // Musik läuft weiter, Lösung erst nach Klick „Auflösen“.
+  assert.equal(pv(db).playback.state, 'playing');
+  assert.equal(pv(db).solution, null);
+  act(db, mod(), 'reveal');
   assert.deepEqual(pv(db).solution, ['A', 'B']);
+  assert.equal(pv(db).playback.state, 'playing'); // ohne Auflösungs-Ton läuft das Mash-up weiter
+});
+
+test('Song Song Song: Auflösung mit Ton startet per Klick und stoppt dann das Mash-up', () => {
+  const { db, ids } = setup(2);
+  use(db, 'songsong', { puzzles: [{ audio: { id: 'media_abcdefabcdef12', type: 'audio/mpeg', name: 's' }, melody: 'A', lyrics: 'B', reveal: { id: 'media_abcdefabcdef13', type: 'video/mp4', name: 'r' } }] });
+  act(db, mod(), 'open', { index: 0 });
+  act(db, mod(), 'play');
+  act(db, team(ids[0]), 'submit', { ink });
+  assert.throws(() => act(db, mod(), 'reveal'), /prüfen/);
+  act(db, mod(), 'judge', { correct: false });
+  assert.equal(pv(db).reveal, null);
+  act(db, mod(), 'reveal'); // niemand hatte beide Titel
+  assert.equal(pv(db).reveal.id, 'media_abcdefabcdef13');
+  assert.equal(pv(db).playback.state, 'stopped');
+  assert.equal(totals(db)[ids[0]], 0);
 });
 
 test('DankeGleichFalsch: falscher Begriff bleibt geheim, Timeout scheidet aus, Aussteigen sichert', () => {

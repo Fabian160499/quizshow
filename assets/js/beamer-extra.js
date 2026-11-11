@@ -146,7 +146,8 @@ export function syncMedia(s) {
   const kon = v && v.type === 'konsequenz' && !v.waiting ? v : null;
   const mus = v && v.type === 'musik' && v.current && v.current.clip ? v.current : null;
   // Song Song Song: Auflösung mit Ton (einmal pro Rätsel), läuft wie beim Musikquiz 12 Sekunden.
-  const songRev = song && song.done && song.reveal ? { reveal: song.reveal, key: `ss${song.index}:${song.reveal.id}` } : null;
+  // Auflösungs-Ton startet erst mit dem Klick „Auflösen“ der Moderation.
+  const songRev = song && song.revealed && song.reveal ? { reveal: song.reveal, key: `ss${song.index}:${song.reveal.id}` } : null;
   const musAud = musRev && !musVid ? musRev : songRev;
   const au = media.audio || (song || kon || mus || musAud ? audioEl() : null);
   if (!au) return;
@@ -156,7 +157,10 @@ export function syncMedia(s) {
     setSrc(au, song.audio.id, 'audioId').then(() => {
       if (last.audioSeq === `s${song.playback.seq}`) return;
       last.audioSeq = `s${song.playback.seq}`;
-      if (song.playback.state === 'playing') { au.currentTime = 0; (au.muted ? au.play().catch(() => {}) : playWithSound(au)); } else au.pause();
+      if (song.playback.state === 'playing') {
+        au.currentTime = 0;
+        (au.muted ? au.play().catch(() => {}) : playWithSound(au));
+      } else au.pause();
     });
   } else if (kon && kon.audio && last.konFallback !== kon.audio.id && env.soundOn() && env.audioCtx && env.audioCtx()) {
     // Web-Audio-Weg (echter Beamer mit Ton)
@@ -387,9 +391,11 @@ function konsequenz(v, teamOf) {
 // ---------- Song Song Song ----------
 function songsong(v, teamOf) {
   if (v.waiting) return waitTitle('Song Song Song', 'Melodie des einen, Text des anderen Songs – schreibt beide Titel!');
-  const playing = v.playback.state === 'playing' && !v.done;
+  const playing = v.playback.state === 'playing';
   const out = [h('div', { class: `vinyl${playing ? ' spin' : ''}`, 'aria-hidden': 'true' }, h('div', { class: 'vinyl-label' }, '♪'))];
-  if (v.done) out.push(h('div', { class: 'solution' }, v.solution.filter(Boolean).join('  +  ') || 'Aufgelöst'), v.winner ? h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '1vh' } }, chip(teamOf(v.winner), '', ` ${plus(pv(v, 'correct'))}`)) : null);
+  const done = v.revealed !== undefined ? v.revealed : v.done;
+  if (done) out.push(h('div', { class: 'solution' }, v.solution.filter(Boolean).join('  +  ') || 'Aufgelöst'), v.winner ? h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '1vh' } }, chip(teamOf(v.winner), '', ` ${plus(pv(v, 'correct'))}`)) : null);
+  else if (v.done) out.push(sub(v.winner ? `${teamOf(v.winner).name} hat beide Titel! Gleich kommt die Auflösung …` : 'Gleich kommt die Auflösung …', { marginTop: '2vh' }));
   else if (!v.started) out.push(sub('Gleich läuft das Mash-up …', { marginTop: '2vh' }));
   if (v.order.length) {
     out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.order.map((o, i) => chip(teamOf(o.teamId), o.grade === false ? 'wrong' : '', h('b', {}, ` ${i + 1}.`), o.grade === true ? ' ✓' : o.grade === false ? ' ✗' : ''))));

@@ -263,8 +263,9 @@ const FLOW = {
       if (!r.started) return step('Musik abspielen', 'play');
       const pending = r.subs.filter((x) => r.grades[x.teamId] === undefined).sort((a, b) => a.at - b.at)[0];
       if (pending) return wait(`Erst die Abgabe von ${teamName(db, pending.teamId)} prüfen (✓ / ✗)`);
-      return step('Auflösen (niemand hatte beide Titel)', 'close');
+      return step('Auflösen (niemand hatte beide Titel)', 'reveal');
     }
+    if (r.revealed === false) return step('Auflösen', 'reveal');
     return nextOf(ps, st.index, 'Rätsel', 'open');
   },
 
