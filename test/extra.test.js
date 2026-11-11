@@ -227,10 +227,10 @@ test('Song Song Song: Buzzer sperrt keine anderen Teams, Prüfung in Buzzer-Reih
   assert.equal(pv(db).board[1].grade, true);
   assert.equal(tv(db, ids[0]).won, true);
   assert.equal(pv(db).solution, null);
-  // Lösung; das dritte Team wird nicht mehr gezeigt
+  // Lösung; danach alle Tafeln nebeneinander, auch das dritte Team (ohne Wertung)
   act(db, mod(), 'reveal');
   assert.deepEqual(pv(db).solution, ['A', 'B']);
-  assert.deepEqual(pv(db).board.map((b) => b.teamId), [ids[2], ids[0]]);
+  assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.grade]), [[ids[2], false], [ids[0], true], [ids[1], null]]);
   assert.equal(pv(db).winner, ids[0]);
   assert.equal(pv(db).playback.state, 'playing'); // ohne Auflösungs-Ton läuft das Mash-up weiter
   assert.throws(() => act(db, mod(), 'reveal'), /schon aufgelöst/);

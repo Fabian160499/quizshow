@@ -177,7 +177,8 @@ module.exports = {
     if (st.index < 0) return { waiting: true };
     const r = round(st, st.index);
     const p = game.content.puzzles[st.index];
-    const rs = isRevealed(r) ? { list: revealList(r), k: revealList(r).length, stage: 'solution' } : revealState(r);
+    // Nach der Lösung: alle Tafeln nebeneinander – auch die der Teams nach dem Gewinner (ohne Wertung).
+    const rs = isRevealed(r) ? { list: r.subs, k: r.subs.length, stage: 'solution' } : revealState(r);
     // Auflösung: gezeigte Teams (bis zum aktuellen) mit Antwort/Wertung je nach Stufe.
     const board = rs ? rs.list.slice(0, Math.min(rs.k + 1, rs.list.length)).map((s, i) => {
       const cur = i === rs.k;
