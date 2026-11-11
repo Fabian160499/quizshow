@@ -145,12 +145,14 @@ export function syncMedia(s) {
   const song = v && v.type === 'songsong' && !v.waiting ? v : null;
   const kon = v && v.type === 'konsequenz' && !v.waiting ? v : null;
   const mus = v && v.type === 'musik' && v.current && v.current.clip ? v.current : null;
-  const musAud = musRev && !musVid ? musRev : null;
+  // Song Song Song: Auflösung mit Ton (einmal pro Rätsel), läuft wie beim Musikquiz 12 Sekunden.
+  const songRev = song && song.done && song.reveal ? { reveal: song.reveal, key: `ss${song.index}:${song.reveal.id}` } : null;
+  const musAud = musRev && !musVid ? musRev : songRev;
   const au = media.audio || (song || kon || mus || musAud ? audioEl() : null);
   if (!au) return;
   au.muted = !env.soundOn();
   if (!kon) konStop();
-  if (song && song.audio) {
+  if (song && song.audio && !songRev) {
     setSrc(au, song.audio.id, 'audioId').then(() => {
       if (last.audioSeq === `s${song.playback.seq}`) return;
       last.audioSeq = `s${song.playback.seq}`;

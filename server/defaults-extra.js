@@ -148,7 +148,8 @@ const EXTRA_TYPES = {
     summary: 'Acht Mash-ups: Melodie des einen, Text des anderen Songs. Beide Titel schreiben, Buzzer schickt ab.',
     schema: [
       { key: 'puzzles', label: 'Musikrätsel', type: 'list', min: 1, max: 8, itemLabel: (i) => `Rätsel ${i + 1}`, addLabel: 'Rätsel hinzufügen',
-        fields: [media('audio', 'Mash-up (MP3 oder MP4, 20–45 Sekunden; MP4 läuft nur als Ton)', 'audio'), text('melody', 'Song 1 (Melodie)', 160), text('lyrics', 'Song 2 (gesungener Text)', 160)] },
+        fields: [media('audio', 'Mash-up (MP3 oder MP4, 20–45 Sekunden; MP4 läuft nur als Ton)', 'audio'), text('melody', 'Song 1 (Melodie)', 160), text('lyrics', 'Song 2 (gesungener Text)', 160),
+          media('reveal', 'Auflösung mit Ton (MP3 oder MP4, optional) – läuft auf dem Beamer ca. 12 Sekunden, sobald aufgelöst ist; MP4 nur als Ton', 'audio')] },
     ],
     example: { puzzles: Array.from({ length: 8 }, () => ({ audio: null, melody: '', lyrics: '' })) },
   },

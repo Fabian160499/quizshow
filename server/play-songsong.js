@@ -129,6 +129,8 @@ module.exports = {
       done: r.done,
       winner: r.winner,
       solution: r.done ? [p.melody, p.lyrics] : null,
+      // Auflösung mit Ton (optional): läuft auf dem Beamer ca. 12 Sekunden, nur Ton.
+      reveal: r.done && p.reveal ? { id: p.reveal.id, type: p.reveal.type } : null,
     };
   },
 };
