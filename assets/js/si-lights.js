@@ -5,6 +5,7 @@
 import { h, clamp } from './si-core.js';
 
 const PAL = {
+  bielefeld: ['#1565c0', '#ffffff', '#0a0a0a', '#f5c400'],
   studio: ['#d9433f', '#f6a9bb', '#3a5fd9', '#6b4bb8'],
   buehne: ['#ff2d8a', '#1fd6f2', '#ffd23d', '#7c5cff'],
   musical: ['#e0193a', '#f5c542', '#fff1c9', '#7a0b18'],
@@ -78,6 +79,12 @@ export function siTeam(v, me, teams, now, opts = {}) {
       if (t < boom + 2) { fill('#1679b8'); rings('#ffffff', t, 0.8); say('', tx.start); return; }
       fill(P[(v.idx + Math.floor(t / 2)) % 4], 0.25); bulbs('#ffd166', t, 6, 0.9); say('', t < tl.lines + 2 ? tx.start : tx.wait); return;
     }
+    if (theme === 'bielefeld') {
+      if (t < tl.teaser) { black(); if (t > 1.8 && t < 2.7 && Math.random() < 0.5) fill('#9aa0a6', 0.6); else radial('#f5c400', 0.25 + 0.1 * Math.sin(t * 3), 0.5, 0.5, 0.6); say(''); return; }
+      if (t < tl.count) { vgrad('#7fb0de', '#f4dfc0'); const x = ((t - tl.teaser) / (tl.count - tl.teaser)); fill('#ffffff', chase(x, 0.15) * 0.6); say(''); return; }
+      if (t < boom) { const step = (boom - tl.count) / 5; const k = Math.floor((t - tl.count) / step); black(); fill('#ffffff', strobe(t, 2 + k) ? 0.15 + k * 0.12 : 0.03); say(`${5 - k}`, '', 'count'); return; }
+      const off = t * 0.8 + pos; const band = Math.floor(off * 3) % 3; fill(['#0a0a0a', '#ffffff', '#1565c0'][band]); if (t < boom + 2.5 && strobe(t, 8)) fill('#ffffff', 0.5); say(t < tl.lines ? tx.start : '', t >= tl.lines ? tx.wait : '', band === 1 ? 'dark' : ''); return;
+    }
     if (theme === 'buehne') {
       if (t < tl.teaser) { black(); radial(P[0], 0.15 * (0.5 + 0.5 * Math.sin(t * 3)), 0.5, 1.1, 0.9); say(''); return; }
       if (t < tl.count) { const slot = (tl.count - tl.teaser - 0.9) / 8; const k = Math.floor((t - tl.teaser - 0.9) / slot); const hit = ((t - tl.teaser - 0.9) % slot) < 0.18 && t > tl.teaser + 0.9; black(); radial(P[(k + v.idx) % 4], hit ? 1 : 0.25, 0.5, 0.5, 0.9); if (hit && (k % N === v.idx || k % 2)) fill('#ffffff', 0.7); say(''); return; }
@@ -128,6 +135,7 @@ export function siTeam(v, me, teams, now, opts = {}) {
       if (t < HIT) { const hz = 3 + t * 10; fill(strobe(t, hz) ? me.color : '#000000', 1); say(''); return; }
       if (t < HIT + 0.25) { fill('#ffffff'); say(''); return; }
       fill(me.color); radial('#ffffff', 0.55 + 0.25 * Math.sin(t * 5), 0.5, 0.45, 0.6);
+      if (theme === 'bielefeld') stripes('#0a0a0a', 0.25, t * 0.5, -0.2, 0.1);
       if (theme === 'musical' || theme === 'casino' || theme === 'studio') bulbs('#fff1c9', t, 8, 0.8);
       if (theme === 'wildnis') flicker('#ff7a1a', 0.35, t);
       say(tx.you, tx.youSub, 'you'); return;

@@ -62,7 +62,13 @@ let page = read('intro-vorschau.html')
   .replace(/<iframe id="beamer" title="Beamer" src="intro-frame\.html\?role=beamer">/, '<iframe id="beamer" title="Beamer">')
   .replace(/f\.src = `intro-frame\.html\?role=ipad&i=\$\{i\}`;/, 'f.srcdoc = __frame("role=ipad&i=" + i);');
 const music = {};
-for (const f of fs.readdirSync(path.join(ROOT, 'assets', 'music'))) if (f.endsWith('.mp3')) music[f.slice(0, -4)] = dataUri(`assets/music/${f}`, 'audio/mpeg');
+// Für die Einzeldatei kleiner kodiert (64 kbit/s), damit sie unter 20 MB bleibt.
+const { execFileSync } = require('child_process');
+for (const f of fs.readdirSync(path.join(ROOT, 'assets', 'music'))) {
+  if (!f.endsWith('.mp3')) continue;
+  const tmp = path.join(require('os').tmpdir(), `siprev-${f}`);
+  try { execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(ROOT, 'assets', 'music', f), '-codec:a', 'libmp3lame', '-b:a', '64k', tmp]); music[f.slice(0, -4)] = `data:audio/mpeg;base64,${fs.readFileSync(tmp).toString('base64')}`; } catch { music[f.slice(0, -4)] = dataUri(`assets/music/${f}`, 'audio/mpeg'); }
+}
 const inject = `<script>window.__SI_CAT = ${read('assets/data/show-intro.json')};
 window.__SI_MUSIC = ${JSON.stringify(music)};
 window.__FRAME = ${JSON.stringify(frame).replace(/<\/(script)/gi, '<\\/$1')};

@@ -894,7 +894,122 @@ class Weltraum(Studio):
         return fade_out(m.render(4.0, 1.0, 5000), 0.8)
 
 
-THEMES = {'studio': Studio, 'buehne': Buehne, 'musical': Musical, 'casino': Casino, 'wildnis': Wildnis, 'weltraum': Weltraum}
+
+# ====================================================================================
+#   BIELEFELD – Stadion-Hymne: Stampfen-Klatschen, Fan-Chor, Bläser – F-Dur
+# ====================================================================================
+class Bielefeld(Studio):
+    bpm = 120
+    swing = 0.0
+    prog = [('F', 'maj'), ('C', 'maj'), ('D', 'min'), ('Bb', 'maj')]
+    theme_chords = prog * 2
+    melody = [  # Fan-Chor „Oh-oh“
+        (0, 1, 'C5'), (1, 1, 'C5'), (2, .5, 'A4'), (2.5, .5, 'C5'), (3, 1, 'F5'),
+        (4, 1, 'E5'), (5, 1, 'C5'), (6, 2, 'G4'),
+        (8, 1, 'D5'), (9, 1, 'D5'), (10, .5, 'C5'), (10.5, .5, 'D5'), (11, 1, 'F5'),
+        (12, 2, 'D5'), (14, 2, 'Bb4'),
+        (16, 1, 'C5'), (17, 1, 'C5'), (18, .5, 'A4'), (18.5, .5, 'C5'), (19, 1, 'F5'),
+        (20, 1, 'G5'), (21, 1, 'E5'), (22, 2, 'C5'),
+        (24, 1, 'D5'), (25, 1, 'F5'), (26, 1, 'A5'), (27, 1, 'G5'),
+        (28, 4, 'F5'),
+    ]
+    KEYS = ['F', 'G', 'A', 'Bb', 'C', 'D']
+
+    def drums(self, m, g, bar, inten=1.0, fill=False):
+        for b in range(4):
+            if b in (0, 2):  # Stampf-Stampf-Klatsch, doppelt gelegt wie eine Tribüne
+                m.add(S.kick(0.7 * inten, 1.4), g.t(bar, b), rev=0.25)
+                m.add(S.kick(0.6 * inten, 1.4), g.t(bar, b + 0.5), rev=0.25)
+            else:
+                for k in range(3):
+                    m.add(S.clap(0.35 * inten), g.t(bar, b) + k * 0.012, pan=(k - 1) * 0.5, rev=0.5)
+            m.add(S.hat(0.08 * inten), g.t(bar, b + 0.5), pan=0.3, rev=0.1)
+        if fill:
+            for k in range(8):
+                m.add(S.tom(150 - k * 10, 0.3 + 0.05 * k, 0.25), g.t(bar, 2 + k * 0.25), rev=0.35)
+
+    def walk(self, m, g, bar, name, kind, inten=1.0):
+        root = n(f'{name}1') if n(f'{name}1') >= n('E1') else n(f'{name}1') + 12
+        for b in range(4):
+            m.add(S.synth_bass(root, g.beat * 0.8, 0.45 * inten, 450, 1.6), g.t(bar, b), rev=0.05)
+
+    def comp(self, m, g, bar, name, kind, inten=1.0, riff=True):
+        notes = chord(n(f'{name}3'), kind)
+        m.add(S.strings(notes + [notes[0] + 12], g.bar * 0.98, 0.25 * inten, 0.05, 3500), g.t(bar, 0), rev=0.45)
+        if riff:
+            for b in (0, 1.5, 3):
+                m.add(S.brass_chord(chord(n(f'{name}4'), kind), g.beat * 0.45, 0.3 * inten, 1.1, 'section'), g.t(bar, b), rev=0.4)
+
+    def lead(self, m, g, mel, bar0=0, vol=0.5, oct_=True):
+        for b, d, p in mel:
+            bar = bar0 + int(b // 4)
+            m.add(S.choir([n(p), n(p) - 12], g.beat * d * 0.95, vol * 1.1, 0.03, 'o'), g.t(bar, b % 4), rev=0.55)
+            m.add(S.brass(n(p), g.beat * d * 0.9, vol * 0.45, 1.0, 3, 'trumpet'), g.t(bar, b % 4), pan=0.2, rev=0.45)
+
+    def tutti(self, m, t, name='F', kind='maj', vol=1.0, dur=1.6):
+        hi = chord(n(f'{name}4'), kind)
+        m.add(S.impact(0.7 * vol), t, rev=0.5)
+        m.add(S.brass_chord(hi + [hi[0] + 12], dur, 0.7 * vol, 1.3, 'trumpet'), t, rev=0.5)
+        m.add(S.choir(chord(n(f'{name}3'), kind) + [n(f'{name}4')], dur * 1.4, 0.5 * vol, 0.03, 'a'), t, rev=0.6)
+        m.add(S.crash(0.55 * vol, 2.2), t, rev=0.4)
+        m.add(S.timpani(n(f'{name}2'), 0.7 * vol), t, rev=0.4)
+
+    def build(self, m, t0, sec, top='C', vol=1.0):
+        m.add(S.snare_roll(sec, 0.35 * vol, rate=(4, 30)), t0, rev=0.4)
+        m.add(S.riser(sec, 0.3 * vol), t0, rev=0.3)
+        m.add(S.timp_roll(n(f'{top}2'), sec, 0.45 * vol), t0, rev=0.45)
+
+    def intro(self, tl):
+        boom = tl['boom']
+        g = Grid(self.bpm, boom)
+        total = boom + 20 * g.bar + 3
+        m = S.Mix(total)
+        m.dyn = self.dyn(tl, g)
+        # Cold Open: Rauschen, ein Fragezeichen-Motiv (Glocken), Stille
+        m.add(S.radio_static(1.0, 0.1), 1.8, rev=0.1)
+        for k, p in enumerate(['C5', 'A4', 'F4', 'G4']):
+            m.add(S.bell(n(p), 0.6, 0.25), 0.4 + k * 0.45, rev=0.6)
+        m.add(S.pad(chord(n('F2'), 'sus2'), tl['teaser'], 0.18, 900, 1.5), 0.0, rev=0.6)
+        # Stadtflug: Glockenspiel-Motiv (Altstadt), leichter Groove, Klatschen kommt dazu
+        tz = tl['teaser']; cnt = tl['count']
+        bars_pre = int((boom - tz) / g.bar) + 1
+        for i in range(bars_pre, 0, -1):
+            bar = -i
+            t0 = g.t(bar, 0)
+            if t0 < tz - 0.2 or t0 >= cnt:
+                continue
+            c, k = self.prog[(bars_pre - i) % 4]
+            m.add(S.strings(chord(n(f'{c}3'), k), g.bar, 0.18, 0.3, 2600), t0, rev=0.5)
+            self.walk(m, g, bar, c, k, 0.6)
+            for b, iv in ((0, 0), (0.5, 4), (1, 7), (1.5, 12), (2, 7), (3, 4)):
+                m.add(S.bell(chord(n(f'{c}5'), k)[0] + iv - 12, 0.3, 0.12), g.t(bar, b), pan=0.3, rev=0.5)
+            for b in (1, 3):
+                m.add(S.clap(0.15), g.t(bar, b), rev=0.5)
+        # Stadion: Stampfen-Klatschen baut sich auf
+        t = cnt
+        while t < boom - 0.3:
+            p = (t - cnt) / (boom - cnt)
+            m.add(S.kick(0.35 + 0.4 * p, 1.4), t, rev=0.3)
+            m.add(S.kick(0.3 + 0.4 * p, 1.4), t + 0.25, rev=0.3)
+            for k in range(3):
+                m.add(S.clap(0.2 + 0.25 * p), t + 0.5 + k * 0.012, pan=(k - 1) * 0.5, rev=0.5)
+            t += 1.0
+        self.build(m, boom - 2.5, 2.42, 'C', 1.0)
+        self.tutti(m, boom, 'F', 'maj', 1.2, 2.0)
+        for i, (c, k) in enumerate(self.theme_chords):
+            self.drums(m, g, i, 1.0, fill=(i == 7))
+            self.walk(m, g, i, c, k)
+            self.comp(m, g, i, c, k, 0.9, riff=(i % 2 == 0))
+        self.lead(m, g, self.melody, 0, 0.45)
+        for i in range(12):
+            c, k = self.prog[i % 4]
+            self.drums(m, g, 8 + i, 0.6, fill=(i % 4 == 3))
+            self.walk(m, g, 8 + i, c, k, 0.8)
+            self.comp(m, g, 8 + i, c, k, 0.55, riff=(i % 2 == 0))
+        return fade_out(m.render(2.8, 0.85), 0.4)
+
+
+THEMES = {'bielefeld': Bielefeld, 'studio': Studio, 'buehne': Buehne, 'musical': Musical, 'casino': Casino, 'wildnis': Wildnis, 'weltraum': Weltraum}
 
 
 def main(ids):

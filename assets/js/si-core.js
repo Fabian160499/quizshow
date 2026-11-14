@@ -140,6 +140,7 @@ export const SYNTH = {
   heart(a, t, vol = 1) { tone(a, t, 'sine', 55, 38, 0.12, 0.6 * vol, 0.15); tone(a, t + 0.22, 'sine', 50, 36, 0.14, 0.45 * vol, 0.15); },
   strike(a, t) { burst(a, t, 'highpass', 2500, 0.7, 0.25, 0.3, 0.2, 0, 0.01); burst(a, t + 0.1, 'lowpass', 900, 0.7, 0.8, 0.25, 0.3, 0, 0.05); },
   wing(a, t) { burst(a, t, 'bandpass', 700, 1.2, 0.35, 0.18, 0.2, 0.5, 0.06); },
+  clap(a, t) { for (let k = 0; k < 3; k++) burst(a, t + k * 0.011, 'bandpass', 1400, 0.9, k < 2 ? 0.02 : 0.15, 0.35, 0.4, (Math.random() - 0.5) * 0.6); },
   pop(a, t) { tone(a, t, 'sine', 600, 140, 0.08, 0.15, 0.3); burst(a, t, 'highpass', 3000, 0.7, 0.03, 0.1, 0.3); },
 };
 // Große Klänge spielen nur als KI-Effekt (oder ohne Musik) – sonst trägt die Musik den Einschlag.

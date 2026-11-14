@@ -25,6 +25,7 @@ const THEME_IDS = CATALOG.order;
 const DEFAULT_THEME = THEME_IDS[0];
 const FIELDS = CATALOG.fields;
 const TEAM_FIELDS = CATALOG.teamFields;
+const teamFieldsFor = (theme) => TEAM_FIELDS.filter((f) => !f.only || f.only.includes(theme));
 const LINES_MAX = 8;
 
 const fieldsFor = (theme) => FIELDS.filter((f) => !f.only || f.only.includes(theme));
@@ -117,6 +118,7 @@ function texts(project) {
       tag: fill(rawTeam(project, t, i, 'tag'), ex),
       extra: fill(rawTeam(project, t, i, 'extra'), ex),
       kicker: fill(rawText(project, 'team.kicker'), ex),
+      ...Object.fromEntries(teamFieldsFor(c.theme).filter((f) => !['call', 'tag', 'extra'].includes(f.key)).map((f) => [f.key, fill(rawTeam(project, t, i, f.key), ex)])),
       other: fill(rawText(project, 'ipad.other'), ex),
       row: fill(rawText(project, 'poll.row'), ex),
     };
@@ -278,7 +280,7 @@ const actions = {
     const key = String(p.key || '');
     const f = fieldsFor(theme).find((x) => x.key === key);
     const tm = /^team\.([\w-]+)\.(\w+)$/.exec(key);
-    if (!f && !(tm && pr.teams.some((t) => t.id === tm[1]) && TEAM_FIELDS.some((x) => x.key === tm[2]))) fail('Unbekannter Text.');
+    if (!f && !(tm && pr.teams.some((t) => t.id === tm[1]) && teamFieldsFor(theme).some((x) => x.key === tm[2]))) fail('Unbekannter Text.');
     let v = p.value;
     if (v !== null) {
       if (f && f.multi) v = (Array.isArray(v) ? v : String(v || '').split('\n')).slice(0, LINES_MAX).map((l) => cleanText(String(l || ''), 140));
@@ -383,9 +385,9 @@ function moderatorData(db) {
     texts: texts(pr),
     own: mine,
     defaults: th.t,
-    teamDefaults: pr.teams.map((t, i) => Object.fromEntries(TEAM_FIELDS.map((f) => [f.key, (th.team[f.key] || [])[i % (th.team[f.key] || ['']).length] || '']))),
+    teamDefaults: pr.teams.map((t, i) => Object.fromEntries(teamFieldsFor(c.theme).map((f) => [f.key, (th.team[f.key] || [])[i % (th.team[f.key] || ['']).length] || '']))),
     fields: fieldsFor(c.theme).map((f) => ({ ...f, label: (th.labels && th.labels[f.key]) || f.label })),
-    teamFields: TEAM_FIELDS.map((f) => ({ ...f, label: (th.labels && th.labels[f.key]) || f.label })),
+    teamFields: teamFieldsFor(c.theme).map((f) => ({ ...f, label: (th.labels && th.labels[f.key]) || f.label })),
     groups: CATALOG.groups,
     themes: THEME_IDS.map((id) => ({ id, name: THEMES[id].name, desc: THEMES[id].desc })),
     tl: th.tl,

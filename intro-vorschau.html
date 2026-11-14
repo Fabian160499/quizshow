@@ -85,7 +85,7 @@
       const tx = {};
       for (const f of CAT.fields) if (!f.only || f.only.includes(id)) tx[f.key] = f.multi ? (th.t[f.key] || []).map((l) => fill(l)) : fill(th.t[f.key]);
       const pick = (k, i) => (th.team[k] || [''])[i % (th.team[k] || ['']).length];
-      const teams = TEAMS.map((t, i) => { const ex = { team: t.name, nr: i + 1 }; return { teamId: t.id, call: fill(pick('call', i), ex), tag: fill(pick('tag', i), ex), extra: fill(pick('extra', i), ex), kicker: fill(th.t['team.kicker'], ex), other: fill(th.t['ipad.other'], ex), row: fill(th.t['poll.row'] || '', ex) }; });
+      const teams = TEAMS.map((t, i) => { const ex = { team: t.name, nr: i + 1 }; return { teamId: t.id, ...Object.fromEntries(Object.keys(th.team).map((k) => [k, fill(pick(k, i), ex)])), kicker: fill(th.t['team.kicker'], ex), other: fill(th.t['ipad.other'], ex), row: fill(th.t['poll.row'] || '', ex) }; });
       const person = (k, name) => ({ name, call: fill(th.t[`${k}.call`], { name }), kicker: fill(th.t[`${k}.kicker`], { name }), tag: fill(th.t[`${k}.tag`], { name }), ipad: fill(th.t['ipad.host'], { name }) });
       return { tx, teams, host: person('host', SHOW.host), coHost: person('coHost', SHOW.coHost), lines: tx.lines, games: GAMES.map((title, i) => ({ position: i + 1, title, label: fill(th.t['teaser.item'], { nr: i + 1, title }) })), extraLabel: (th.labels || {}).extra || '' };
     }
