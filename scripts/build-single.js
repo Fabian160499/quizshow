@@ -146,7 +146,7 @@ function inlineImages(text) {
   });
 }
 
-// Standard-Musik des Show-Intros (für die Einzeldatei kleiner kodiert, 48 kbit/s).
+// Standard-Musik des Show-Intros (für die Einzeldatei klein kodiert: 16 kbit/s mono, damit der Prototyp unter 16 MB bleibt).
 // Ohne ffmpeg bleibt das Intro im Prototyp stumm – auf dem Show-Rechner spielt die volle Qualität.
 function siMusic() {
   const dir = path.join(SRC, 'assets', 'music');
@@ -157,7 +157,7 @@ function siMusic() {
   for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.mp3'))) {
     const tmp = path.join(os.tmpdir(), `si-${f}`);
     try {
-      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(dir, f), '-codec:a', 'libmp3lame', '-b:a', '48k', tmp]);
+      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(dir, f), '-ac', '1', '-codec:a', 'libmp3lame', '-b:a', '16k', '-ar', '22050', tmp]);
       out[f.slice(0, -4)] = `data:audio/mpeg;base64,${fs.readFileSync(tmp).toString('base64')}`;
     } catch { return 'window.__SI_MUSIC = {};'; }
   }
