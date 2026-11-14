@@ -2,6 +2,7 @@
 // Alle sichtbaren Texte kommen aus si.tx / si.teams / si.host (im Editor änderbar).
 
 import { h, later, atTime, esc, frag, logoEl, avatarOf, nowEl } from './si-core.js';
+import { mediaUrl } from './client.js';
 import { MAPS } from './map-data.js';
 const nowElSafe = () => nowEl(0);
 
@@ -373,7 +374,9 @@ function presents(c, kicker, word) {
 function dropLogo(c, stage, extras = []) {
   const { si, s, L, el } = c;
   const boom = si.tl.boom;
-  const wrap = h('div', { class: 'si-logo-wrap' }, si.tx['drop.big'] ? h('div', { class: `si-bigword ${L.font}` }, si.tx['drop.big']) : null, logoEl(s.show.name, L), si.tx['drop.sub'] ? h('div', { class: 'si-sub' }, si.tx['drop.sub']) : null);
+  const img = si.dropImage ? h('img', { class: 'si-dropimg', alt: '' }) : null;
+  if (img) mediaUrl(si.dropImage.id).then((u) => { if (u) img.src = u; });
+  const wrap = h('div', { class: 'si-logo-wrap' }, img, si.tx['drop.big'] ? h('div', { class: `si-bigword ${L.font}` }, si.tx['drop.big']) : null, logoEl(s.show.name, L), si.tx['drop.sub'] ? h('div', { class: 'si-sub' }, si.tx['drop.sub']) : null);
   const fresh = el < boom + 0.8;
   stage.replaceChildren(...[fresh ? h('div', { class: 'si-flash', 'aria-hidden': 'true' }) : null, h('div', { class: 'si-rays', 'aria-hidden': 'true' }), ...extras, wrap].filter(Boolean));
   if (fresh) wrap.classList.add('from-particles');
@@ -740,53 +743,114 @@ function fachwerk(x, y, w, hgt, roof, wall = '#f3ece0') {
   for (let k = 0; k < 3; k++) win += `<rect x="${x + 14 + k * (w - 28) / 3}" y="${y + hgt * 0.62}" width="${(w - 40) / 4}" height="${hgt * 0.22}" fill="#6f8fb0"/>`;
   return `<rect x="${x}" y="${y}" width="${w}" height="${hgt}" fill="${wall}"/>${beams}${win}<path d="M${x - 8},${y} L${x + w / 2},${y - roof} L${x + w + 8},${y} Z" fill="#8c3b2a"/>`;
 }
+// Sparrenburg nach Foto: runder Sandsteinturm mit Zinnenkranz, Galerie-Ring, Sparren-Fahne, Haus mit rotem Dach
+function sparrenburg() {
+  const merlons = Array.from({ length: 7 }, (_, k) => `<rect x="${-56 + k * 17}" y="236" width="11" height="20" fill="url(#bstone)"/>`).join('');
+  const corbel = (y, w) => Array.from({ length: Math.round(w / 8) }, (_, k) => `<rect x="${-w / 2 + k * 8 + 1}" y="${y}" width="5" height="7" fill="#9c8a6a"/>`).join('');
+  const courses = Array.from({ length: 22 }, (_, k) => `<path d="M-46,${290 + k * 14} L46,${290 + k * 14}" stroke="rgba(120,100,70,.25)" stroke-width="1.5"/>`).join('');
+  return `<g transform="translate(1180 0)">
+    <path d="M-300,900 L-300,640 Q-60,520 300,620 L300,900 Z" fill="#4e7148"/>
+    <path d="M-230,640 L-170,600 L210,600 L250,640 L230,690 L-210,690 Z" fill="#cbb894"/><path d="M-230,640 L250,640" stroke="#a8956f" stroke-width="4"/>
+    ${Array.from({ length: 4 }, (_, k) => `<path d="M-215,${652 + k * 9} L235,${652 + k * 9}" stroke="rgba(120,100,70,.25)" stroke-width="1.5"/>`).join('')}
+    <rect x="60" y="470" width="150" height="132" fill="#d9c9a6"/><path d="M50,472 L135,400 L220,472 Z" fill="#a8452e"/><path d="M120,436 L150,436 L150,452 L120,452 Z" fill="#e8e1d2"/>
+    ${[[78, 500], [120, 500], [162, 500], [78, 548], [162, 548]].map(([x, y]) => `<rect x="${x}" y="${y}" width="22" height="30" fill="#f2efe6" stroke="#8a7656" stroke-width="2"/>`).join('')}
+    <rect x="-46" y="262" width="92" height="340" fill="url(#bstone)"/>${courses}
+    <rect x="-58" y="516" width="116" height="14" fill="url(#bstone)"/>${corbel(530, 116)}
+    <rect x="-56" y="248" width="112" height="16" fill="url(#bstone)"/>${corbel(264, 112)}${merlons}
+    ${[330, 395, 455].map((y) => `<path d="M-6,${y + 22} L-6,${y + 6} Q0,${y - 2} 6,${y + 6} L6,${y + 22} Z" fill="#5b4a37"/>`).join('')}
+    <path d="M-40,602 Q-20,560 -30,520 Q-10,560 0,602 Z" fill="#4b6b3a" opacity=".85"/>
+    <rect x="-1.5" y="150" width="3" height="100" fill="#555"/><circle cx="0" cy="148" r="4" fill="#b8a050"/>
+    <g transform="translate(2 158)"><rect width="64" height="40" fill="#fff"/><path d="M0,10 L32,24 L64,10 L64,20 L32,34 L0,20 Z M0,-4 L32,10 L64,-4 L64,6 L32,20 L0,6 Z" fill="#c8323a"/><path d="M0,34 L32,48 L64,34 L64,40 L0,40 Z" fill="#c8323a" opacity=".9"/></g>
+  </g>`;
+}
+// Altes Rathaus nach Foto: Sandstein, zwei Ziergiebel (links mit Uhr), Arkaden, grüner Erker; Theater daneben
+function rathaus() {
+  const win = (x, y, w, hh) => `<rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="#7f97ad"/><path d="M${x + w / 2},${y} L${x + w / 2},${y + hh} M${x},${y + hh * 0.4} L${x + w},${y + hh * 0.4}" stroke="#efe6d2" stroke-width="3"/>`;
+  const gable = (x0, w, top) => { const steps = 4; let d = `M${x0},470`; for (let k = 0; k < steps; k++) { const y = 470 - ((470 - top) / steps) * (k + 1); d += ` L${x0 + (w / 2 / steps) * k + 6},${y + 18} L${x0 + (w / 2 / steps) * k + 6},${y} L${x0 + (w / 2 / steps) * (k + 1)},${y}`; } d += ` L${x0 + w / 2},${top - 20}`; for (let k = steps - 1; k >= 0; k--) { const y = 470 - ((470 - top) / steps) * (k + 1); d += ` L${x0 + w - (w / 2 / steps) * (k + 1)},${y} L${x0 + w - (w / 2 / steps) * k - 6},${y} L${x0 + w - (w / 2 / steps) * k - 6},${y + 18}`; } return `${d} L${x0 + w},470 Z`; };
+  return `<g transform="translate(2050 0)">
+    <path d="M-170,470 L-20,400 L70,400 L220,470 Z" fill="#a8452e"/>
+    <rect x="-180" y="470" width="410" height="430" fill="url(#bsand)"/>
+    <path d="${gable(-180, 160, 250)}" fill="url(#bsand)"/><path d="${gable(70, 150, 300)}" fill="url(#bsand)"/>
+    <rect x="-102" y="190" width="4" height="40" fill="#8a7656"/><rect x="143" y="242" width="4" height="40" fill="#8a7656"/>
+    <circle cx="-100" cy="350" r="22" fill="#efe6d2" stroke="#6e5a3e" stroke-width="5"/><path d="M-100,350 L-100,336 M-100,350 L-90,356" stroke="#3a2f22" stroke-width="3"/>
+    ${win(-160, 395, 26, 40)}${win(-114, 395, 26, 40)}${win(-68, 395, 26, 40)}${win(120, 360, 28, 42)}
+    ${[-165, -120, -75, 0, 45, 100, 150, 195].map((x) => win(x, 510, 30, 60) + win(x, 610, 30, 60)).join('')}
+    ${[-165, -125, -85, -45].map((x) => `<path d="M${x},900 L${x},820 Q${x + 17},790 ${x + 34},820 L${x + 34},900 Z" fill="#4c3d2c"/>`).join('')}
+    <rect x="-176" y="790" width="160" height="10" fill="#bfa77c"/><rect x="-180" y="700" width="410" height="8" fill="#bfa77c"/>
+    <path d="M12,600 L50,600 L50,680 L31,700 L12,680 Z" fill="#79a596"/><path d="M12,600 Q31,575 50,600 Z" fill="#5f8a7c"/>
+    <path d="M170,800 L170,900 L220,900 L220,800 Q195,770 170,800 Z" fill="#4c3d2c"/>
+    <rect x="232" y="560" width="70" height="340" fill="url(#bsand)"/><path d="M228,560 L267,500 L306,560 Z" fill="#79a596"/>
+  </g>
+  <g transform="translate(2420 0)"><rect x="-70" y="520" width="150" height="380" fill="#d9c7a6"/><path d="M-70,520 Q5,430 80,520 Z" fill="#c4b08c"/><path d="M-30,470 Q5,400 40,470 Z" fill="#79a596"/>${Array.from({ length: 3 }, (_, k) => `<rect x="${-50 + k * 45}" y="580" width="26" height="80" rx="13" fill="#7f97ad"/>`).join('')}<rect x="-55" y="720" width="120" height="16" fill="#b39d78"/>${Array.from({ length: 4 }, (_, k) => `<rect x="${-48 + k * 34}" y="736" width="12" height="164" fill="#c4b08c"/>`).join('')}</g>
+  <rect x="2302" y="600" width="50" height="34" fill="#c9b38a"/>`;
+}
+// Alter Markt nach Foto: weißes Giebelhaus, Renaissance-Ziergiebel (Sandstein), gelbes Giebelhaus
+function altmarkt() {
+  const win = (x, y) => `<rect x="${x}" y="${y}" width="18" height="30" fill="#7f97ad" stroke="#f3eee2" stroke-width="2"/>`;
+  const rows = (x0, n, y0, rowsN, gap = 30) => Array.from({ length: rowsN }, (_, r) => Array.from({ length: n }, (_, k) => win(x0 + k * gap, y0 + r * 62)).join('')).join('');
+  return `<g>
+    <rect x="1560" y="560" width="110" height="340" fill="#f1ede6"/><path d="M1552,560 L1615,440 L1678,560 Z" fill="#b5503a"/><path d="M1575,560 L1615,470 L1655,560 Z" fill="#f1ede6"/>${rows(1575, 3, 590, 4)}
+    <rect x="1670" y="520" width="130" height="380" fill="url(#bsand)"/>
+    <path d="M1670,520 L1670,480 L1688,480 L1688,450 L1706,450 L1706,420 L1724,420 L1724,390 L1746,390 L1746,420 L1764,420 L1764,450 L1782,450 L1782,480 L1800,480 L1800,520 Z" fill="url(#bsand)"/><path d="M1735,390 L1735,360" stroke="#8a7656" stroke-width="4"/><circle cx="1735" cy="356" r="6" fill="#8a7656"/>
+    ${[[1690, 470], [1780, 470], [1708, 440], [1762, 440]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6" fill="#bfa77c"/>`).join('')}${rows(1684, 4, 545, 5, 27)}
+    <rect x="1800" y="540" width="130" height="360" fill="#ecd98f"/><path d="M1792,540 L1865,410 L1938,540 Z" fill="#ecd98f"/><path d="M1792,540 L1865,410 L1938,540" fill="none" stroke="#9c7f45" stroke-width="5"/><path d="M1865,410 L1880,404 L1940,540 L1930,540 Z" fill="#b5503a"/>${win(1856, 470)}${rows(1818, 3, 570, 4, 34)}
+  </g>`;
+}
 function cityPanorama() {
   const W = 3600;
   const far = hillPath(0, W, 520, 120, 1.3);
   const near = hillPath(0, 1500, 640, 150, 2.1);
   const nearY = (x) => 640 - 150 * (0.55 + 0.45 * Math.sin(x * 0.004 * 2.1 + 2.1) * Math.cos(x * 0.0017 + 2.1));
-  // Sparrenburg auf dem Hügel (Mauern mit Bastionen, runder Turm)
-  const sb = `<g transform="translate(1180 0)"><path d="M-260,900 L-260,610 Q0,470 260,610 L260,900 Z" fill="#456b45"/>
-    <path d="M-170,600 L-120,560 L120,560 L170,600 L150,640 L-150,640 Z" fill="#b9a58a"/><rect x="-150" y="560" width="300" height="12" fill="#9c896f"/>
-    <path d="M-170,600 L-200,620 L-170,640 Z M170,600 L200,620 L170,640 Z" fill="#a8947a"/>
-    <rect x="-38" y="330" width="76" height="240" fill="#c9b79b"/><rect x="-38" y="330" width="18" height="240" fill="#a8947a"/>
-    <rect x="-46" y="318" width="92" height="16" fill="#a8947a"/>${Array.from({ length: 5 }, (_, k) => `<rect x="${-46 + k * 20}" y="304" width="12" height="16" fill="#a8947a"/>`).join('')}
-    <path d="M-20,304 Q0,270 20,304 Z" fill="#6c7d86"/><rect x="-1" y="250" width="2" height="30" fill="#333"/>
-    ${Array.from({ length: 4 }, (_, k) => `<rect x="-6" y="${380 + k * 45}" width="12" height="20" rx="6" fill="#4a3c30"/>`).join('')}</g>`;
-  // Fernsehturm auf dem Teuto
   const tower = `<g transform="translate(420 ${nearY(420) - 4})"><rect x="-7" y="-330" width="14" height="330" fill="#d9dde3"/><rect x="-26" y="-250" width="52" height="34" rx="6" fill="#e9edf2"/><rect x="-22" y="-244" width="44" height="8" fill="#9aa7b4"/><rect x="-2" y="-420" width="4" height="95" fill="#c43c3c"/><circle cx="0" cy="-422" r="5" fill="#ff4a4a"/></g>`;
-  // Altstadt: Altes Rathaus (Treppengiebel + Turm), Nicolaikirche, Fachwerk
-  const rathaus = `<g transform="translate(2050 0)"><rect x="-140" y="470" width="280" height="430" fill="#c98d6b"/><path d="M-140,470 L-140,420 L-110,420 L-110,390 L-80,390 L-80,360 L-50,360 L-50,330 L50,330 L50,360 L80,360 L80,390 L110,390 L110,420 L140,420 L140,470 Z" fill="#b97a59"/>
-    <rect x="150" y="300" width="70" height="600" fill="#b97a59"/><path d="M140,300 L185,170 L230,300 Z" fill="#4f6670"/>
-    ${Array.from({ length: 3 }, (_, r) => Array.from({ length: 5 }, (_, k) => `<path d="M${-115 + k * 52},${520 + r * 110} L${-115 + k * 52},${495 + r * 110} Q${-97 + k * 52},${470 + r * 110} ${-79 + k * 52},${495 + r * 110} L${-79 + k * 52},${520 + r * 110} Z" fill="#5d7a92"/>`).join('')).join('')}
-    <rect x="-40" y="800" width="80" height="100" rx="40" fill="#5a3a2a"/><circle cx="185" cy="360" r="20" fill="#f4efe2" stroke="#5a3a2a" stroke-width="4"/></g>`;
-  const theater = `<g transform="translate(2290 0)"><rect x="-70" y="520" width="150" height="380" fill="#d9c7a6"/><path d="M-70,520 Q5,430 80,520 Z" fill="#c4b08c"/><path d="M-30,470 Q5,400 40,470 Z" fill="#5f7a74"/>${Array.from({ length: 3 }, (_, k) => `<rect x="${-50 + k * 45}" y="580" width="26" height="80" rx="13" fill="#5d7a92"/>`).join('')}<rect x="-55" y="720" width="120" height="16" fill="#b39d78"/>${Array.from({ length: 4 }, (_, k) => `<rect x="${-48 + k * 34}" y="736" width="12" height="164" fill="#c4b08c"/>`).join('')}</g>
-    <rect x="2190" y="600" width="35" height="40" fill="#b97a59"/><rect x="2190" y="596" width="35" height="6" fill="#8f5c42"/>`;
-  const kirche = `<g transform="translate(2470 0)"><rect x="-60" y="380" width="120" height="520" fill="#9e8f80"/><path d="M-60,380 L0,90 L60,380 Z" fill="#3f5560"/><rect x="-3" y="60" width="6" height="40" fill="#c9a43a"/><rect x="-14" y="72" width="28" height="5" fill="#c9a43a"/><rect x="-18" y="460" width="36" height="90" rx="18" fill="#4b5d6a"/></g>`;
-  const fw = fachwerk(1640, 600, 150, 300, 110) + fachwerk(1800, 640, 120, 260, 90, '#efe4d0') + fachwerk(2520, 620, 140, 280, 100) + fachwerk(2670, 660, 120, 240, 80, '#f1e7d6');
-  // Jahnplatz: Stadt, Haltestellendach, Stadtbahn
   const blocks = [[2860, 420, 160], [3030, 360, 130], [3170, 450, 170], [3350, 390, 150], [3510, 470, 120]].map(([x, y, w], i) => `<rect x="${x}" y="${y}" width="${w}" height="${900 - y}" fill="${['#8a96a3', '#9fa9b3', '#7d8a97', '#a7b0b9', '#8f9aa6'][i]}"/>${Array.from({ length: Math.floor((900 - y) / 60) }, (_, r) => `<rect x="${x + 12}" y="${y + 20 + r * 60}" width="${w - 24}" height="26" fill="#c7d6e3" opacity=".7"/>`).join('')}`).join('');
   const stop = `<path d="M2900,700 L3400,690 L3400,705 L2900,716 Z" fill="#e8edf2"/><rect x="2920" y="712" width="8" height="120" fill="#5c6670"/><rect x="3370" y="704" width="8" height="128" fill="#5c6670"/>`;
   const tram = `<g class="si-tram"><rect x="2950" y="760" width="420" height="96" rx="18" fill="#f4f6f8"/><rect x="2950" y="826" width="420" height="20" fill="#1565c0"/>${Array.from({ length: 6 }, (_, k) => `<rect x="${2975 + k * 64}" y="775" width="46" height="38" rx="6" fill="#26394f"/>`).join('')}<rect x="3150" y="740" width="4" height="22" fill="#333"/></g>`;
-  const ground = `<rect x="0" y="852" width="${W}" height="48" fill="#5f6a5c"/><rect x="1500" y="852" width="${W - 1500}" height="48" fill="#6b6f74"/><rect x="0" y="852" width="${W}" height="5" fill="#3f4a3d"/>`;
-  const svg = `<svg viewBox="0 0 ${W} 900" preserveAspectRatio="xMinYMid slice" aria-hidden="true"><defs><linearGradient id="bisky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fb0de"/><stop offset=".7" stop-color="#e7e9e6"/><stop offset="1" stop-color="#f4dfc0"/></linearGradient></defs>
+  const ground = `<rect x="0" y="852" width="${W}" height="48" fill="#5f6a5c"/><rect x="1500" y="852" width="${W - 1500}" height="48" fill="#b9b1a3"/><rect x="0" y="852" width="${W}" height="5" fill="#3f4a3d"/>`;
+  const svg = `<svg viewBox="0 0 ${W} 900" preserveAspectRatio="xMinYMid slice" aria-hidden="true"><defs><linearGradient id="bisky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f86d8"/><stop offset=".65" stop-color="#9cc6ef"/><stop offset="1" stop-color="#e9eef2"/></linearGradient>
+    <linearGradient id="bstone" x1="0" x2="1"><stop offset="0" stop-color="#efe5cc"/><stop offset=".45" stop-color="#d9c9a4"/><stop offset="1" stop-color="#a99674"/></linearGradient>
+    <linearGradient id="bsand" x1="0" x2="1"><stop offset="0" stop-color="#d8c296"/><stop offset="1" stop-color="#c2a878"/></linearGradient></defs>
     <rect width="${W}" height="900" fill="url(#bisky)"/><path d="${far}" fill="#8aa585"/>${trees(0, W, (x) => 520 - 120 * (0.55 + 0.45 * Math.sin(x * 0.004 * 1.3 + 1.3) * Math.cos(x * 0.0017 + 1.3)), '#7a9875', 18, 14)}
-    <path d="${near}" fill="#4f7350"/>${trees(0, 1500, nearY, '#3f6142', 30, 20)}${tower}${sb}${fw}${rathaus}${theater}${kirche}${blocks}${stop}${tram}${ground}</svg>`;
+    <path d="${near}" fill="#4f7350"/>${trees(0, 1500, nearY, '#3f6142', 30, 20)}${tower}${sparrenburg()}${altmarkt()}${rathaus()}${blocks}${stop}${tram}${ground}</svg>`;
   return h('div', { class: 'si-set si-city' }, frag(svg, 'si-pano'), h('div', { class: 'si-city-haze' }));
 }
+// Die Alm von oben (Anflug): weißes Dach rundum, blaue Fassade, grüner Rasen
+function almAerial() {
+  const svg = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="1600" height="900" fill="#5f7d4a"/>
+    ${Array.from({ length: 40 }, (_, k) => `<circle cx="${(k * 397) % 1600}" cy="${(k * 233) % 900}" r="${30 + (k % 5) * 12}" fill="#3f6334"/>`).join('')}
+    ${Array.from({ length: 14 }, (_, k) => `<rect x="${(k * 271) % 1500}" y="${(k * 157) % 850}" width="70" height="44" fill="#b5503a"/>`).join('')}
+    <g transform="translate(800 470) rotate(-8)"><rect x="-470" y="-250" width="940" height="560" rx="70" fill="#1e5bb0"/><rect x="-480" y="-290" width="960" height="560" rx="80" fill="#f2f4f6"/>
+    <rect x="-440" y="-250" width="880" height="480" rx="50" fill="#e3e8ee"/><rect x="-340" y="-170" width="680" height="320" fill="#2b5fa8"/>
+    <rect x="-300" y="-140" width="600" height="260" fill="#3f9a45"/>${Array.from({ length: 8 }, (_, k) => `<rect x="${-300 + k * 75}" y="-140" width="37" height="260" fill="#46a64c"/>`).join('')}
+    <rect x="80" y="-288" width="380" height="120" fill="#9fb3c8" opacity=".6"/></g></svg>`;
+  return h('div', { class: 'si-set si-alm-air' }, frag(svg, 'si-air'));
+}
+// Die Alm von innen nach Foto: Dach mit blauen Trägern und hellen Paneelen, Lichtband, Videowand,
+// zwei Ränge mit hochgehaltenen Schals, Fahnen in Schwarz-Weiß-Blau, Werbebande ohne Text
 function stadiumSet(mode) {
-  const crowd = Array.from({ length: 260 }, (_, i) => { const row = Math.floor(i / 52); const x = 30 + (i % 52) * 30.5 + (row % 2) * 15; const y = 470 + row * 46; return `<circle class="fan" cx="${x}" cy="${y}" r="10" fill="${['#0a0a0a', '#f2f2f2', '#1565c0', '#0a0a0a', '#1565c0'][(i * 7) % 5]}" style="animation-delay:${((i * 37) % 100) / 100}s"/>`; }).join('');
-  const lights = Array.from({ length: 40 }, (_, k) => `<rect x="${20 + k * 39.5}" y="372" width="26" height="9" rx="2" fill="#fffbe8"/>`).join('');
-  const svg = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="nsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#03050c"/><stop offset="1" stop-color="#14203a"/></linearGradient><radialGradient id="pitch" cx=".5" cy="0" r="1"><stop offset="0" stop-color="#2f8f3e"/><stop offset="1" stop-color="#15461f"/></radialGradient><linearGradient id="roofg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3442"/><stop offset="1" stop-color="#151b24"/></linearGradient></defs>
-    <rect width="1600" height="900" fill="url(#nsky)"/>
-    <path d="M-40,250 L1640,250 L1640,330 L-40,380 Z" fill="url(#roofg)"/><path d="M-40,330 L1640,330" stroke="#3b4757" stroke-width="3"/>
-    ${Array.from({ length: 20 }, (_, k) => `<path d="M${k * 84},250 L${k * 84 + 30},378" stroke="#3a4554" stroke-width="3"/>`).join('')}
-    <path d="M-40,250 L1640,250 L1640,262 L-40,262 Z" fill="#6aa7e0" opacity=".35"/>
-    <rect x="0" y="366" width="1600" height="20" fill="#0d1118"/>${lights}
-    <path d="M0,386 L1600,386 L1600,720 L0,720 Z" fill="#11151d"/>${Array.from({ length: 5 }, (_, k) => `<rect x="0" y="${430 + k * 58}" width="1600" height="3" fill="#1b2230"/>`).join('')}${crowd}
-    <rect x="0" y="690" width="1600" height="30" fill="#0e3d7a"/>${Array.from({ length: 8 }, (_, k) => `<rect x="${30 + k * 200}" y="696" width="140" height="18" rx="3" fill="${k % 2 ? '#ffffff' : '#1565c0'}" opacity=".85"/>`).join('')}
-    <path d="M0,720 L1600,720 L1600,900 L0,900 Z" fill="url(#pitch)"/>${Array.from({ length: 8 }, (_, k) => `<rect x="${k * 200}" y="720" width="100" height="180" fill="rgba(255,255,255,.04)"/>`).join('')}
-    <rect x="0" y="716" width="1600" height="8" fill="#e9eef3"/><path d="M500,900 Q800,780 1100,900" stroke="#e9eef3" stroke-width="4" fill="none"/></svg>`;
+  let scarves = '';
+  const tiers = [[430, 560, 7], [600, 700, 5]];
+  for (const [y0, y1, rowsN] of tiers) {
+    for (let r = 0; r < rowsN; r++) {
+      const y = y0 + (r * (y1 - y0)) / rowsN;
+      for (let x = (r % 2) * 14; x < 1600; x += 28) {
+        scarves += `<rect class="fan" x="${x}" y="${y.toFixed(0)}" width="22" height="7" fill="#1d4fa0" style="animation-delay:${(((x * 13 + r * 7) % 100) / 100).toFixed(2)}s"/><rect x="${x + 7}" y="${y.toFixed(0)}" width="4" height="7" fill="#f4f6f8"/><rect x="${x + 15}" y="${y.toFixed(0)}" width="3" height="7" fill="#f4f6f8"/><circle cx="${x + 11}" cy="${(y + 13).toFixed(0)}" r="5" fill="#141820"/>`;
+      }
+    }
+  }
+  const flag = (x, y, cols, rot) => `<g class="flag" style="transform-origin:${x}px ${y}px; animation-delay:${(x % 7) / 10}s"><rect x="${x}" y="${y}" width="3" height="120" fill="#ddd"/><g transform="translate(${x + 3} ${y}) rotate(${rot})">${cols.map((c, i) => `<rect y="${i * 22}" width="110" height="22" fill="${c}"/>`).join('')}</g></g>`;
+  const flags = flag(300, 380, ['#0a0a0a', '#ffffff', '#1d4fa0'], 8) + flag(760, 360, ['#1d4fa0', '#ffffff', '#1d4fa0'], -6) + flag(1180, 390, ['#0a0a0a', '#ffffff', '#1d4fa0'], 10) + flag(1440, 400, ['#1d4fa0', '#0a0a0a', '#ffffff'], -10);
+  const svg = `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="nsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#03050c"/><stop offset="1" stop-color="#14203a"/></linearGradient><radialGradient id="pitch" cx=".5" cy="0" r="1"><stop offset="0" stop-color="#3a9a45"/><stop offset="1" stop-color="#1a5424"/></radialGradient><linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9dcae"/><stop offset="1" stop-color="#b9ab83"/></linearGradient></defs>
+    <rect width="1600" height="900" fill="#0b0f18"/>
+    <path d="M-40,0 L1640,0 L1640,290 L-40,330 Z" fill="url(#panel)"/>
+    ${Array.from({ length: 22 }, (_, k) => `<path d="M${k * 78 - 40},0 L${k * 78 + 10},300" stroke="#1d4fa0" stroke-width="10"/>`).join('')}
+    ${Array.from({ length: 4 }, (_, k) => `<path d="M-40,${60 + k * 60} L1640,${50 + k * 56}" stroke="#2a5cae" stroke-width="5"/>`).join('')}
+    <path d="M-40,290 L1640,270 L1640,330 L-40,350 Z" fill="#1d4fa0"/>${Array.from({ length: 14 }, (_, k) => `<rect x="${360 + k * 88}" y="${296 - k * 1.3}" width="60" height="14" rx="3" fill="#fffbe8"/>`).join('')}
+    <rect x="40" y="250" width="250" height="140" fill="#0d1a33" stroke="#0a0f1a" stroke-width="8"/>
+    <path d="M-40,350 L1640,330 L1640,720 L-40,720 Z" fill="#141a26"/><rect x="0" y="580" width="1600" height="10" fill="#2a3242"/><path d="M0,590 L1600,590" stroke="#8d97a6" stroke-width="2"/>
+    ${scarves}${flags}
+    <rect x="0" y="702" width="1600" height="26" fill="#1d4fa0"/>${Array.from({ length: 10 }, (_, k) => `<rect x="${20 + k * 160}" y="707" width="130" height="16" rx="2" fill="${k % 2 ? '#f4f6f8' : '#0a0a0a'}" opacity=".9"/>`).join('')}
+    <path d="M0,728 L1600,728 L1600,900 L0,900 Z" fill="url(#pitch)"/>${Array.from({ length: 8 }, (_, k) => `<rect x="${k * 200}" y="728" width="100" height="172" fill="rgba(255,255,255,.05)"/>`).join('')}
+    <rect x="0" y="726" width="1600" height="5" fill="#e9eef3"/><rect x="600" y="760" width="400" height="140" fill="none" stroke="#e9eef3" stroke-width="4"/><rect x="700" y="740" width="200" height="40" fill="none" stroke="#f4f6f8" stroke-width="5"/></svg>`;
   return h('div', { class: `si-set si-stadium ${mode || ''}`.trim() }, frag(svg, 'si-stadium-svg'), h('div', { class: 'si-score' }, h('i', {}), h('b', { class: 'si-score-num' }, '')));
 }
 function autoBielefeld(c) {
@@ -814,13 +878,15 @@ function autoBielefeld(c) {
     at(t0, () => { if (el > tl.count) return; stage.replaceChildren(h('div', { class: `si-street-wrap p${i % 3}` }, streetSign(g.label))); });
   });
   // Countdown auf der Anzeigetafel im Stadion, Klatsch-Rhythmus
-  at(tl.count, () => { root.classList.remove('si-day'); root.classList.add('si-stadion'); bg.replaceChildren(set(c, 'night')); stage.replaceChildren(); c.fx((fx) => { fx.beams = 0.7; fx.beamN = 4; fx.beamColor = '#ffffff'; }); });
+  at(tl.count, () => { if (el > tl.count + 1.1) return; root.classList.remove('si-day'); bg.replaceChildren(almAerial()); stage.replaceChildren(); });
+  sound('whoosh', tl.count + 0.9, el, 0.6, 0.5);
+  at(tl.count + 1.1, () => { root.classList.remove('si-day'); root.classList.add('si-stadion'); bg.replaceChildren(set(c, 'night')); stage.replaceChildren(); c.fx((fx) => { fx.beams = 0.5; fx.beamN = 4; fx.beamColor = '#ffffff'; }); });
   for (let k = 0; k < 5; k++) {
     const tt = tl.count + k * ((boom - tl.count) / 5);
     sound('tick', tt, el, k); sound('clap', tt + 0.5, el);
     at(tt, () => {
       if (el > boom) return;
-      const sc = bg.querySelector('.si-score-num'); if (sc) { sc.textContent = `${si.tx['count.label'] || ''}${5 - k}`; sc.parentElement.classList.remove('hit'); void sc.offsetWidth; sc.parentElement.classList.add('hit'); }
+      const sc = bg.querySelector('.si-score-num'); if (sc && nowEl(el) >= tl.count + 1.1) { sc.textContent = `${si.tx['count.label'] || ''}${5 - k}`; sc.parentElement.classList.remove('hit'); void sc.offsetWidth; sc.parentElement.classList.add('hit'); }
       if (k === 4 && si.tx['count.final']) stage.replaceChildren(h('div', { class: 'si-count-final bi' }, si.tx['count.final']));
     });
   }

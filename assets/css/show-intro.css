@@ -756,3 +756,15 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .lay-scarf .si-scarf { margin-top: 11vh; z-index: 5; }
 .lay-scarf .si-kicker { margin-top: 4vh; }
 .si-stats.l { align-items: flex-start; text-align: left; } .si-stats.l .si-stat { align-items: flex-start; } .si-stats.r .si-stat { align-items: flex-end; }
+.si-alm-air { overflow: hidden; background: #5f7d4a; }
+.si-air { position: absolute; inset: 0; }
+.si-air svg { width: 100%; height: 100%; display: block; animation: siAir 1.15s cubic-bezier(.6, 0, .9, .4) both; transform-origin: 52% 52%; }
+@keyframes siAir { from { transform: scale(.9) rotate(4deg); } to { transform: scale(3.2) rotate(0deg); filter: blur(2px); } }
+.si-stadium .fan { animation: siFan .6s ease-in-out infinite alternate; transform-box: fill-box; }
+.si-stadium .flag { animation: siFlag 1.4s ease-in-out infinite alternate; }
+.si-stadium.party .flag { animation-duration: .5s; }
+@keyframes siFlag { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.si-bielefeld .si-score { left: 8%; top: 22vh; margin-left: 0; width: 32vh; height: 18vh; border: none; background: #0d1a33; box-shadow: 0 0 5vh rgba(100, 160, 255, .45); }
+.si-bielefeld .si-score-num { font-size: 15vh; color: #ffffff; text-shadow: 0 0 3vh #5aa0ff; }
+.si-bielefeld .si-count-final.bi { margin-bottom: 30vh; }
+.si-dropimg { height: 22vh; width: auto; margin-bottom: 2vh; filter: drop-shadow(0 0 3vh rgba(255, 255, 255, .5)); animation: siStampBig .6s cubic-bezier(.2, 1.6, .4, 1) .3s both; }

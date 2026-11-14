@@ -231,7 +231,7 @@ function flow(db) {
 function cleanMedia(m, kinds) {
   if (m === null) return null;
   if (!m || typeof m.id !== 'string' || !/^media_[a-f0-9]{12,40}$/.test(m.id)) fail('Ungültige Datei.');
-  if (typeof m.type !== 'string' || !new RegExp(`^(${kinds})/[\\w.+-]{1,40}$`).test(m.type)) fail('Bitte eine MP3- oder MP4-Datei wählen.');
+  if (typeof m.type !== 'string' || !new RegExp(`^(${kinds})/[\\w.+-]{1,40}$`).test(m.type)) fail(kinds === 'image' ? 'Bitte ein Bild wählen (PNG, JPG, WebP).' : 'Bitte eine MP3- oder MP4-Datei wählen.');
   return { id: m.id, type: m.type, name: cleanText(String(m.name || 'Datei'), 100) || 'Datei', size: Number(m.size) || 0 };
 }
 
@@ -245,6 +245,7 @@ const actions = {
       c.theme = p.theme;
     }
     if ('music' in p) c.music = cleanMedia(p.music, 'audio|video');
+    if ('dropImage' in p) c.dropImage = p.dropImage === null ? null : cleanMedia(p.dropImage, 'image');
     if ('dropSec' in p) {
       const n = Number(p.dropSec);
       if (!Number.isFinite(n) || n < 0 || n > 600) fail('Die Drop-Zeit muss zwischen 0 und 600 Sekunden liegen.');
@@ -338,6 +339,7 @@ function beamerData(db) {
     tl: THEMES[c.theme].tl,
     music: c.music ? { id: c.music.id, type: c.music.type } : null,
     dropSec: c.dropSec,
+    dropImage: (pr.showIntro && pr.showIntro.dropImage) ? { id: pr.showIntro.dropImage.id, type: pr.showIntro.dropImage.type } : null,
     tx: t.tx,
     extraLabel: (THEMES[c.theme].labels || {}).extra || '',
     lines: t.lines,
@@ -381,7 +383,7 @@ function moderatorData(db) {
   const th = THEMES[c.theme];
   const mine = c.texts[c.theme] || {};
   return {
-    config: { theme: c.theme, music: c.music, dropSec: c.dropSec, voiceId: c.voiceId },
+    config: { theme: c.theme, music: c.music, dropSec: c.dropSec, voiceId: c.voiceId, dropImage: (pr.showIntro && pr.showIntro.dropImage) || null },
     texts: texts(pr),
     own: mine,
     defaults: th.t,
@@ -402,6 +404,7 @@ function referencedMedia(project, ids) {
   const c = project.showIntro;
   if (!c) return;
   if (c.music) ids.add(c.music.id);
+  if (c.dropImage) ids.add(c.dropImage.id);
   for (const clip of Object.values(c.clips || {})) if (clip && clip.id) ids.add(clip.id);
   for (const m of Object.values(c.songs || {})) if (m && m.id) ids.add(m.id);
 }

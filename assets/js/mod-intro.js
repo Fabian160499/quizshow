@@ -60,6 +60,8 @@ function themeCard(x, si) {
     }, h('b', {}, t.name), h('small', {}, t.desc)))),
     h('div', { class: 'row', style: { marginTop: '10px' } },
       serverOnly() ? null : h('button', { class: 'btn', onclick: () => openPreview(x, si) }, '▶ Vorschau: Beamer + 6 iPads mit Ton'),
+      uploadButton(x, si.config.dropImage ? 'Bild beim Höhepunkt austauschen' : '+ Bild beim Höhepunkt (optional)', 'image/png,image/jpeg,image/webp', (m) => x.act('showIntro.set', { dropImage: m }), 'dropimg'),
+      si.config.dropImage ? h('button', { class: 'btn ghost small', onclick: () => x.act('showIntro.set', { dropImage: null }) }, 'Bild entfernen') : null,
       h('span', { class: 'muted', style: { fontSize: '.85rem' } }, serverOnly() ? 'Ansehen: im Showablauf den Schritt „Show-Intro“ starten und Beamer + Team-iPads anschauen.' : 'Zeigt eure echten Teams, Namen und Texte. Im Showablauf startet das Intro mit dem Schritt „Show-Intro“.')));
 }
 function openPreview(x, si) {
