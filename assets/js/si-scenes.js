@@ -7,6 +7,7 @@ import { MAPS } from './map-data.js';
 const nowElSafe = () => nowEl(0);
 
 export const THEME_LOOK = {
+  voice: { a: '#ff1f6b', b: '#ff2d55', c: '#ffffff', d: '#3a0012', bg: '#060005', metal: 'chrome', font: 'si-display', parts: 'sparks' },
   bielefeld: { a: '#1565c0', b: '#ffffff', c: '#f5c400', d: '#0a0a0a', bg: '#05070d', metal: 'chrome', font: 'si-anton', parts: 'confetti' },
   studio: { a: '#ff4f6d', b: '#6f8cff', c: '#ffd166', d: '#8b5cf6', bg: '#120a1c', metal: 'chrome', font: 'si-anton', parts: 'confetti' },
   buehne: { a: '#ff2d8a', b: '#1fd6f2', c: '#ffd23d', d: '#7c5cff', bg: '#07051a', metal: 'chrome', font: 'si-display', parts: 'confetti' },
@@ -24,6 +25,7 @@ export const FONT = {
 // Reihenfolge der Team-Auftritte je Thema: kein Team wird gleich vorgestellt.
 const TEAM_LAYOUTS = {
   studio: ['podium', 'split', 'cube', 'type', 'spot', 'zoom'],
+  voice: ['teamchair', 'teamchair', 'teamchair', 'teamchair', 'teamchair', 'teamchair'],
   bielefeld: ['sign', 'scarf', 'split', 'type', 'spot', 'zoom'],
   buehne: ['spot', 'type', 'led', 'split', 'zoom', 'card'],
   musical: ['spot', 'card', 'marquee', 'split', 'type', 'zoom'],
@@ -31,8 +33,8 @@ const TEAM_LAYOUTS = {
   wildnis: ['stats', 'hexteam', 'bodycam', 'statsR', 'polaroid', 'hexteamR'],
   weltraum: ['reticle', 'patch', 'split', 'type', 'spot', 'zoom'],
 };
-const HOST_LAYOUT = { bielefeld: 'scarf', studio: 'stairs', buehne: 'stairs', musical: 'stairs', casino: 'card', wildnis: 'bodycam', weltraum: 'patch' };
-const COHOST_LAYOUT = { bielefeld: 'sign', studio: 'split', buehne: 'split', musical: 'marquee', casino: 'split', wildnis: 'polaroid', weltraum: 'reticle' };
+const HOST_LAYOUT = { voice: 'allchairs', bielefeld: 'scarf', studio: 'stairs', buehne: 'stairs', musical: 'stairs', casino: 'card', wildnis: 'bodycam', weltraum: 'patch' };
+const COHOST_LAYOUT = { voice: 'allchairs', bielefeld: 'sign', studio: 'split', buehne: 'split', musical: 'marquee', casino: 'split', wildnis: 'polaroid', weltraum: 'reticle' };
 
 // ---------------------------------------------------------------------------------
 // Bühnenbilder (bleiben über alle Phasen stehen)
@@ -41,6 +43,7 @@ function set(c, mode) {
   const { si } = c;
   const th = si.theme;
   if (th === 'studio') return mode === 'muralla' ? murallaSet() : studioSet(c);
+  if (th === 'voice') return voiceSet(mode);
   if (th === 'bielefeld') return mode === 'city' ? cityPanorama() : stadiumSet(mode);
   if (th === 'buehne') return h('div', { class: 'si-set si-led-wall' }, h('i', { class: 'si-led-img' }), h('i', { class: 'si-floor' }));
   if (th === 'musical') return h('div', { class: `si-set si-theatre ${mode === 'closed' ? 'closed' : 'open'}` }, h('div', { class: 'si-curtain' }, h('i'), h('i')), h('div', { class: 'si-pros' }), h('div', { class: 'si-foot' }, Array.from({ length: 13 }, () => h('i'))));
@@ -397,7 +400,7 @@ function dropLogo(c, stage, extras = []) {
 // ERÖFFNUNG je Thema
 // ---------------------------------------------------------------------------------
 export function autoScene(c) {
-  ({ bielefeld: autoBielefeld, studio: autoStudio, buehne: autoBuehne, musical: autoMusical, casino: autoCasino, wildnis: autoWild, weltraum: autoSpace })[c.si.theme in THEME_LOOK ? c.si.theme : 'studio'](c);
+  ({ voice: autoVoice, bielefeld: autoBielefeld, studio: autoStudio, buehne: autoBuehne, musical: autoMusical, casino: autoCasino, wildnis: autoWild, weltraum: autoSpace })[c.si.theme in THEME_LOOK ? c.si.theme : 'studio'](c);
 }
 
 // ---- STUDIO (wie im Fernsehen) ----
@@ -903,6 +906,96 @@ function autoBielefeld(c) {
   linesAndHold(c, stage);
 }
 
+
+// ---------------------------------------------------------------------------------
+// THE VOICE (Blind Audition): rote Coach-Stühle, Mikro im Spotlight, Buzzer, rote Lichtringe
+// (eigene Zeichnungen, kein Sendungslogo)
+// ---------------------------------------------------------------------------------
+// Coach-Stuhl nach Fotos: rotes Leder, schwarzes V-Panel mit weißer LED-Kante, Namensschild, Leuchtring am Boden
+const CHAIR_DEFS = '<defs><linearGradient id="chr" x1="0" x2="1"><stop offset="0" stop-color="#7d0614"/><stop offset=".3" stop-color="#e0182c"/><stop offset=".7" stop-color="#ff3346"/><stop offset="1" stop-color="#8a0816"/></linearGradient><linearGradient id="chrv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4255"/><stop offset="1" stop-color="#a80c1c"/></linearGradient></defs>';
+function chairBack(name) {
+  return `<svg viewBox="0 0 220 300" aria-hidden="true">${CHAIR_DEFS}
+    <path d="M24,262 L16,64 Q16,12 66,8 L154,8 Q204,12 204,64 L196,262 Q110,276 24,262 Z" fill="url(#chr)"/>
+    <path d="M40,256 L34,70 M186,256 L180,70" stroke="#5a0410" stroke-width="3" opacity=".7"/>
+    <path d="M62,12 L158,12 L118,150 L102,150 Z" fill="#0d0d10"/><path d="M62,12 L158,12 L118,150 L102,150 Z" fill="none" stroke="#ffffff" stroke-width="3.5" filter="drop-shadow(0 0 4px #ff9db0)"/>
+    <path d="M30,96 L80,96 M140,96 L190,96" stroke="#ffffff" stroke-width="3" opacity=".9"/>
+    <rect x="30" y="160" width="160" height="34" rx="4" fill="#0d0d10"/><text x="110" y="183" text-anchor="middle" font-family="SI Display, sans-serif" font-weight="900" font-size="17" letter-spacing="2" fill="#ffffff">${esc(String(name || '').toUpperCase())}</text>
+    <path d="M28,214 Q110,228 192,214" stroke="#5a0410" stroke-width="3" fill="none"/>
+    <rect x="98" y="266" width="24" height="16" fill="#1a1a1e"/><ellipse cx="110" cy="290" rx="92" ry="9" fill="none" stroke="#ff4d6d" stroke-width="3" filter="drop-shadow(0 0 5px #ff2d55)"/></svg>`;
+}
+const CHAIR_FRONT = `<svg viewBox="0 0 220 300" aria-hidden="true">${CHAIR_DEFS}<path d="M24,262 L16,64 Q16,12 66,8 L154,8 Q204,12 204,64 L196,262 Q110,276 24,262 Z" fill="#6e0512"/><path d="M46,176 L42,80 Q42,34 110,32 Q178,34 178,80 L174,176 Z" fill="url(#chrv)"/>${Array.from({ length: 3 }, (_, k) => `<path d="M50,${92 + k * 28} L170,${92 + k * 28}" stroke="#8a0816" stroke-width="2"/>`).join('')}<rect x="30" y="176" width="160" height="50" rx="16" fill="#e0182c"/><rect x="8" y="140" width="32" height="84" rx="12" fill="#4a0410"/><rect x="180" y="140" width="32" height="84" rx="12" fill="#4a0410"/><rect x="98" y="266" width="24" height="16" fill="#1a1a1e"/><ellipse cx="110" cy="290" rx="92" ry="9" fill="none" stroke="#ffffff" stroke-width="3" filter="drop-shadow(0 0 6px #ff2d55)"/></svg>`;
+function chairEl(text, i = 0, seat = null, name = '') {
+  return h('div', { class: 'si-chair', '--i': String(i) }, h('div', { class: 'si-chair-in' },
+    frag(chairBack(name), 'back'), h('div', { class: 'front' }, frag(CHAIR_FRONT, 'fsvg'), seat ? h('div', { class: 'seat' }, seat) : null, h('b', { class: 'si-chair-led' }, text))));
+}
+// Ein Stuhl pro Team (Name auf der Lehne, Avatar sitzt darin). turned: Indizes, die schon umgedreht sind.
+function teamChairs(c, turned = [], cls = '') {
+  const { s, si } = c;
+  return h('div', { class: `si-chairs six ${cls}`.trim() }, s.teams.map((t, i) => {
+    const ch = chairEl(si.tx['chair.text'], i, avatarOf({ name: t.name, color: t.color, avatar: t.avatar }), t.name);
+    if (turned.includes(i)) ch.classList.add('turned', 'pre');
+    return ch;
+  }));
+}
+function micEl() {
+  return frag('<svg viewBox="0 0 80 400" aria-hidden="true"><rect x="38" y="60" width="4" height="320" fill="#2b2b2f"/><path d="M10,396 L40,370 L70,396 Z" fill="#1d1d21"/><rect x="31" y="20" width="18" height="44" rx="9" fill="#3a3a40"/><rect x="31" y="20" width="18" height="22" rx="9" fill="#707078"/></svg>', 'si-mic');
+}
+function voiceSet(mode, floorText = '') {
+  const stripes = Array.from({ length: 7 }, (_, i) => h('i', { '--i': String(i) }));
+  return h('div', { class: `si-set si-voice-set ${mode || ''}`.trim() },
+    h('div', { class: 'si-vwall' }, stripes), h('div', { class: 'si-vback' }),
+    h('div', { class: 'si-vstage' }, h('i'), h('i'), h('i')),
+    h('div', { class: 'si-vfloor' }, floorText ? h('b', { class: 'si-vfloortext' }, floorText) : null));
+}
+function buzzerEl() { return h('div', { class: 'si-buzzer' }, h('i', { class: 'dome' }), h('i', { class: 'base' })); }
+function autoVoice(c) {
+  const { root, si, s, L, el, sound } = c;
+  const tl = si.tl; const boom = tl.boom;
+  const bg = h('div', { class: 'si-setslot' }); const stage = h('div', { class: 'si-stage' });
+  root.append(bg, stage);
+  const at = (t, fn) => atTime(el, t, fn);
+  bg.replaceChildren(voiceSet('dark', s.show.name));
+  c.voice(si.clips.cold, si.tx['voice.cold'], 0.5);
+  sound('clunk', 0.2, el);
+  at(0.2, () => { if (el < tl.teaser) stage.replaceChildren(h('div', { class: 'si-vmic' }, h('div', { class: 'si-spot-cone' }), micEl()), h('div', { class: 'si-vtitle' }, si.tx['cold.a'])); });
+  at(1.8, () => { if (el < tl.teaser && si.tx['cold.b']) stage.querySelector('.si-vtitle')?.after(h('div', { class: 'si-vsub' }, si.tx['cold.b'])); });
+  at(2.8, () => { if (el < tl.teaser) stage.replaceChildren(h('div', { class: 'si-vmic' }, h('div', { class: 'si-spot-cone' }), micEl()), presents(c, si.tx['cold.kicker'], si.tx['cold.present'])); });
+  // Teaser: Spieltitel in den roten Lichtringen
+  at(tl.teaser, () => { bg.querySelector('.si-voice-set')?.classList.replace('dark', 'on'); });
+  sound('whoosh', tl.teaser, el, 0.8);
+  at(tl.teaser, () => { if (el < tl.teaser + 0.9) stage.replaceChildren(h('div', { class: 'si-teaser-head' }, si.tx['teaser.head'])); });
+  const games = si.games.slice(0, 8);
+  const slot = games.length ? (tl.count - tl.teaser - 0.9) / games.length : 0;
+  games.forEach((g, i) => {
+    const t0 = tl.teaser + 0.9 + i * slot;
+    sound('whoosh', t0, el, 0.35, 0.4);
+    at(t0, () => { if (el > tl.count) return; stage.replaceChildren(h('div', { class: 'si-cut si-vcut' }, h('b', {}, g.label))); bg.querySelector('.si-vrings')?.classList.toggle('flip', i % 2 === 1); });
+  });
+  // Countdown: vier Stühle mit dem Rücken zur Bühne, Buzzer glüht, Herzschlag
+  const chairs = teamChairs(c);
+  const buzz = buzzerEl();
+  at(tl.count, () => { stage.replaceChildren(); bg.append(chairs, buzz); });
+  for (let k = 0; k < 5; k++) {
+    const tt = tl.count + k * ((boom - tl.count) / 5);
+    sound('heart', tt, el, 0.5 + k * 0.12);
+    at(tt, () => {
+      if (el > boom) return;
+      stage.replaceChildren(h('div', { class: 'si-count si-count-voice' }, h('b', { class: 'si-num' }, `${si.tx['count.label'] || ''}${5 - k}`), k === 4 && si.tx['count.final'] ? h('div', { class: 'si-count-final' }, si.tx['count.final']) : null));
+      root.classList.toggle('si-pulse', k >= 2);
+    });
+  }
+  // BUZZER: Stühle drehen sich, rote Explosion
+  c.shake(boom, true); sound('hit', boom, el);
+  at(boom, () => {
+    root.classList.remove('si-pulse'); root.classList.add('si-lit');
+    buzz.classList.add('pressed'); chairs.classList.add('flash');
+    c.voice(si.clips.drop, si.tx['voice.drop'], boom + 0.3);
+    dropLogo(c, stage);
+    c.fx((fx) => { if (el < boom + 1) { fx.burst(160, 'spark', fx.w / 2, fx.h * 0.7, 1.3, ['#ff2a3a', '#ffffff', '#ff8a96']); fx.flare(fx.w / 2, fx.h * 0.4); } fx.beams = 1; fx.beamColor = '#ff2a3a'; fx.beamFrom = 'both'; });
+  });
+  linesAndHold(c, stage, () => []);
+}
+
 // ---------------------------------------------------------------------------------
 // PERSONEN: Teams (6 verschiedene Auftritte), Co-Moderation, Moderation
 // ---------------------------------------------------------------------------------
@@ -929,8 +1022,9 @@ export function personScene(c, kind) {
   c.jingle(P.jingle, P.song, HIT);
   c.shake(HIT, kind === 'host');
   root.classList.add('si-lit');
-  const bg = h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : 'open'))));
+  const bg = h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open')))));
   root.append(bg);
+  if (si.theme === 'voice') bg.querySelector('.si-vfloor')?.append(h('b', { class: 'si-vfloortext' }, P.name));
   const node = (LAYOUTS[P.layout] || LAYOUTS.spot)(c, P);
   node.classList.add('si-stage', 'si-person', `lay-${P.layout}`, kind);
   node.style.setProperty('--team', P.color);
@@ -998,6 +1092,43 @@ const LAYOUTS = {
       corner ? h('i', { class: 'cn tl' }, corner, h('br'), suit) : null, corner ? h('i', { class: 'cn br' }, corner, h('br'), suit) : null,
       h('div', { class: 'si-card-av' }, P.avatar()), h('b', { class: c.L.font }, P.name), h('small', {}, P.tag), extraEl(P))), kickerEl(P));
   },
+  // The Voice: der Stuhl dieses Teams dreht sich um – darin sitzt das Team; vorherige bleiben umgedreht
+  teamchair(c, P) {
+    const before = Array.from({ length: Math.max(0, P.k) }, (_, i) => i);
+    const row = teamChairs(c, before);
+    const mine = row.children[P.k];
+    if (mine) { mine.classList.add('me'); later(Math.max(0, HIT - c.el), () => mine.classList.add('turned')); }
+    c.sound('wing', HIT, c.el);
+    return h('div', {}, h('div', { class: 'si-buzzer' }, h('i', { class: 'dome' }), h('i', { class: 'base' })), row, kickerEl(P), h('div', { class: 'si-vname' }, h('b', { class: c.L.font }, P.name), h('small', {}, P.tag)), extraEl(P));
+  },
+  // The Voice: für die Moderation drehen sich alle Stühle gleichzeitig um
+  allchairs(c, P) {
+    const row = teamChairs(c, [], 'all');
+    later(Math.max(0, HIT - c.el), () => [...row.children].forEach((ch) => ch.classList.add('turned')));
+    for (let i = 0; i < Math.min(6, c.s.teams.length); i++) c.sound('wing', HIT + i * 0.12, c.el);
+    return h('div', {}, h('div', { class: 'si-spot-cone' }), h('div', { class: 'si-hero voice' }, P.avatar()), row, kickerEl(P), plate(P, c.L));
+  },
+  // The Voice: Talent am Mikro, vier Stühle drehen sich nacheinander um
+  chairs(c, P) {
+    const ch = teamChairs(c);
+    later(Math.max(0, HIT - c.el), () => ch.classList.add('turned'));
+    for (let i = 0; i < 4; i++) c.sound('wing', HIT + 0.1 + i * 0.25, c.el);
+    return h('div', {}, h('div', { class: 'si-spot-cone' }), h('div', { class: 'si-hero voice' }, P.avatar()), ch, kickerEl(P), plate(P, c.L));
+  },
+  // The Voice: Riesen-Buzzer wird gedrückt, Name explodiert heraus
+  buzzer(c, P) {
+    const b = buzzerEl(); b.classList.add('big');
+    later(Math.max(0, HIT - c.el - 0.15), () => b.classList.add('pressed'));
+    return h('div', {}, b, h('b', { class: `si-zoom-name ${c.L.font}`, style: { fontSize: P.fit(90, 13) } }, P.name), h('div', { class: 'si-hero small left' }, P.avatar()), kickerEl(P), h('div', { class: 'si-split-tag bottom' }, P.tag));
+  },
+  // The Voice: Coach-Stuhl dreht sich um – darin sitzt die Moderation
+  coach(c, P) {
+    const ch = chairEl(c.si.tx['chair.text'], 0, P.avatar(), P.name); ch.classList.add('coach');
+    const wrap = h('div', { class: 'si-chairs coach' }, ch);
+    later(Math.max(0, HIT - c.el), () => wrap.classList.add('turned'));
+    c.sound('wing', HIT, c.el);
+    return h('div', {}, wrap, kickerEl(P), plate(P, c.L));
+  },
   // Bielefeld: Name auf dem Ortsschild
   sign(c, P) {
     return h('div', {}, kickerEl(P), h('div', { class: 'si-sign-wrap' }, ortsschild(P.name)), h('div', { class: 'si-hero small left' }, P.avatar()), h('div', { class: 'si-split-tag bottom' }, P.tag), extraEl(P));
@@ -1058,11 +1189,13 @@ export function allScene(c) {
   c.jingle('all', null, 0.1);
   c.shake(0.1, true);
   root.classList.add('si-lit');
-  root.append(h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : 'open')))));
+  root.append(h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open'))))));
   root.append(h('div', { class: 'si-stage si-all' },
     h('div', { class: 'si-rays', 'aria-hidden': 'true' }),
     h('div', { class: 'si-logo-wrap small' }, logoEl(s.show.name, L)),
-    si.theme === 'wildnis'
+    si.theme === 'voice'
+      ? teamChairs(c, s.teams.map((_, i) => i), 'final')
+      : si.theme === 'wildnis'
       ? h('div', { class: 'si-hexrow' }, s.teams.map((t, i) => h('div', { class: `si-hexcell${i % 2 ? ' low' : ''}`, '--team': t.color, style: { animationDelay: `${0.25 + i * 0.14}s` } }, h('div', { class: 'si-hexframe' }, avatarOf(t)), h('div', { class: 'si-torn-paper mini', style: { clipPath: tornClip(i + 11) } }, h('b', {}, t.name)))))
       : h('div', { class: 'si-row' }, s.teams.map((t, i) => h('div', { class: 'si-mini', '--team': t.color, style: { animationDelay: `${0.25 + i * 0.12}s` } }, avatarOf(t), h('b', {}, t.name)))),
     h('div', { class: 'si-hosts' }, [s.show.host, s.show.coHost].filter(Boolean).join(' & ')),

@@ -5,6 +5,7 @@
 import { h, clamp } from './si-core.js';
 
 const PAL = {
+  voice: ['#ff1f6b', '#ff2d55', '#ffffff', '#3a0012'],
   bielefeld: ['#1565c0', '#ffffff', '#0a0a0a', '#f5c400'],
   studio: ['#d9433f', '#f6a9bb', '#3a5fd9', '#6b4bb8'],
   buehne: ['#ff2d8a', '#1fd6f2', '#ffd23d', '#7c5cff'],
@@ -78,6 +79,14 @@ export function siTeam(v, me, teams, now, opts = {}) {
       if (t < boom) { const u = (t - (boom - 1.15)) / 1.15; vgrad('#8fc3ff', '#1679b8'); g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(0, 0, W, H * (1 - u)); say(''); return; }
       if (t < boom + 2) { fill('#1679b8'); rings('#ffffff', t, 0.8); say('', tx.start); return; }
       fill(P[(v.idx + Math.floor(t / 2)) % 4], 0.25); bulbs('#ffd166', t, 6, 0.9); say('', t < tl.lines + 2 ? tx.start : tx.wait); return;
+    }
+    if (theme === 'voice') {
+      const neon = (a) => { for (let k = 0; k < 6; k++) { const y = ((k / 6 + t * 0.05 + pos * 0.1) % 1) * H; g.fillStyle = rgba('#ff1f6b', a); g.fillRect(0, y, W, Math.max(2, H * 0.012)); } };
+      if (t < tl.teaser) { black(); radial('#ff1f6b', 0.12 + 0.06 * Math.sin(t * 2), 0.5, 0.2, 0.6); say(''); return; }
+      if (t < tl.count) { black(); neon(0.85); say(''); return; }
+      if (t < boom) { const step = (boom - tl.count) / 5; const k = Math.floor((t - tl.count) / step); const f = ((t - tl.count) % step) / step; black(); radial('#e3122b', Math.max(0, 1 - f * 3) * (0.4 + k * 0.15), 0.5, 0.5, 0.9); say(`${5 - k}`, '', 'count'); return; }
+      if (t < boom + 2.5) { fill(strobe(t, 9) ? '#ffffff' : '#ff1f6b'); say(tx.start, ''); return; }
+      fill('#1a0010'); neon(0.7); radial('#ff2d55', 0.35 + 0.15 * Math.sin(t * 2 + pos * 4), 0.5, 1, 0.8); say(t < tl.lines ? tx.start : '', t >= tl.lines ? tx.wait : ''); return;
     }
     if (theme === 'bielefeld') {
       if (t < tl.teaser) { black(); if (t > 1.8 && t < 2.7 && Math.random() < 0.5) fill('#9aa0a6', 0.6); else radial('#f5c400', 0.25 + 0.1 * Math.sin(t * 3), 0.5, 0.5, 0.6); say(''); return; }

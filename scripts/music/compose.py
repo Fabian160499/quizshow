@@ -1009,7 +1009,103 @@ class Bielefeld(Studio):
         return fade_out(m.render(2.8, 0.85), 0.4)
 
 
-THEMES = {'bielefeld': Bielefeld, 'studio': Studio, 'buehne': Buehne, 'musical': Musical, 'casino': Casino, 'wildnis': Wildnis, 'weltraum': Weltraum}
+# ====================================================================================
+#   THE VOICE – emotionale Pop-Ballade, die zur Hymne wird (Klavier, Streicher, großer Drop) – a-Moll
+# ====================================================================================
+class Voice(Studio):
+    bpm = 100
+    swing = 0.0
+    prog = [('A', 'min'), ('F', 'maj'), ('C', 'maj'), ('G', 'maj')]
+    theme_chords = prog * 2
+    melody = [
+        (0, 1.5, 'E5'), (1.5, .5, 'D5'), (2, 1, 'C5'), (3, 1, 'D5'),
+        (4, 2, 'C5'), (6, 1, 'A4'), (7, 1, 'C5'),
+        (8, 1.5, 'G5'), (9.5, .5, 'E5'), (10, 2, 'E5'),
+        (12, 2, 'D5'), (14, 1, 'B4'), (15, 1, 'D5'),
+        (16, 1.5, 'E5'), (17.5, .5, 'D5'), (18, 1, 'C5'), (19, 1, 'E5'),
+        (20, 2, 'A5'), (22, 1, 'G5'), (23, 1, 'F5'),
+        (24, 2, 'E5'), (26, 1, 'G5'), (27, 1, 'D5'),
+        (28, 4, 'C5'),
+    ]
+    KEYS = ['A', 'C', 'D', 'E', 'F', 'G']
+
+    def drums(self, m, g, bar, inten=1.0, fill=False):
+        for b in range(4):
+            m.add(S.kick(0.7 * inten, 1.1), g.t(bar, b) if b in (0, 2) else g.t(bar, b + 0.5) if b == 1 else g.t(bar, 0) - 9, rev=0.1)
+            if b in (1, 3):
+                m.add(S.snare(0.4 * inten, 190, 0.2), g.t(bar, b), rev=0.6)
+                m.add(S.clap(0.25 * inten), g.t(bar, b), rev=0.6)
+            m.add(S.hat(0.1 * inten), g.t(bar, b + 0.5), pan=0.3, rev=0.2)
+        if fill:
+            m.add(S.snare_roll(g.beat * 2, 0.3 * inten, rate=(8, 24)), g.t(bar, 2), rev=0.5)
+
+    def walk(self, m, g, bar, name, kind, inten=1.0):
+        root = n(f'{name}1') if n(f'{name}1') >= n('E1') else n(f'{name}1') + 12
+        m.add(S.synth_bass(root, g.bar * 0.95, 0.4 * inten, 380, 1.3), g.t(bar, 0), rev=0.05)
+
+    def comp(self, m, g, bar, name, kind, inten=1.0, riff=True):
+        notes = chord(n(f'{name}3'), kind)
+        for k in range(8):  # Klavier-Achtel
+            m.add(S.piano(notes[k % 3] + (12 if k % 4 == 3 else 0), g.beat * 0.5, 0.22 * inten), g.t(bar, k / 2), pan=-0.2, rev=0.5)
+        m.add(S.strings(notes + [notes[0] + 12], g.bar * 0.98, 0.3 * inten, 0.2, 3800), g.t(bar, 0), rev=0.55)
+        if riff:
+            m.add(S.choir(notes, g.bar * 0.98, 0.22 * inten, 0.3, 'a'), g.t(bar, 0), rev=0.6)
+
+    def lead(self, m, g, mel, bar0=0, vol=0.5, oct_=True):
+        for b, d, p in mel:
+            bar = bar0 + int(b // 4)
+            m.add(S.supersaw([n(p)], g.beat * d * 0.92, vol * 0.5, 0.01, 5000, 0.3), g.t(bar, b % 4), rev=0.5)
+            m.add(S.strings([n(p) + 12], g.beat * d, vol * 0.35, 0.05, 6000), g.t(bar, b % 4), rev=0.55)
+
+    def tutti(self, m, t, name='A', kind='min', vol=1.0, dur=1.6):
+        m.add(S.impact(0.85 * vol), t, rev=0.5)
+        m.add(S.supersaw(chord(n(f'{name}3'), kind) + [n(f'{name}4'), n(f'{name}5')], dur * 1.4, 0.45 * vol, 0.005, 6000, 0.6), t, rev=0.5)
+        m.add(S.choir(chord(n(f'{name}3'), kind) + [n(f'{name}4')], dur * 1.4, 0.45 * vol, 0.03), t, rev=0.6)
+        m.add(S.crash(0.55 * vol, 2.4), t, rev=0.45)
+
+    def build(self, m, t0, sec, top='E', vol=1.0):
+        m.add(S.snare_roll(sec, 0.3 * vol, rate=(4, 28)), t0, rev=0.5)
+        m.add(S.riser(sec, 0.32 * vol), t0, rev=0.3)
+
+    def intro(self, tl):
+        boom = tl['boom']
+        g = Grid(self.bpm, boom)
+        total = boom + 20 * g.bar + 3
+        m = S.Mix(total)
+        m.dyn = self.dyn(tl, g)
+        # Klavier allein im Spotlight
+        for k, p in enumerate(['A3', 'C4', 'E4', 'A4', 'G4', 'E4', 'C4', 'E4']):
+            m.add(S.piano(n(p), 0.5, 0.3), 0.2 + k * 0.45, rev=0.7)
+        tz = tl['teaser']; cnt = tl['count']
+        bars_pre = int((boom - tz) / g.bar) + 1
+        for i in range(bars_pre, 0, -1):
+            bar = -i
+            t0 = g.t(bar, 0)
+            if t0 < tz - 0.2 or t0 >= boom - 0.1:
+                continue
+            c, k = self.prog[(bars_pre - i) % 4]
+            self.comp(m, g, bar, c, k, 0.5 + 0.5 * (1 - i / bars_pre), riff=(t0 >= cnt))
+            self.walk(m, g, bar, c, k, 0.6)
+            if t0 >= cnt:
+                for b in range(4):
+                    m.add(S.kick(0.3 + 0.4 * (1 - i / bars_pre), 1.3), g.t(bar, b), rev=0.2)
+        # Herzschlag-Stille vor dem Buzzer, dann Drop
+        self.build(m, boom - 2.4, 2.32, 'E', 1.0)
+        self.tutti(m, boom, 'A', 'min', 1.2, 2.0)
+        for i, (c, k) in enumerate(self.theme_chords):
+            self.drums(m, g, i, 1.0, fill=(i == 7))
+            self.walk(m, g, i, c, k)
+            self.comp(m, g, i, c, k, 0.8, riff=True)
+        self.lead(m, g, self.melody, 0, 0.5)
+        for i in range(12):
+            c, k = self.prog[i % 4]
+            self.drums(m, g, 8 + i, 0.55, fill=(i % 4 == 3))
+            self.walk(m, g, 8 + i, c, k, 0.8)
+            self.comp(m, g, 8 + i, c, k, 0.55, riff=(i % 2 == 0))
+        return fade_out(m.render(3.0, 0.9), 0.4)
+
+
+THEMES = {'voice': Voice, 'bielefeld': Bielefeld, 'studio': Studio, 'buehne': Buehne, 'musical': Musical, 'casino': Casino, 'wildnis': Wildnis, 'weltraum': Weltraum}
 
 
 def main(ids):

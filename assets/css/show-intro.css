@@ -768,3 +768,74 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .si-bielefeld .si-score-num { font-size: 15vh; color: #ffffff; text-shadow: 0 0 3vh #5aa0ff; }
 .si-bielefeld .si-count-final.bi { margin-bottom: 30vh; }
 .si-dropimg { height: 22vh; width: auto; margin-bottom: 2vh; filter: drop-shadow(0 0 3vh rgba(255, 255, 255, .5)); animation: siStampBig .6s cubic-bezier(.2, 1.6, .4, 1) .3s both; }
+
+/* ============ THE VOICE (Blind Audition) – nach Fotos: Neon in Pink/Rot, Glanzboden, Coach-Stühle ============ */
+.si-voice .si-logo span { --m1: #ffffff; --m2: #ffd6e2; --m3: #ff4f86; --m4: #ffffff; }
+.si-voice-set { background: #050004; overflow: hidden; perspective: 90vh; }
+.si-vwall { position: absolute; left: 0; right: 0; top: 6vh; height: 40vh; }
+.si-vwall i { position: absolute; left: -5%; right: -5%; height: .45vh; top: calc(var(--i) * 5.6vh); background: linear-gradient(90deg, transparent, #ff1f6b 15%, #ff3c8e 50%, #ff1f6b 85%, transparent); box-shadow: 0 0 1.4vh #ff1f6b, 0 0 4vh rgba(255, 31, 107, .6); opacity: .25; transition: opacity .6s; }
+.si-voice-set.on .si-vwall i, .si-lit .si-vwall i { opacity: .9; animation: siNeon 3s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -.3s); }
+@keyframes siNeon { from { opacity: .55; } to { opacity: 1; } }
+.si-vback { position: absolute; left: 50%; top: 4vh; width: 34vh; height: 46vh; margin-left: -17vh; background: linear-gradient(180deg, rgba(255, 31, 107, .55), rgba(120, 0, 40, .2)); clip-path: polygon(0 0, 100% 0, 62% 100%, 38% 100%); box-shadow: 0 0 6vh rgba(255, 31, 107, .5); opacity: .25; transition: opacity .6s; }
+.si-voice-set.on .si-vback, .si-lit .si-vback { opacity: .85; }
+.si-vstage { position: absolute; left: 50%; top: 44vh; width: 120vh; height: 26vh; margin-left: -60vh; transform: rotateX(62deg); transform-origin: 50% 0; }
+.si-vstage i { position: absolute; inset: calc(var(--k, 0) * 1vh); border: .5vh solid #ff2d6b; box-shadow: 0 0 2vh #ff2d6b, inset 0 0 2vh rgba(255, 45, 107, .5); background: linear-gradient(180deg, rgba(40, 0, 20, .7), rgba(10, 0, 6, .9)); }
+.si-vstage i:nth-child(2) { inset: 2.4vh; background: none; border-color: #ffffff; border-width: .25vh; box-shadow: 0 0 1.4vh #fff; opacity: .7; }
+.si-vstage i:nth-child(3) { inset: 5vh; background: none; border-color: #ff2d6b; opacity: .6; }
+.si-vfloor { position: absolute; left: -20%; right: -20%; bottom: 0; height: 40vh; background: linear-gradient(180deg, #0b0208, #000), repeating-linear-gradient(90deg, rgba(255, 45, 107, .18) 0 .3vh, transparent .3vh 18vh); transform: perspective(60vh) rotateX(48deg); transform-origin: 50% 100%; display: grid; place-items: center; overflow: hidden; }
+.si-vfloor::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .5) 0 .25vh, transparent .25vh 22vh); opacity: .35; }
+.si-vfloortext { position: relative; font-family: "SI Display", sans-serif; font-weight: 900; font-size: 14vh; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .85); text-shadow: 0 0 3vh rgba(255, 45, 107, .7); white-space: nowrap; }
+.si-vmic { position: relative; align-self: end; margin-bottom: 20vh; }
+.si-vmic .si-mic { width: 6vh; } .si-vmic .si-mic svg { width: 100%; display: block; }
+.si-vtitle { align-self: start; margin-top: 16vh; font-family: "SI Display", sans-serif; font-weight: 900; font-size: 9vh; letter-spacing: .14em; text-transform: uppercase; color: #fff; text-shadow: 0 0 3vh #ff1f6b; animation: siFadeSlow 1.4s ease-out both; }
+.si-vsub { align-self: start; margin-top: 28vh; font-family: "SI Display", sans-serif; font-weight: 600; font-size: 3vh; letter-spacing: .6em; text-transform: uppercase; color: #ff9dbb; animation: siFadeSlow 1s ease-out both; }
+.si-vcut b { text-shadow: 0 0 3vh #ff1f6b, -.04em 0 0 rgba(255, 0, 100, .6); }
+.si-chairs { position: absolute; left: 0; right: 0; bottom: 2vh; display: flex; justify-content: center; gap: 3vw; z-index: 3; perspective: 120vh; animation: siChairsIn 1s cubic-bezier(.2, 1, .3, 1) both; }
+@keyframes siChairsIn { from { transform: translateY(40vh); } }
+.si-chair { width: 22vh; aspect-ratio: 220 / 300; }
+.si-chair-in { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.5, 0, .2, 1); }
+.si-chair-in > div { position: absolute; inset: 0; backface-visibility: hidden; }
+.si-chair-in .back svg, .si-chair-in .fsvg svg { width: 100%; height: 100%; display: block; }
+.si-chair-in .front { transform: rotateY(180deg); }
+.si-chair-in .fsvg { position: absolute; inset: 0; }
+.si-chairs.turned .si-chair-in { transform: rotateY(180deg); transition-delay: calc(var(--i) * .18s); }
+.si-chair-led { position: absolute; left: 0; right: 0; bottom: 4%; text-align: center; font-family: "SI Display", sans-serif; font-weight: 900; font-size: 1.9vh; letter-spacing: .12em; text-transform: uppercase; color: #fff; opacity: 0; text-shadow: 0 0 1vh #ff2d55, 0 0 2vh #ff2d55; }
+.si-chairs.turned .si-chair-led { opacity: 1; transition: opacity .3s calc(var(--i) * .18s + .8s); }
+.si-chair .seat { position: absolute; left: 22%; right: 22%; top: 8%; height: 66%; display: grid; place-items: end center; overflow: hidden; }
+.si-chair .seat .si-avatar { height: 100%; max-width: 100%; filter: drop-shadow(0 1vh 1vh rgba(0, 0, 0, .6)); }
+.si-chair .seat .si-avatar.si-initials { width: 70%; height: auto; aspect-ratio: 1; margin-bottom: 20%; font-size: 6vh; }
+.si-chairs.persons { bottom: -4vh; gap: 2vw; } .si-chairs.persons .si-chair { width: 19vh; }
+.si-chairs.coach { bottom: 4vh; } .si-chairs.coach .si-chair { width: 56vh; } .si-chairs.coach .si-chair-led { font-size: 3.4vh; }
+.si-hero.voice { margin-bottom: 30vh; }
+.si-buzzer { position: absolute; left: 50%; bottom: 32vh; width: 14vh; height: 10vh; margin-left: -7vh; z-index: 2; }
+.si-buzzer .base { position: absolute; left: 0; right: 0; bottom: 0; height: 4vh; border-radius: 1vh; background: linear-gradient(180deg, #2a2a30, #0c0c10); }
+.si-buzzer .dome { position: absolute; left: 12%; right: 12%; bottom: 3vh; height: 6vh; border-radius: 50% 50% 10% 10%; background: radial-gradient(circle at 40% 30%, #ff9aa8, #e3122b 45%, #7a0010); box-shadow: 0 0 3vh #ff2d55; animation: siBuzz 1s ease-in-out infinite alternate; transition: transform .1s; }
+.si-buzzer.pressed .dome { transform: scaleY(.4) translateY(3vh); box-shadow: 0 0 8vh #ff2d55, 0 0 16vh #ff2d55; }
+@keyframes siBuzz { from { filter: brightness(.8); } to { filter: brightness(1.3); } }
+.si-buzzer.big { bottom: 40vh; width: 40vh; height: 26vh; margin-left: -20vh; }
+.si-buzzer.big .base { height: 10vh; } .si-buzzer.big .dome { bottom: 8vh; height: 16vh; }
+.lay-buzzer .si-zoom-name { align-self: start; margin-top: 12vh; margin-bottom: 0; }
+.si-count-voice .si-num { --m2: #ffc2d4; --m3: #ff1f6b; }
+.si-voice .si-line, .si-voice .si-teaser-head { text-shadow: none; }
+.si-chairs:not(.persons):not(.coach) .si-chair { width: 27vh; }
+/* 6 Stühle (einer pro Team) */
+.si-chairs.six { gap: 1.6vw; bottom: 1vh; }
+.si-chairs.six .si-chair { width: 21vh !important; }
+.si-chair.turned .si-chair-in { transform: rotateY(180deg); transition-delay: 0s; }
+.si-chairs.all .si-chair.turned .si-chair-in { transition-delay: calc(var(--i) * .1s); }
+.si-chair.pre .si-chair-in { transition: none; }
+.si-chair.turned .si-chair-led { opacity: 1; transition: opacity .3s .8s; }
+.si-chair.pre .si-chair-led { opacity: .8; transition: none; }
+.si-chair.me .back svg { filter: drop-shadow(0 0 2.4vh #ff2d55); }
+.si-chair .seat { left: 18%; right: 18%; }
+.si-chairs.flash .si-chair .back svg { animation: siChairFlash .25s steps(2) 4; }
+@keyframes siChairFlash { 50% { filter: brightness(2.2) drop-shadow(0 0 3vh #ff2d55); } }
+.si-vname { align-self: start; margin-top: 14vh; display: flex; flex-direction: column; align-items: center; gap: 1vh; animation: siStampBig .5s cubic-bezier(.2, 1.6, .4, 1) var(--hit) both; }
+.si-vname b { font-size: min(12vh, 8vw); font-weight: 900; text-transform: uppercase; color: #fff; text-shadow: 0 0 4vh #ff1f6b; }
+.si-vname small { font-size: 2.8vh; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #ff9dbb; }
+.lay-teamchair .si-buzzer { bottom: 36vh; }
+.lay-teamchair .si-extra { align-self: center; justify-self: center; margin-top: 4vh; }
+.lay-allchairs .si-hero.voice { margin-bottom: 34vh; }
+.lay-allchairs .si-hero.voice .si-avatar { height: 44vh; }
+.lay-allchairs .si-plate { margin-bottom: 33vh; align-self: end; justify-self: end; margin-right: 6vw; }
+.si-all .si-chairs.final { position: relative; bottom: auto; margin-top: 8vh; animation: none; } .si-voice .si-all .si-hosts { margin-bottom: 14vh; }
