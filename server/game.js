@@ -15,6 +15,7 @@ const { QuizError, fail, newId, log, effect, teamName, teamIds, totals, cleanTex
 // Ablauf der einzelnen Spiele. Jedes Modul liefert init, Team- und
 // Moderationsaktionen sowie die Sichten für Teams und Beamer.
 const FINALE = require('./finale');
+const SI = require('./show-intro');
 const { FLOW, COLLECT } = require('./flow');
 
 const PLAY = {
@@ -54,7 +55,7 @@ const PLAY = {
 };
 
 const STATE_VERSION = 2;
-const BEAMER_VIEWS = ['start', 'video', 'intro', 'pyramid', 'title', 'game', 'ranking', 'coin', 'pause', 'stageTitle', 'hosts', 'finaleTitle', 'finale', 'blank'];
+const BEAMER_VIEWS = ['start', 'showIntro', 'video', 'intro', 'pyramid', 'title', 'game', 'ranking', 'coin', 'pause', 'stageTitle', 'hosts', 'finaleTitle', 'finale', 'blank'];
 const MAX_PROCESSED = 5000;
 
 // Kurze Zugangscodes: vierstellige Zahl (1000–9999), in der Show eindeutig –
@@ -192,7 +193,7 @@ function migrate(db) {
     if (!db.project.coHostDefaulted) { if (!db.project.coHost) db.project.coHost = 'Alexia'; db.project.coHostDefaulted = true; }
     if (!db.project.finale) db.project.finale = clone(FINALE.EXAMPLE);
     // Nach jedem Spiel: Punkte dieses Spiels, dann Moderation am Pult (Wunsch von Fabian, einmalig ergänzt).
-    for (const pr of [db.project, ...db.shows.map((x) => x.project)]) addGameScoreSteps(pr);
+    for (const pr of [db.project, ...db.shows.map((x) => x.project)]) { addGameScoreSteps(pr); addShowIntroStep(pr); }
     // Spielname korrigiert: „DankeGleichFalsch“ → „Danke, gleichfalsch!“ (nur unveränderte Namen).
     for (const e of [...db.library, ...db.project.games, ...db.shows.flatMap((x) => x.project.games)]) {
       if (e.type === 'dgf' && e.title === 'DankeGleichFalsch') e.title = 'Danke, gleichfalsch!';
@@ -453,8 +454,12 @@ function rankingFlow(db) {
   if (k >= reveals) return { label: n > 1 ? '🏆 Platz 2 und Platz 1 gleichzeitig aufdecken' : '🏆 Platz 1 aufdecken', action: 'ranking.next', mod: true };
   return { label: `Platz ${pl[n - k]} aufdecken`, action: 'ranking.next', mod: true };
 }
+function showIntroFlow(db) {
+  const cur = rundown(db)[db.live.run ?? -1];
+  return cur && cur.kind === 'showIntro' ? SI.flow(db) : null;
+}
 function stepFlow(db, now) {
-  return gameFlow(db, now) || rankingFlow(db);
+  return gameFlow(db, now) || rankingFlow(db) || showIntroFlow(db);
 }
 
 // Teams ohne Abgabe nach dem Schließen (für die Nachfrist-Knöpfe in der Regie).
@@ -686,12 +691,12 @@ function requireEditable(db) {
 // Jeder Schritt ist eine „Folie“: Beamer-Ansicht plus nötige Spielaktion.
 // Ohne eigenen Ablauf gilt der Standardablauf aus den Spielen der Show.
 
-const RUN_KINDS = ['start', 'video', 'intro', 'pyramid', 'title', 'game', 'gameScore', 'coin', 'pause', 'ranking', 'stageTitle', 'hosts', 'finaleTitle', 'finale', 'end'];
+const RUN_KINDS = ['start', 'showIntro', 'video', 'intro', 'pyramid', 'title', 'game', 'gameScore', 'coin', 'pause', 'ranking', 'stageTitle', 'hosts', 'finaleTitle', 'finale', 'end'];
 const RUN_NEEDS_POS = ['title', 'game', 'gameScore', 'coin'];
 const RUN_MAX = 120;
 
 function defaultRundown(project) {
-  const steps = [{ kind: 'start' }, { kind: 'video' }, { kind: 'intro' }, { kind: 'pyramid' }];
+  const steps = [{ kind: 'start' }, { kind: 'showIntro' }, { kind: 'video' }, { kind: 'intro' }, { kind: 'pyramid' }];
   project.games.forEach((g, i) => {
     const pos = i + 1;
     // Zu Beginn jeder Gewinnstufe (Spiel 1, 5 und 7) eine eigene Spieltitel-Folie.
@@ -724,6 +729,16 @@ function addGameScoreSteps(project) {
   project.rundown = out.slice(0, RUN_MAX);
 }
 
+// Gespeicherte Abläufe einmalig ergänzen: Show-Intro direkt nach dem Startbild (Wunsch: in jeder Show).
+function addShowIntroStep(project) {
+  if (project.showIntroStep) return;
+  project.showIntroStep = true;
+  if (!Array.isArray(project.rundown) || !project.rundown.length || project.rundown.some((x) => x.kind === 'showIntro')) return;
+  const at = project.rundown.findIndex((x) => x.kind === 'start');
+  project.rundown.splice(at + 1, 0, { id: newId('step'), kind: 'showIntro' });
+  project.rundown = project.rundown.slice(0, RUN_MAX);
+}
+
 // Punkte, die jedes Team in einem einzelnen Spiel geholt hat (nicht der Gesamtstand).
 function gameScoreSnapshot(db, game) {
   const sums = Object.fromEntries(db.project.teams.map((t) => [t.id, 0]));
@@ -740,6 +755,7 @@ function stepLabel(db, st) {
   const game = g ? `Spiel ${st.pos} · ${g.title}` : st.pos ? `Spiel ${st.pos} (fehlt)` : '';
   const base = {
     start: 'Startbild',
+    showIntro: `Show-Intro (${(SI.THEMES[(db.project.showIntro || {}).theme] || SI.THEMES[SI.DEFAULT_THEME]).name})${(db.project.showIntro || {}).music ? ' ♪' : ''}`,
     video: `Intro-Video${db.project.introVideo ? ` (${db.project.introVideo.name})` : ' – noch keins hinterlegt'}`,
     intro: 'Vorstellung der Teams',
     pyramid: st.pos ? `Übersicht Kategorien → ${game}` : 'Übersicht Kategorien',
@@ -821,6 +837,9 @@ function runStep(db, ctx, index) {
     if (db.live.activeGame) moderatorActions['show.activate'](db, ctx, { gameId: null });
     db.live.beamer = { view: 'finaleTitle', data: {} };
     effect(db, 'title');
+  } else if (st.kind === 'showIntro') {
+    if (db.live.activeGame) moderatorActions['show.activate'](db, ctx, { gameId: null });
+    SI.start(db, ctx);
   } else if (st.kind === 'stageTitle') {
     db.live.beamer = { view: 'stageTitle', data: { stage: st.stage || 1 } };
     effect(db, 'title');
@@ -929,6 +948,7 @@ function previewBeamer(db, ctx, p) {
 }
 
 const moderatorActions = {
+  ...SI.actions,
   'preview.beamer'(db, ctx, p) {
     return previewBeamer(db, ctx, p);
   },
@@ -1717,6 +1737,7 @@ function referencedMedia(db) {
     if (pr.introVideo) ids.add(pr.introVideo.id);
     for (const g of pr.games) { if (g.intro) ids.add(g.intro.id); collectMedia(g.content, ids); }
     if (pr.finaleIntro) ids.add(pr.finaleIntro.id);
+    SI.referencedMedia(pr, ids);
     Object.values(pr.stages || {}).forEach((st) => { if (st && st.intro) ids.add(st.intro.id); });
     for (const st of pr.rundown || []) for (const m of st.songs || []) ids.add(m.id);
   }
@@ -1768,6 +1789,12 @@ function teamView(db, teamId, now = Date.now()) {
       finale: f && f.teamId === teamId ? (f.result === 'team' ? 'won' : f.result === 'mod' ? 'lost' : 'played') : null,
       showName: db.project.name,
     };
+    return view;
+  }
+  // Show-Intro: die iPads werden zu Lichtern im Raum (Blackout, Countdown, Teamfarben).
+  if (db.live.beamer && db.live.beamer.view === 'showIntro') {
+    view.game = null;
+    view.showIntro = SI.teamData(db, teamId);
     return view;
   }
   // Pause, Münzvergabe, Zwischenstand und Titelfolien: die iPads warten, statt den
@@ -1834,7 +1861,7 @@ function beamerView(db) {
       const out = sums ? { ...t, points: sums[t.id] || 0 } : { ...t };
       // Avatare nur in den Ansichten mit Teampulten mitschicken (große Bilder).
       const avatar = db.project.teams[i].avatar;
-      if (avatar && (b.view === 'intro' || b.view === 'coin')) out.avatar = avatar;
+      if (avatar && (b.view === 'intro' || b.view === 'coin' || b.view === 'showIntro')) out.avatar = avatar;
       return out;
     }),
     settings: { reducedMotion: pr.settings.reducedMotion, sound: pr.settings.sound, titleDurationSec: pr.settings.titleDurationSec, fxVolume: 100, musicVolume: 100 }, // volle Lautstärke (Regler in der Regie entfernt)
@@ -1856,6 +1883,7 @@ function beamerView(db) {
     const nextCoin = at >= 0 ? steps.slice(at + 1).find((x) => x.kind === 'coin') : null;
     view.pauseCoinPos = nextCoin ? nextCoin.pos : null;
   }
+  if (b.view === 'showIntro') view.showIntro = SI.beamerData(db);
   if (b.view === 'video') view.introVideo = pr.introVideo ? { id: pr.introVideo.id, type: pr.introVideo.type } : null;
   if (b.view === 'game') { view.gameView = beamerGameView(db); view.timer = timerInfo(db); }
   if (b.view === 'ranking' && b.data.final) {
@@ -1912,7 +1940,8 @@ function moderatorView(db, connections) {
   return {
     role: 'moderator',
     // „Weiter“ im Spiel: Beschriftung oder Sperrgrund; Nachfrist-Kandidaten.
-    flow: f ? { label: f.label || null, wait: f.wait || null } : null,
+    flow: f ? { label: f.label || null, wait: f.wait || null, cue: f.cue || null } : null,
+    showIntro: SI.moderatorData(db),
     late: lateCandidates(db),
     project: db.project,
     shows: showList(db),

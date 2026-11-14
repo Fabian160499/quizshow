@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Wer stiehlt uns die Show – Team</title>
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/show-intro.css">
 </head>
 <body>
   <header class="team-head" id="head">
@@ -22,6 +23,7 @@
     import { syncTimer } from './assets/js/timer-ui.js';
     import { clearAllInkDrafts } from './assets/js/ink.js';
     import { renderPlay, renderFinale } from './assets/js/team-play.js';
+    import { siTeam, siTeamStop } from './assets/js/show-intro.js';
 
     const params = new URLSearchParams(location.search);
     const urlCode = params.get('code');
@@ -148,7 +150,9 @@
         clearDraft: () => store(draftKey, null),
       };
       draftKey = null;
+      if (!s.showIntro) siTeamStop();
       if (s.end) parts.push(endPage(s));
+      else if (s.showIntro) parts.push(siTeam(s.showIntro, s.team, s.teams, () => Date.now() + clockOffset));
       else if (s.play) parts.push(...renderPlay(s.play, ui).filter(Boolean));
       else if (s.finale) parts.push(...renderFinale(s.finale, ui).filter(Boolean));
       else if (s.waitKind === 'pause') parts.push(h('div', { class: 'wait' },
@@ -170,7 +174,7 @@
       });
 
       // Ein offenes Eingabefeld nicht bei jedem Update neu aufbauen (Fokus/Tastatur bleiben).
-      const key = JSON.stringify([s.team, s.teams, s.game, s.play || null, s.finale || null, s.ranking || null, s.waitKind || null, s.end || null]);
+      const key = JSON.stringify([s.team, s.teams, s.game, s.play || null, s.finale || null, s.ranking || null, s.waitKind || null, s.end || null, s.showIntro || null]);
       if (key === lastRenderKey) return;
       lastRenderKey = key;
       main.replaceChildren(...parts);

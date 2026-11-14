@@ -10,6 +10,7 @@
   <meta name="theme-color" content="#000000">
   <title>Wer stiehlt uns die Show – Beamer</title>
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/show-intro.css">
 </head>
 <body class="beamer-page">
   <div class="studio-bg" id="studio-bg" aria-hidden="true"></div>
@@ -30,6 +31,7 @@
     import { qrcode } from './assets/js/vendor/qrcode.js';
     import { pooled, unlockMedia, playWithSound } from './assets/js/media-pool.js';
     import { startPause, stopPause, bandScene, audioReady, preloadSongs, setMusicLevel } from './assets/js/band.js';
+    import { siBeamer, siStop } from './assets/js/show-intro.js';
 
     const stage = document.getElementById('stage');
     // ?preview: Live-Vorschau in der Regie. ?demo: Vorschau im Editor (bekommt einen
@@ -251,7 +253,7 @@
         onLock: () => snd && buzzer(),
       });
 
-      const key = JSON.stringify([s.view, s.gameView, s.ranking, s.rankFinal, s.coin, s.show, s.teams, s.game, s.games, s.pauseSongs, s.pauseCoinPos, s.introVideo, s.coins, s.finale, s.finaleIntro, s.stage, s.hosts]);
+      const key = JSON.stringify([s.view, s.gameView, s.ranking, s.rankFinal, s.coin, s.show, s.teams, s.game, s.games, s.pauseSongs, s.pauseCoinPos, s.introVideo, s.coins, s.finale, s.finaleIntro, s.stage, s.hosts, s.showIntro]);
       const replayTitle = fresh && (s.effect.kind === 'title' || s.effect.kind === 'video');
       if (key === lastKey && !replayTitle) return;
       lastKey = key;
@@ -262,7 +264,10 @@
       // Pausenmusik nur in der Pause; beim Verlassen ausblenden.
       if (s.view !== 'pause') stopPause();
       if (!['title', 'finaleTitle', 'stageTitle'].includes(s.view)) stopGameIntro();
-      const views = { start, video, intro, pyramid, title, game, ranking, coin, pause, stageTitle, hosts, finaleTitle, finale, blank: () => [] };
+      if (s.view !== 'showIntro' && document.body.classList.contains('si-active')) siStop();
+      // Show-Intro: eigene Inszenierung über die ganze Leinwand (siehe assets/js/show-intro.js).
+      const showIntro = (st) => [siBeamer(st, { now: () => Date.now() + clockOffset, ctx: () => audio, audible: () => !!audio, sound: !!st.settings.sound && !embedded })];
+      const views = { start, showIntro, video, intro, pyramid, title, game, ranking, coin, pause, stageTitle, hosts, finaleTitle, finale, blank: () => [] };
       if (s.view !== 'finale') prevFin = null;
       stage.replaceChildren(...(views[s.view] || start)(s, replayTitle));
       fitAll();

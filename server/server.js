@@ -8,6 +8,8 @@ const { WebSocketServer } = require('ws');
 const { createStore } = require('./store');
 const game = require('./game');
 const probeLib = require('./probe')(game);
+const { createVoice } = require('./voice');
+const SI = require('./show-intro');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT) || 3000;
@@ -87,7 +89,7 @@ const STATIC = {
   '/beamer.html': 'beamer.html',
   '/host.html': 'host.html',
 };
-const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.woff': 'font/woff', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg', '.json': 'application/json; charset=utf-8', '.webp': 'image/webp', '.png': 'image/png' };
 
 function sendJson(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -153,6 +155,85 @@ function uploadMedia(req, res) {
     fs.renameSync(tmp, file);
     sendJson(res, 200, { id, type, size });
   });
+}
+
+// ---------- KI-Stimme fürs Show-Intro (ElevenLabs) ----------
+const voice = createVoice({ secretsFile: path.join(path.dirname(DATA_FILE), 'secrets.json'), mediaDir: MEDIA_DIR });
+let voiceBusy = false;
+// Aktion wie aus der Regie ausführen (für Ergebnisse des Servers selbst).
+function serverAction(name, payload) {
+  const draft = structuredClone(store.data);
+  game.applyAction(draft, { role: 'moderator', actor: 'moderator', now: Date.now() }, name, payload, null);
+  store.data = draft;
+  store.save();
+  broadcast();
+}
+async function voiceApi(req, res, url) {
+  if (!validSession(req.headers['x-token'])) return sendJson(res, 401, { error: 'Bitte als Moderation anmelden.' });
+  try {
+    if (req.method === 'GET' && url.pathname === '/api/voice') {
+      if (!voice.hasKey()) return sendJson(res, 200, { hasKey: false, voices: [] });
+      try { return sendJson(res, 200, { hasKey: true, voices: await voice.voices() }); } catch (e) { return sendJson(res, 200, { hasKey: true, voices: [], error: e.message }); }
+    }
+    if (req.method === 'POST' && url.pathname === '/api/voice/key') {
+      const body = await readBody(req);
+      return sendJson(res, 200, await voice.setKey(body.key));
+    }
+    if (req.method === 'POST' && url.pathname === '/api/voice/sfx') {
+      if (voiceBusy) return sendJson(res, 409, { error: 'Es wird gerade schon erzeugt.' });
+      const body = await readBody(req);
+      voiceBusy = true;
+      try {
+        const pr = store.data.project;
+        const theme = SI.THEMES[(pr.showIntro || {}).theme] ? pr.showIntro.theme : SI.DEFAULT_THEME;
+        const have = SI.validSfx(pr);
+        const clips = {};
+        for (const [k, w] of Object.entries(SI.sfxPrompts(theme))) {
+          if (!body.all && have[k.slice(4)]) continue;
+          clips[k] = await voice.soundEffect(w.text, w.sec);
+        }
+        if (Object.keys(clips).length) serverAction('showIntro.voiceSet', { clips });
+        return sendJson(res, 200, { made: Object.keys(clips).length });
+      } finally { voiceBusy = false; }
+    }
+    if (req.method === 'POST' && url.pathname === '/api/voice/music') {
+      if (voiceBusy) return sendJson(res, 409, { error: 'Es wird gerade schon erzeugt.' });
+      voiceBusy = true;
+      try {
+        const pr = store.data.project;
+        const theme = SI.THEMES[(pr.showIntro || {}).theme] ? pr.showIntro.theme : SI.DEFAULT_THEME;
+        const plan = SI.musicPlan(theme);
+        const m = await voice.music(plan);
+        serverAction('showIntro.set', { music: m, dropSec: SI.THEMES[theme].tl.boom });
+        return sendJson(res, 200, { ok: true });
+      } finally { voiceBusy = false; }
+    }
+    if (req.method === 'POST' && url.pathname === '/api/voice/generate') {
+      if (voiceBusy) return sendJson(res, 409, { error: 'Die Stimme wird gerade schon erzeugt.' });
+      const body = await readBody(req);
+      const voiceId = String(body.voiceId || '');
+      if (!/^[A-Za-z0-9]{8,40}$/.test(voiceId)) return sendJson(res, 400, { error: 'Bitte zuerst eine Stimme wählen.' });
+      voiceBusy = true;
+      try {
+        const pr = store.data.project;
+        const want = SI.clipTexts(pr);
+        const valid = SI.validClips(pr);
+        const cur = (pr.showIntro && pr.showIntro.clips) || {};
+        // Neu erzeugen: alles (bei Stimmwechsel) oder nur Fehlendes/Geändertes; eigene Aufnahme bleibt.
+        const redo = body.all || (pr.showIntro && pr.showIntro.voiceId !== voiceId);
+        const todo = Object.entries(want).filter(([k]) => !(cur[k] && cur[k].own) && (redo || !valid[k]));
+        const clips = {};
+        let chars = 0;
+        for (const [k, text] of todo) { clips[k] = await voice.speak(text, voiceId); chars += text.length; }
+        serverAction('showIntro.set', { voiceId });
+        if (Object.keys(clips).length) serverAction('showIntro.voiceSet', { clips });
+        return sendJson(res, 200, { made: Object.keys(clips).length, chars });
+      } finally { voiceBusy = false; }
+    }
+    return sendJson(res, 404, { error: 'Unbekannt.' });
+  } catch (e) {
+    return sendJson(res, 400, { error: e instanceof game.QuizError || e instanceof Error ? e.message : 'Fehler.' });
+  }
 }
 
 // Video ausliefern, mit Range-Anfragen (Spulen, Safari/iPad).
@@ -261,6 +342,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url.pathname === '/api/media') return uploadMedia(req, res);
+    if (url.pathname.startsWith('/api/voice')) return voiceApi(req, res, url);
     if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname.startsWith('/media/') && serveMedia(req, res, url.pathname.slice(7))) return;
 
     if (req.method === 'GET' && serveStatic(req, res, url.pathname)) return;

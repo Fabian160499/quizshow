@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intro-Bildschirm</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/show-intro.css">
+  <style>html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }</style>
+</head>
+<body class="beamer-body">
+  <script type="module">
+    // Ein Bildschirm der Intro-Vorschau (Beamer oder ein Team-iPad). Die Vorschau-Seite
+    // schickt den Zustand per postMessage; Ton und Stimme kommen von der Vorschau-Seite.
+    import { siBeamer, siStop, siTeam, siTeamStop } from './assets/js/show-intro.js';
+    const q = new URLSearchParams(location.search);
+    const role = q.get('role') || 'beamer';
+    const idx = Number(q.get('i') || 0);
+    const P = () => { try { return window.parent; } catch { return null; } };
+    let last = null;
+    window.addEventListener('message', (ev) => {
+      const m = ev.data;
+      if (!m || m.si !== true) return;
+      if (m.stop) { siStop(); siTeamStop(); document.body.replaceChildren(); last = null; return; }
+      const s = m.state;
+      const key = JSON.stringify([s.showIntro.seq, s.showIntro.theme]);
+      if (key === last) return;
+      last = key;
+      if (role === 'beamer') {
+        document.body.replaceChildren(siBeamer(s, {
+          now: () => Date.now(),
+          ctx: () => P() && P().__siAudio,
+          audible: () => true,
+          sound: !!m.sound,
+          speak: (text) => P() && P().__siSpeak && P().__siSpeak(text),
+          audioEl: (k) => P().__siAudioEl(k),
+        }));
+      } else {
+        const si = s.showIntro; const ip = s.ipad;
+        const k = si.phase.startsWith('team:') ? Number(si.phase.slice(5)) : -1;
+        const person = si.phase === 'host' ? ip.host : si.phase === 'coHost' ? ip.coHost : null;
+        const v = { phase: si.phase, at: si.at, seq: si.seq, theme: si.theme, tl: si.tl, idx, n: s.teams.length,
+          tx: { wait: ip.wait, start: ip.start, go: ip.go, you: ip.you, youSub: ip.youSub, all: ip.all, label: ip.label, other: k >= 0 ? ip.team[k].other : '', host: person ? person.ipad : '' } };
+        document.body.replaceChildren(siTeam(v, s.teams[idx], s.teams, () => Date.now()));
+      }
+    });
+    if (P() && P() !== window) P().postMessage({ siFrame: role, i: idx }, '*');
+  </script>
+</body>
+</html>

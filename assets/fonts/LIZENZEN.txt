@@ -1,0 +1,5 @@
+Schriften für das Show-Intro (auf lateinische Zeichen gekürzt):
+- Inter Display (Black, ExtraBold, SemiBold) – SIL Open Font License 1.1, © The Inter Project Authors (https://rsms.me/inter)
+- TeX Gyre Bonum Bold, TeX Gyre Adventor Bold – GUST Font License (frei nutzbar), © GUST e-foundry
+- Anton, Playfair Display, Cinzel, Big Shoulders Stencil Display, IBM Plex Mono, Barlow Condensed – SIL Open Font License 1.1 (Quelle: github.com/google/fonts)
+- Permanent Marker, Special Elite – Apache License 2.0 (Quelle: github.com/google/fonts)

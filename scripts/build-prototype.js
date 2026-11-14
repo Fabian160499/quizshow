@@ -41,13 +41,26 @@ const modules = fs.readdirSync(path.join(ROOT, 'server'))
     const src = fs.readFileSync(path.join(ROOT, 'server', `${name}.js`), 'utf8');
     return `  './${name}': function (module, exports, require) {\n${src}\n  },`;
   })
-  .join('\n');
+  .join('\n')
+  + `\n  './si-catalog-json': function (module) {\n    module.exports = ${fs.readFileSync(path.join(ROOT, 'assets', 'data', 'show-intro.json'), 'utf8')};\n  },`;
 
 const bundle = `// Automatisch erzeugt von scripts/build-prototype.js – nicht von Hand ändern.
 const cryptoShim = {
   randomBytes(n) {
     const bytes = globalThis.crypto.getRandomValues(new Uint8Array(n));
     return { toString: () => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('') };
+  },
+  // Kein Sicherheitszweck: nur ein stabiler Fingerabdruck von Texten (FNV-1a).
+  createHash() {
+    let data = '';
+    return {
+      update(x) { data += String(x); return this; },
+      digest() {
+        let h1 = 0x811c9dc5; let h2 = 0x01000193;
+        for (let i = 0; i < data.length; i++) { const c = data.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619) >>> 0; h2 = Math.imul(h2 ^ c, 2246822519) >>> 0; }
+        return (h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0')).repeat(2);
+      },
+    };
   },
   randomInt(max) {
     const buf = new Uint32Array(1);

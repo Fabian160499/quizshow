@@ -616,7 +616,7 @@ test('Avatare: nur gültige Bilder, nur auf dem Beamer bei Intro und Münze, ent
 test('Showablauf: Standardfolge, Weiter/Zurück lösen Spiel, Beamer und Münze aus', () => {
   const { db, ids } = setup(2);
   const steps = game.moderatorView(db).rundown;
-  assert.deepEqual(steps.slice(0, 8).map((s) => s.kind), ['start', 'video', 'intro', 'pyramid', 'stageTitle', 'hosts', 'title', 'game']);
+  assert.deepEqual(steps.slice(0, 9).map((s) => s.kind), ['start', 'showIntro', 'video', 'intro', 'pyramid', 'stageTitle', 'hosts', 'title', 'game']);
   assert.equal(steps.filter((s) => s.kind === 'pyramid').length, 1);
   assert.ok(steps.some((s) => s.kind === 'coin' && s.pos === 4));
   assert.ok(steps.some((s) => s.kind === 'pause'));
@@ -680,8 +680,8 @@ test('Intro-Video: je Show austauschbar, Beamer bekommt nur den Verweis', () => 
   assert.throws(() => game.applyAction(db, mod(), 'intro.set', { media: { id: '../etc/passwd', type: 'video/mp4' } }), /Ungültiges Video/);
   assert.throws(() => game.applyAction(db, mod(), 'intro.set', { media: { id: 'media_abcdef123456', type: 'text/html' } }), /Videodatei/);
   game.applyAction(db, mod(), 'intro.set', { media: { id: 'media_abcdef123456', type: 'video/mp4', name: 'Intro 2026.mp4', size: 1000 } });
-  assert.match(game.moderatorView(db).rundown[1].text, /Intro 2026\.mp4/);
-  game.applyAction(db, mod(), 'run.goto', { index: 1 });
+  assert.match(game.moderatorView(db).rundown[2].text, /Intro 2026\.mp4/);
+  game.applyAction(db, mod(), 'run.goto', { index: 2 });
   assert.equal(db.live.beamer.view, 'video');
   assert.deepEqual(game.beamerView(db).introVideo, { id: 'media_abcdef123456', type: 'video/mp4' });
   const r = game.applyAction(db, mod(), 'intro.set', { media: { id: 'media_abcdef654321', type: 'video/webm', name: 'Neu' } });
@@ -1470,6 +1470,7 @@ test('Gespeicherter Ablauf bekommt einmalig nach jedem Spiel „Punkte dieses Sp
   const { db } = setup(2);
   db.project.rundown = [{ id: 'a', kind: 'title', pos: 1 }, { id: 'b', kind: 'game', pos: 1 }, { id: 'c', kind: 'pause' }, { id: 'd', kind: 'game', pos: 2 }];
   delete db.project.gameScoreSteps;
+  db.project.showIntroStep = true; // Show-Intro hier nicht prüfen
   game.migrate(db);
   assert.deepEqual(db.project.rundown.map((s) => s.kind), ['title', 'game', 'gameScore', 'hosts', 'pause', 'game', 'gameScore', 'hosts']);
   // Danach nicht erneut: gelöschte Schritte bleiben gelöscht.
@@ -1511,4 +1512,55 @@ test('Kassenschlager: Datenbank-Hinweise heißen „Hinweis N“, Wand-Anordnung
   assert.equal(e.content.hintCats[2].name, 'Hinweis 3');
   assert.equal(e.content.hintCats[4].name, 'Mein Name');
   assert.equal(e.content.hintCats[0].name, 'Hinweis 1');
+});
+
+test('Show-Intro: Schritt nach dem Startbild, Phasen per Klick, iPads als Lichter, Texte je Thema', () => {
+  const { db, ids } = setup(3);
+  db.project.host = 'Fabian'; db.project.coHost = 'Lena';
+  const steps = game.moderatorView(db).rundown;
+  const si = steps.findIndex((s) => s.kind === 'showIntro');
+  assert.equal(steps[si - 1].kind, 'start');
+  game.applyAction(db, mod(), 'run.goto', { index: si });
+  assert.equal(db.live.beamer.view, 'showIntro');
+  assert.equal(game.beamerView(db).showIntro.phase, 'auto');
+  assert.equal(game.teamView(db, ids[1]).showIntro.idx, 1);
+  assert.equal(game.teamView(db, ids[1]).game, null);
+  const labels = [];
+  for (let i = 0; i < 6; i++) { labels.push(game.moderatorView(db).flow.label); game.applyAction(db, mod(), 'run.next', {}); }
+  assert.match(labels[0], /Team 1 von 3/);
+  assert.match(labels[3], /Co-Moderation.*Lena/);
+  assert.match(labels[4], /Moderation.*Fabian/);
+  assert.match(labels[5], /Alle zusammen/);
+  assert.equal(game.beamerView(db).showIntro.phase, 'all');
+  assert.equal(game.moderatorView(db).flow, null);
+  game.applyAction(db, mod(), 'run.next', {}); // weiter zum Intro-Video
+  assert.equal(db.live.beamer.view, 'video');
+  // Thema und Texte
+  game.applyAction(db, mod(), 'showIntro.set', { theme: 'casino', dropSec: 8.5 });
+  const t = game.moderatorView(db).showIntro.texts;
+  assert.match(t.host.call, /Bank … Fabian/);
+  assert.equal(t.teams.length, 3);
+  assert.notEqual(t.teams[0].call, t.teams[1].call, 'jedes Team wird anders angesagt');
+  assert.match(t.lines[0], /Drei Spieler/); // {nWort} = Anzahl der Teams
+  // Jeder Text ist änderbar, auch je Team; null = zurück zum Standard
+  game.applyAction(db, mod(), 'showIntro.text', { key: `team.${ids[0]}.call`, value: 'Hier kommt {team}!' });
+  assert.match(game.moderatorView(db).showIntro.texts.teams[0].call, /^Hier kommt /);
+  game.applyAction(db, mod(), 'showIntro.text', { key: 'lines', value: 'Zeile A\nZeile B' });
+  assert.deepEqual(game.moderatorView(db).showIntro.texts.lines, ['Zeile A', 'Zeile B']);
+  game.applyAction(db, mod(), 'showIntro.text', { key: 'lines', value: null });
+  assert.equal(game.moderatorView(db).showIntro.texts.lines.length, 5);
+  assert.throws(() => game.applyAction(db, mod(), 'showIntro.text', { key: 'poll.go', value: 'x' }), /Unbekannter Text/); // nur im Weltraum
+  // Eigene Texte bleiben je Thema erhalten
+  game.applyAction(db, mod(), 'showIntro.text', { key: 'tagline', value: 'Casino-Schluss' });
+  game.applyAction(db, mod(), 'showIntro.set', { theme: 'weltraum' });
+  assert.notEqual(game.moderatorView(db).showIntro.texts.tx.tagline, 'Casino-Schluss');
+  assert.equal(game.moderatorView(db).showIntro.texts.tx['ipad.go'], 'GO');
+  game.applyAction(db, mod(), 'showIntro.set', { theme: 'casino' });
+  assert.equal(game.moderatorView(db).showIntro.texts.tx.tagline, 'Casino-Schluss');
+  assert.throws(() => game.applyAction(db, mod(), 'showIntro.set', { theme: 'gibtsnicht' }), /Thema/);
+  // KI-Clips gelten nur, solange der Text passt
+  game.applyAction(db, mod(), 'showIntro.voiceSet', { clips: { host: { id: 'media_abcdefabcdef01', type: 'audio/mpeg' } } });
+  assert.equal(game.moderatorView(db).showIntro.voice.ready, 1);
+  game.applyAction(db, mod(), 'showIntro.text', { key: 'host.call', value: 'Bühne frei für {name}!' });
+  assert.equal(game.moderatorView(db).showIntro.voice.ready, 0);
 });

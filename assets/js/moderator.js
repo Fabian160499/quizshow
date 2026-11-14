@@ -2,6 +2,7 @@ import { h, connect, run, store, toast, ask, showModal, localServer, uploadMedia
 import { buildPlay } from './mod-play.js';
 import { mapView, zoomState } from './map.js';
 import { buildFinaleLive, buildFinaleEditor } from './mod-finale.js';
+import { buildShowIntro } from './mod-intro.js';
 
 const token = store('quiz.modToken') || localServer?.demoToken;
 if (!token) location.href = 'index.html';
@@ -195,8 +196,8 @@ function finaleUi() {
 
 // ---------- Showablauf wie eine Präsentation ----------
 
-const RUN_ICON = { start: '★', video: '🎞', intro: '👥', pyramid: '▲', title: '🎬', game: '🎮', gameScore: '🔢', coin: '🪙', pause: '☕', ranking: '🏆', stageTitle: '🎬', hosts: '🎙', finaleTitle: '🎬', finale: '★', end: '🏁' };
-const RUN_KIND_LABEL = { start: 'Startbild', video: 'Intro-Video', intro: 'Vorstellung der Teams', pyramid: 'Übersicht Kategorien', title: 'Spieltitel', game: 'Spiel spielen', gameScore: 'Punkte dieses Spiels', coin: 'Münzvergabe', pause: 'Pause', ranking: 'Zwischenstand / Rangliste', stageTitle: 'Gewinnstufe – Spieltitel', hosts: 'Moderation am Pult', finaleTitle: 'Finale – Spieltitel', finale: 'Finale gegen die Moderation', end: 'Abschluss' };
+const RUN_ICON = { start: '★', showIntro: '✨', video: '🎞', intro: '👥', pyramid: '▲', title: '🎬', game: '🎮', gameScore: '🔢', coin: '🪙', pause: '☕', ranking: '🏆', stageTitle: '🎬', hosts: '🎙', finaleTitle: '🎬', finale: '★', end: '🏁' };
+const RUN_KIND_LABEL = { start: 'Startbild', showIntro: 'Show-Intro', video: 'Intro-Video', intro: 'Vorstellung der Teams', pyramid: 'Übersicht Kategorien', title: 'Spieltitel', game: 'Spiel spielen', gameScore: 'Punkte dieses Spiels', coin: 'Münzvergabe', pause: 'Pause', ranking: 'Zwischenstand / Rangliste', stageTitle: 'Gewinnstufe – Spieltitel', hosts: 'Moderation am Pult', finaleTitle: 'Finale – Spieltitel', finale: 'Finale gegen die Moderation', end: 'Abschluss' };
 
 // Symbol eines Schritts; die Münzvergabe zeigt die Münze der Show.
 const runIcon = (kind) => (kind === 'coin' ? coinImg('run-coin') : RUN_ICON[kind]);
@@ -254,9 +255,12 @@ function buildRun() {
     h('div', { class: 'run-now' },
       h('div', { class: 'run-title' }, started ? [h('span', { class: 'run-ico' }, runIcon(now.kind)), now.text] : 'Show noch nicht gestartet'),
       // Im Spiel: was „Weiter“ als Nächstes tut – oder worauf gewartet wird.
-      S.flow ? h('div', { class: `run-flow${S.flow.wait ? ' is-wait' : ''}` }, S.flow.wait ? ['⏳ ', S.flow.wait] : ['Weiter: ', h('b', {}, S.flow.label)]) : null),
+      S.flow ? h('div', { class: `run-flow${S.flow.wait ? ' is-wait' : ''}` }, S.flow.wait ? ['⏳ ', S.flow.wait] : ['Weiter: ', h('b', {}, S.flow.label)]) : null,
+      // Spickzettel: was der Off-Sprecher beim nächsten Klick sagt bzw. die Begrüßung der Moderation
+      S.flow && S.flow.cue ? h('div', { class: 'run-cue' }, h('small', {}, '🗒 Spickzettel'), S.flow.cue) : null),
     h('div', { class: 'run-buttons' },
       now && now.kind === 'video' && S.project.introVideo ? h('button', { class: 'btn ghost', onclick: () => act('run.goto', { index: cur }) }, '⟲ Video von vorn') : null,
+      now && now.kind === 'showIntro' ? h('button', { class: 'btn ghost', onclick: () => act('run.goto', { index: cur }) }, '⟲ Intro von vorn') : null,
       h('button', { class: 'btn ghost', disabled: cur <= 0, onclick: runPrev, title: 'Zurück (Pfeil links)' }, '◀ Zurück'),
       h('button', { class: `btn pink run-go${S.flow && S.flow.wait ? ' waiting' : ''}`, disabled: cur >= steps.length - 1 && !(S.flow && S.flow.label), onclick: runNext, title: 'Weiter (Pfeil rechts, Leertaste)' }, started ? 'Weiter ▶' : 'Erster Schritt ▶')));
   const strip = h('ol', { class: 'run-strip', 'aria-label': 'Alle Schritte' }, steps.map((st, i) => h('li', {},
@@ -980,7 +984,7 @@ function buildEditor() {
       h('input', { id: 'show-title-dur', type: 'number', min: '3', max: '20', value: p.settings.titleDurationSec, onchange: (ev) => act('project.update', { settings: { titleDurationSec: Number(ev.target.value) } }) })));
 
   // Unterpunkte des Show-Editors
-  const SECTIONS = [['teams', '1. Teams'], ['games', '2. Spiele'], ['rundown', '3. Showablauf'], ['finale', '4. Finale']];
+  const SECTIONS = [['teams', '1. Teams'], ['games', '2. Spiele'], ['rundown', '3. Showablauf'], ['finale', '4. Finale'], ['intro', '5. Show-Intro']];
   if (!SECTIONS.some(([k]) => k === editorSection)) editorSection = 'games';
   const nav = h('nav', { class: 'tabs editor-sections', role: 'tablist', 'aria-label': 'Show-Editor' }, SECTIONS.map(([k, label]) =>
     h('button', { role: 'tab', 'aria-selected': String(k === editorSection), onclick: () => { editorSection = k; store('quiz.editorSection', k); renderAll(true); } }, label)));
@@ -988,6 +992,7 @@ function buildEditor() {
     teams: () => buildTeams(),
     games: () => [buildBoard(), sel ? drawer(buildGameEditor('game', sel), () => { selectedGame = null; renderAll(true); }, sel.id) : null],
     rundown: () => [buildRundownEditor(), buildStageTitles(), buildIntroVideo(), showCards],
+    intro: () => buildShowIntro({ S, card, act, autosave, token, rerender: () => renderAll(true) }),
     finale: () => [card('Spieltitel des Finales', h('p', { class: 'muted' }, 'Vor dem Finale zeigt der Beamer eine eigene Spieltitel-Folie. Ist das Lied zu Ende, geht es automatisch ins Finale.'), buildGameIntro({ id: 'finale', title: 'Finale', intro: S.project.finaleIntro }, 'das Finale', (media) => act('finale.setIntro', { media }))), buildFinaleEditor({ ...finaleUi(), reset: !saveState.dirty })],
   }[editorSection]();
   return [

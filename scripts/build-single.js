@@ -73,7 +73,8 @@ else __start();
 
 // --- Seiten (Bildschirme) als srcdoc-Vorlagen --------------------------------
 
-const css = read('assets/css/style.css');
+// Schriften (assets/fonts) als data:-URIs in das CSS einbetten.
+const css = (read('assets/css/style.css') + '\n' + read('assets/css/show-intro.css')).replace(/url\(['"]?\.\.\/fonts\/([\w.-]+)['"]?\)/g, (_, name) => `url(data:font/${path.extname(name).slice(1)};base64,${fs.readFileSync(path.join(SRC, 'assets', 'fonts', name)).toString('base64')})`);
 
 // Läuft in jedem Bildschirm vor dessen Code: Seitenwechsel, Links und
 // verschachtelte Bildschirme (Beamer-Vorschau) gehen über die Hauptseite.
@@ -114,6 +115,7 @@ function pageCode(code) {
 function buildPage(file) {
   let html = read(file);
   html = html.replace(/<link rel="stylesheet" href="assets\/css\/style\.css">/, () => `<style>\n${css}\n</style>`);
+  html = html.replace(/\s*<link rel="stylesheet" href="assets\/css\/show-intro\.css">/, '');
   html = html.replace(/<iframe([^>]*?)\ssrc="([^"]+\.html[^"]*)"/g, '<iframe$1 data-page="$2"');
   let entry;
   const inline = html.match(/<script type="module">([\s\S]*?)<\/script>/);
@@ -142,6 +144,24 @@ function inlineImages(text) {
     }
     return imageCache[name];
   });
+}
+
+// Standard-Musik des Show-Intros (für die Einzeldatei kleiner kodiert, 48 kbit/s).
+// Ohne ffmpeg bleibt das Intro im Prototyp stumm – auf dem Show-Rechner spielt die volle Qualität.
+function siMusic() {
+  const dir = path.join(SRC, 'assets', 'music');
+  if (!fs.existsSync(dir)) return 'window.__SI_MUSIC = {};';
+  const { execFileSync } = require('child_process');
+  const os = require('os');
+  const out = {};
+  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.mp3'))) {
+    const tmp = path.join(os.tmpdir(), `si-${f}`);
+    try {
+      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', path.join(dir, f), '-codec:a', 'libmp3lame', '-b:a', '48k', tmp]);
+      out[f.slice(0, -4)] = `data:audio/mpeg;base64,${fs.readFileSync(tmp).toString('base64')}`;
+    } catch { return 'window.__SI_MUSIC = {};'; }
+  }
+  return `window.__SI_MUSIC = ${JSON.stringify(out)};`;
 }
 
 const pages = {};
@@ -187,7 +207,7 @@ window.addEventListener('message', (ev) => {
 `;
 
 const mainJs = bundle(MAIN_PRELUDE + mainCode, SRC);
-main = main.replace(mainScript[0], () => `<script>${mainJs}</script>`);
+main = main.replace(mainScript[0], () => `<script>${siMusic()}</script>\n<script>${mainJs}</script>`);
 if (/(src|href)="(assets|demo)\//.test(main) || /import\s*\{/.test(main.replace(/<script>[\s\S]*<\/script>/, ''))) {
   throw new Error('Externe Datei in der Hauptseite übrig');
 }

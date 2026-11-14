@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Show-Intro Vorschau</title>
+  <link rel="stylesheet" href="assets/css/show-intro.css">
+  <style>
+    :root { --bg: #08080c; --panel: #13131a; --line: #262633; --text: #f2f2f6; --muted: #9a9aab; --accent: #ff2d8a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "SI Display", system-ui, sans-serif; }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 14px; }
+    h1 { font-size: 20px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; margin: 0 auto 0 0; }
+    h1 small { display: block; font-size: 12px; font-weight: 600; letter-spacing: .1em; color: var(--muted); margin-top: 2px; }
+    .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    select, button { font: inherit; font-weight: 700; font-size: 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 10px 14px; }
+    button { cursor: pointer; }
+    button.go { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button:disabled { opacity: .4; cursor: default; }
+    .phase { font-size: 13px; color: var(--muted); min-width: 220px; }
+    .beamer { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #000; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+    .beamer iframe, .ipad iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .label { position: absolute; left: 10px; top: 8px; z-index: 2; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .55); pointer-events: none; }
+    .room { margin-top: 18px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+    .ipad { position: relative; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; background: #000; border: 6px solid #1d1d24; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+    .ipad .label { top: auto; bottom: 6px; left: 0; right: 0; text-align: center; }
+    .hint { margin-top: 14px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .start { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: radial-gradient(circle, rgba(255, 45, 138, .25), rgba(0, 0, 0, .85) 70%); }
+    .start button { font-size: 22px; padding: 18px 30px; border-radius: 999px; }
+    @media (max-width: 760px) { .room { grid-template-columns: repeat(3, minmax(0, 1fr)); } .phase { min-width: 0; width: 100%; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Show-Intro · Vorschau<small>Beamer + 6 Team-iPads, mit Ton und Musik</small></h1>
+      <div class="ctl">
+        <label for="theme" class="phase" style="min-width:0">Thema</label>
+        <select id="theme"></select>
+        <button id="play" class="go" type="button">▶ Intro starten</button>
+        <button id="next" type="button" disabled>Weiter ▸</button>
+        <button id="auto" type="button">Automatisch: an</button>
+      </div>
+    </header>
+    <div class="phase" id="phase">Bereit. Ton an? Dann „Mit Ton starten“.</div>
+    <div class="beamer"><span class="label">Beamer</span><iframe id="beamer" title="Beamer" src="intro-frame.html?role=beamer"></iframe>
+      <div class="start" id="start"><button class="go" type="button" id="start-btn">▶ Mit Ton starten</button></div>
+    </div>
+    <div class="room" id="room"></div>
+    <p class="hint" id="desc"></p>
+    <p class="hint">In der Vorschau spricht die Browser-Stimme die Ansagen. In der Show kommt die KI-Stimme (oder eure Aufnahme). Die Musik ist die mitgelieferte Standard-Musik des Themas – im Editor austauschbar, ebenso wie jeder Text.</p>
+  </div>
+  <script type="module">
+    let TEAMS = [
+      { id: 't1', name: 'Die Quizzards', color: '#ff2e88' },
+      { id: 't2', name: 'Team Rakete', color: '#ffd400' },
+      { id: 't3', name: 'Wissensdurst', color: '#00d1ff' },
+      { id: 't4', name: 'Die Ahnungslosen', color: '#7cff4f' },
+      { id: 't5', name: 'Brainstorm', color: '#ff7a00' },
+      { id: 't6', name: 'Glückspilze', color: '#b16cff' },
+    ];
+    let SHOW = { name: 'Wer stiehlt uns die Show', subtitle: 'Die Live-Show mit acht Spielen', host: 'Fabian', coHost: 'Lena', hostAvatar: 'assets/img/avatar-host.webp', coHostAvatar: 'assets/img/avatar-cohost.webp' };
+    const GAMES = ['Die leichten 5', 'Dummes Zeug', 'Ich seh ein Land', 'Kassenschlager', '5 ist Trumpf', 'Song Song Song', 'Wer wird Millionär', 'Nerdfragen'];
+    const CAT = window.__SI_CAT || await (await fetch('assets/data/show-intro.json')).json();
+    // Aus dem Editor geöffnet: eure echten Teams, Namen, Avatare und Texte
+    let OWN = null;
+    if (new URLSearchParams(location.search).get('eigene')) { try { OWN = JSON.parse(localStorage.getItem('si-preview')); } catch { OWN = null; } }
+    if (OWN) {
+      TEAMS = OWN.teams;
+      SHOW = { ...SHOW, ...OWN.show, hostAvatar: OWN.show.hostAvatar || SHOW.hostAvatar, coHostAvatar: OWN.show.coHostAvatar || SHOW.coHostAvatar };
+    }
+    const sel = document.getElementById('theme');
+    for (const id of CAT.order) sel.append(new Option(CAT.themes[id].name, id));
+    if (OWN && CAT.themes[OWN.theme]) sel.value = OWN.theme;
+
+    // Texte wie auf dem Server zusammenbauen (Platzhalter ersetzen)
+    const NUM = ['null', 'eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf'];
+    const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+    const base = { show: SHOW.name, subtitle: SHOW.subtitle, host: SHOW.host, cohost: SHOW.coHost, hosts: `${SHOW.host} & ${SHOW.coHost}`, n: TEAMS.length, nWort: cap(NUM[TEAMS.length]), nwort: NUM[TEAMS.length], games: GAMES.length, gamesWort: cap(NUM[GAMES.length]), gameswort: NUM[GAMES.length] };
+    const fill = (tpl, ex = {}) => String(tpl ?? '').replace(/\{(\w+)\}/g, (m, k) => (k in ex ? ex[k] : (k in base ? base[k] : m)));
+    function texts(id) {
+      const th = CAT.themes[id];
+      if (OWN && id === OWN.theme && OWN.texts) return { ...OWN.texts, lines: OWN.texts.lines || OWN.texts.tx.lines, extraLabel: (th.labels || {}).extra || '' };
+      const tx = {};
+      for (const f of CAT.fields) if (!f.only || f.only.includes(id)) tx[f.key] = f.multi ? (th.t[f.key] || []).map((l) => fill(l)) : fill(th.t[f.key]);
+      const pick = (k, i) => (th.team[k] || [''])[i % (th.team[k] || ['']).length];
+      const teams = TEAMS.map((t, i) => { const ex = { team: t.name, nr: i + 1 }; return { teamId: t.id, call: fill(pick('call', i), ex), tag: fill(pick('tag', i), ex), extra: fill(pick('extra', i), ex), kicker: fill(th.t['team.kicker'], ex), other: fill(th.t['ipad.other'], ex), row: fill(th.t['poll.row'] || '', ex) }; });
+      const person = (k, name) => ({ name, call: fill(th.t[`${k}.call`], { name }), kicker: fill(th.t[`${k}.kicker`], { name }), tag: fill(th.t[`${k}.tag`], { name }), ipad: fill(th.t['ipad.host'], { name }) });
+      return { tx, teams, host: person('host', SHOW.host), coHost: person('coHost', SHOW.coHost), lines: tx.lines, games: GAMES.map((title, i) => ({ position: i + 1, title, label: fill(th.t['teaser.item'], { nr: i + 1, title }) })), extraLabel: (th.labels || {}).extra || '' };
+    }
+    const PHASES = ['auto', ...TEAMS.map((_, i) => `team:${i}`), ...(SHOW.coHost ? ['coHost'] : []), 'host', 'all'];
+    const LABEL = (p) => p === 'auto' ? 'Eröffnung (läuft automatisch)' : p.startsWith('team:') ? `Team ${+p.slice(5) + 1} von ${TEAMS.length}: ${TEAMS[+p.slice(5)].name}` : p === 'coHost' ? 'Co-Moderation' : p === 'host' ? 'Moderation' : 'Alle zusammen';
+
+    const room = document.getElementById('room');
+    const frames = [document.getElementById('beamer')];
+    TEAMS.forEach((t, i) => {
+      const box = document.createElement('div'); box.className = 'ipad';
+      const f = document.createElement('iframe'); f.title = `iPad ${t.name}`; f.src = `intro-frame.html?role=ipad&i=${i}`;
+      const l = document.createElement('span'); l.className = 'label'; l.textContent = t.name;
+      box.append(f, l); room.append(box); frames.push(f);
+    });
+
+    // Ton: ein AudioContext + Audio-Elemente auf dieser Seite (Browser erlauben Ton erst nach einem Klick)
+    window.__siAudio = null;
+    const els = {};
+    window.__siAudioEl = (key) => { if (!els[key]) { els[key] = document.createElement('audio'); els[key].preload = 'auto'; document.body.append(els[key]); } return els[key]; };
+    let voices = [];
+    const loadVoices = () => { voices = speechSynthesis.getVoices().filter((v) => /^de/i.test(v.lang)); };
+    if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+    window.__siSpeak = (text) => {
+      if (!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text.replace(/…/g, ', '));
+      u.lang = 'de-DE'; u.rate = 0.95; u.pitch = 0.8; u.volume = 1;
+      const v = voices.find((x) => /male|männ|stefan|markus|yannick|conrad|google deutsch/i.test(x.name)) || voices[0];
+      if (v) u.voice = v;
+      speechSynthesis.speak(u);
+    };
+    const stopAll = () => { for (const e of Object.values(els)) { try { e.pause(); } catch { /* egal */ } } if ('speechSynthesis' in window) speechSynthesis.cancel(); };
+
+    let phase = -1; let at = 0; let seq = 0; let autoOn = true; let autoTimer = null;
+    const theme = () => sel.value;
+    function state() {
+      const id = theme(); const th = CAT.themes[id]; const T = texts(id);
+      return {
+        show: SHOW, teams: TEAMS,
+        showIntro: { phase: PHASES[phase], at, seq, theme: id, tl: th.tl, music: null, dropSec: 0, tx: T.tx, lines: T.lines, teams: T.teams, host: T.host, coHost: T.coHost, games: T.games, extraLabel: T.extraLabel, clips: {}, sfx: {}, songs: {} },
+        ipad: { label: T.tx['count.label'] || '', wait: T.tx['ipad.wait'], start: T.tx['ipad.start'], go: T.tx['ipad.go'] || '', you: T.tx['ipad.you'], youSub: T.tx['ipad.youSub'], all: T.tx['ipad.all'], team: T.teams, host: T.host, coHost: T.coHost },
+      };
+    }
+    function send() {
+      const s = state();
+      for (const f of frames) f.contentWindow?.postMessage({ si: true, state: s, sound: true }, '*');
+      document.getElementById('phase').textContent = `Jetzt: ${LABEL(PHASES[phase])}`;
+      document.getElementById('desc').textContent = CAT.themes[theme()].desc;
+    }
+    const autoLen = () => { const tl = CAT.themes[theme()].tl; return (tl.lines + texts(theme()).lines.length * tl.line + 4) * 1000; };
+    function go(i) {
+      clearTimeout(autoTimer);
+      if (i === 0) stopAll();
+      phase = i; at = Date.now(); seq += 1; send();
+      document.getElementById('next').disabled = phase >= PHASES.length - 1;
+      const p = PHASES[phase];
+      if (autoOn && phase < PHASES.length - 1) autoTimer = setTimeout(() => go(phase + 1), phase === 0 ? autoLen() : p === 'host' ? 11000 : p === 'coHost' ? 9000 : 7500);
+    }
+    function start() {
+      try { window.__siAudio = window.__siAudio || new (window.AudioContext || window.webkitAudioContext)(); window.__siAudio.resume(); } catch { /* ohne Ton */ }
+      for (const k of ['si-music', 'si-bed', 'si-jingle', 'si-voice', 'si-song']) { const e = window.__siAudioEl(k); e.muted = false; }
+      document.getElementById('start')?.remove();
+      go(0);
+    }
+    document.getElementById('start-btn').onclick = start;
+    document.getElementById('play').onclick = () => { if (document.getElementById('start')) start(); else go(0); };
+    document.getElementById('next').onclick = () => { if (phase < PHASES.length - 1) go(phase + 1); };
+    document.getElementById('auto').onclick = (e) => { autoOn = !autoOn; e.target.textContent = `Automatisch: ${autoOn ? 'an' : 'aus'}`; if (!autoOn) clearTimeout(autoTimer); else if (phase >= 0) go(phase); };
+    sel.onchange = () => { if (phase >= 0) go(0); else document.getElementById('desc').textContent = CAT.themes[theme()].desc; };
+    document.getElementById('desc').textContent = CAT.themes[theme()].desc;
+  </script>
+</body>
+</html>

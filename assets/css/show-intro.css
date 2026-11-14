@@ -1,0 +1,540 @@
+/* ================== Show-Intro (Beamer + iPads) – TV-Look ================== */
+@font-face { font-family: "SI Display"; src: url("../fonts/InterDisplay-Black.woff") format("woff"); font-weight: 900; font-display: block; }
+@font-face { font-family: "SI Display"; src: url("../fonts/InterDisplay-ExtraBold.woff") format("woff"); font-weight: 800; font-display: block; }
+@font-face { font-family: "SI Display"; src: url("../fonts/InterDisplay-SemiBold.woff") format("woff"); font-weight: 600; font-display: block; }
+@font-face { font-family: "SI Serif"; src: url("../fonts/texgyrebonum-bold.woff") format("woff"); font-weight: 700; font-display: block; }
+@font-face { font-family: "SI Anton"; src: url("../fonts/anton.woff") format("woff"); font-weight: 400; font-display: block; }
+@font-face { font-family: "SI Playfair"; src: url("../fonts/playfair-black.woff") format("woff"); font-weight: 900; font-display: block; }
+@font-face { font-family: "SI Playfair"; src: url("../fonts/playfair-italic.woff") format("woff"); font-weight: 800; font-style: italic; font-display: block; }
+@font-face { font-family: "SI Cinzel"; src: url("../fonts/cinzel-extrabold.woff") format("woff"); font-weight: 800; font-display: block; }
+@font-face { font-family: "SI Stencil"; src: url("../fonts/stencil-black.woff") format("woff"); font-weight: 900; font-display: block; }
+@font-face { font-family: "SI Marker"; src: url("../fonts/marker.woff") format("woff"); font-weight: 400; font-display: block; }
+@font-face { font-family: "SI Mono"; src: url("../fonts/plexmono-medium.woff") format("woff"); font-weight: 500; font-display: block; }
+@font-face { font-family: "SI Mono"; src: url("../fonts/plexmono-bold.woff") format("woff"); font-weight: 700; font-display: block; }
+@font-face { font-family: "SI Cond"; src: url("../fonts/barlowcond-semibold.woff") format("woff"); font-weight: 600; font-display: block; }
+@font-face { font-family: "SI Cond"; src: url("../fonts/barlowcond-extrabold.woff") format("woff"); font-weight: 800; font-display: block; }
+@font-face { font-family: "SI Type"; src: url("../fonts/typewriter.woff") format("woff"); font-weight: 400; font-display: block; }
+
+body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badge.conn.ok, body.si-ipad-on .badge.conn.ok { opacity: 0; transition: opacity .6s; }
+.si { position: fixed; inset: 0; z-index: 50; overflow: hidden; background: #000; color: #fff; font-family: "SI Display", var(--font-display); --f: "SI Display", sans-serif; --ui: "SI Display", sans-serif; }
+.si.si-anton { --f: "SI Anton", "SI Display", sans-serif; }
+.si.si-display { --f: "SI Display", sans-serif; }
+.si.si-playfair { --f: "SI Playfair", Georgia, serif; --ui: "SI Playfair", Georgia, serif; }
+.si.si-cinzel { --f: "SI Cinzel", Georgia, serif; --ui: "SI Cinzel", Georgia, serif; }
+.si.si-stencil { --f: "SI Stencil", "SI Display", sans-serif; --ui: "SI Mono", monospace; }
+.si.si-cond { --f: "SI Cond", "SI Display", sans-serif; --ui: "SI Mono", monospace; }
+.si-display { font-family: "SI Display", sans-serif; }
+.si-anton { font-family: "SI Anton", "SI Display", sans-serif; }
+.si-playfair { font-family: "SI Playfair", Georgia, serif; }
+.si-cinzel { font-family: "SI Cinzel", Georgia, serif; }
+.si-stencil { font-family: "SI Stencil", "SI Display", sans-serif; }
+.si-cond { font-family: "SI Cond", "SI Display", sans-serif; }
+
+/* Ebenen */
+.si-bg { position: absolute; inset: 0; background: #000; transition: background 1.4s ease; }
+.si.si-lit .si-bg { background: radial-gradient(120% 90% at 50% 115%, color-mix(in srgb, var(--a) 38%, var(--bg)) 0%, var(--bg) 55%, #000 100%); }
+.si-setslot, .si-set { position: absolute; inset: 0; z-index: 1; }
+.si-haze { position: absolute; inset: -10%; z-index: 2; opacity: 0; transition: opacity 2s; pointer-events: none; background: radial-gradient(60% 40% at 30% 70%, rgba(255, 255, 255, .07), transparent 70%), radial-gradient(50% 35% at 75% 60%, rgba(255, 255, 255, .06), transparent 70%); animation: siHaze 18s ease-in-out infinite alternate; }
+.si.si-lit .si-haze { opacity: 1; }
+@keyframes siHaze { from { transform: translateX(-3%) scale(1); } to { transform: translateX(3%) scale(1.08); } }
+.si-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+.si-stage { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; z-index: 4; }
+.si-stage > * { grid-area: 1 / 1; }
+.si-overlay { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.si-grain { position: absolute; inset: -50%; z-index: 8; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: siGrain .5s steps(4) infinite; }
+@keyframes siGrain { 0% { transform: translate(0, 0); } 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-2%, -1%); } 100% { transform: translate(1%, 3%); } }
+.si-vignette { position: absolute; inset: 0; z-index: 7; pointer-events: none; background: radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, .72) 100%); }
+.si.si-pulse .si-bg { animation: siPulse .5s ease-in-out infinite alternate; }
+@keyframes siPulse { from { background: #000; } to { background: radial-gradient(circle, color-mix(in srgb, var(--a) 28%, #000), #000 70%); } }
+.si.si-shake .si-stage, .si.si-shake .si-setslot { animation: siShake .45s cubic-bezier(.36, .07, .19, .97) both; }
+.si.si-shake-big .si-stage, .si.si-shake-big .si-setslot { animation: siShakeBig .8s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes siShake { 10%, 90% { transform: translate(-2px, 1px); } 20%, 80% { transform: translate(4px, -2px); } 30%, 50%, 70% { transform: translate(-6px, 3px); } 40%, 60% { transform: translate(6px, -3px); } }
+@keyframes siShakeBig { 0% { transform: scale(1.06); } 10% { transform: translate(-14px, 8px) scale(1.05) rotate(-.4deg); } 20% { transform: translate(12px, -10px) scale(1.04) rotate(.4deg); } 35% { transform: translate(-9px, 6px) scale(1.03); } 50% { transform: translate(6px, -4px) scale(1.02); } 70% { transform: translate(-3px, 2px) scale(1.01); } 100% { transform: none; } }
+
+/* Metallische Schrift */
+.si-metal-chrome { --m1: #ffffff; --m2: #c9d3de; --m3: #6f7c8a; --m4: #f4f8ff; }
+.si-metal-gold { --m1: #fff6cf; --m2: #f2c94c; --m3: #9a6a12; --m4: #ffe9a3; }
+.si-metal-bronze { --m1: #ffe3c2; --m2: #f0a35a; --m3: #7a3e12; --m4: #ffd29b; }
+.si-logo, .si-line, .si-tagline { text-transform: uppercase; }
+.si-logo span, .si-line, .si-tagline, .si-num, .si-plate-name, .si-bigword {
+  background: linear-gradient(180deg, var(--m1, #fff) 0%, var(--m2, #ddd) 45%, var(--m3, #888) 52%, var(--m4, #fff) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .06em 0 rgba(0, 0, 0, .55)) drop-shadow(0 0 .35em color-mix(in srgb, var(--a) 70%, transparent));
+}
+.si-logo { position: relative; display: flex; flex-direction: column; align-items: center; gap: .02em; font-family: var(--f); font-size: min(13vh, 8.6vw); font-weight: 900; line-height: .92; letter-spacing: -.01em; }
+.si-anton .si-logo, .si-logo.si-anton { font-weight: 400; letter-spacing: .01em; line-height: .95; }
+.si-cinzel .si-logo, .si-playfair .si-logo { letter-spacing: .02em; }
+.si-logo-line { display: flex; gap: .22em; animation: siWord .9s cubic-bezier(.2, 1.3, .35, 1) both; }
+.si-logo span { display: inline-block; position: relative; }
+.si-logo span.hot { --m1: #fff; --m2: var(--a); --m3: color-mix(in srgb, var(--a) 55%, #000); --m4: #fff; font-size: 1.12em; }
+.si-logo::after { content: ''; position: absolute; inset: -10% -20%; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%); mix-blend-mode: overlay; animation: siGlint 4.5s ease-in-out 1.6s infinite; transform: translateX(-120%); }
+.si-logo.tiny { font-size: 3.4vh; }
+.si-logo.tiny::after { display: none; }
+@keyframes siGlint { 0% { transform: translateX(-120%); } 35%, 100% { transform: translateX(120%); } }
+.si-logo-wrap { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; animation: siLogoIn 1.3s cubic-bezier(.15, 1.25, .3, 1) both; }
+.si-logo-wrap.from-particles { animation: siLogoFromParticles 2.2s ease-out both; }
+@keyframes siLogoIn { from { transform: scale(.4); opacity: 0; filter: blur(14px); } to { transform: none; opacity: 1; filter: none; } }
+@keyframes siLogoFromParticles { 0%, 55% { opacity: 0; transform: scale(1.04); filter: blur(6px); } 85% { opacity: 1; filter: blur(0); } 100% { opacity: 1; transform: none; } }
+@keyframes siWord { from { transform: translateY(.4em) scale(.9); opacity: 0; letter-spacing: .25em; } to { transform: none; opacity: 1; } }
+.si-logo-wrap.small { align-self: start; margin-top: 5vh; animation: siDrop .8s cubic-bezier(.2, 1.2, .4, 1) both; }
+.si-logo-wrap.small .si-logo { font-size: min(6vh, 4vw); }
+@keyframes siDrop { from { opacity: 0; transform: translateY(-4vh); } to { opacity: 1; transform: none; } }
+.si-sub { margin-top: 2.4vh; font-family: var(--ui); font-weight: 600; font-size: 2.6vh; letter-spacing: .5em; text-transform: uppercase; color: var(--b); text-shadow: 0 0 1.5vh var(--b); animation: siTrack 2.5s ease-out 1s both; }
+@keyframes siTrack { from { letter-spacing: 1.4em; opacity: 0; } to { letter-spacing: .5em; opacity: 1; } }
+.si-bigword { font-family: var(--f); font-weight: 900; font-size: min(9vh, 7vw); letter-spacing: .12em; margin-bottom: 2vh; animation: siLineLast .9s cubic-bezier(.2, 1.4, .4, 1) both; }
+
+.si-present { display: flex; flex-direction: column; align-items: center; gap: 1.2vh; animation: siFadeSlow 1.6s ease-out both; }
+.si-present small { font-family: var(--ui); font-weight: 800; font-size: 4.2vh; letter-spacing: .4em; text-transform: uppercase; color: #fff; text-shadow: 0 0 2vh rgba(255, 255, 255, .5); }
+.si-present b { font-family: var(--ui); font-weight: 600; font-size: 2.2vh; letter-spacing: .9em; text-transform: uppercase; color: var(--b); }
+@keyframes siFadeSlow { from { opacity: 0; filter: blur(6px); letter-spacing: .2em; } to { opacity: 1; filter: none; } }
+.si-kicker-big { font-family: var(--ui); font-weight: 800; font-size: 5vh; letter-spacing: .5em; text-transform: uppercase; animation: siFadeSlow 1.2s ease-out both; text-shadow: 0 0 3vh var(--a); }
+
+.si-teaser-head { font-family: var(--f); font-weight: 900; font-size: 9vh; text-transform: uppercase; letter-spacing: .08em; color: #fff; animation: siCutIn .5s cubic-bezier(.2, 1.4, .4, 1) both; text-shadow: 0 0 3vh var(--a); }
+.si-teaser-head.small { align-self: start; margin-top: 6vh; font-size: 5vh; }
+.si-cut { display: flex; flex-direction: column; align-items: center; gap: 1vh; animation: siCutIn .32s cubic-bezier(.2, 1.4, .4, 1) both; }
+.si-cut b { font-family: var(--f); font-weight: 900; font-size: min(10vh, 6.6vw); line-height: 1.02; text-transform: uppercase; max-width: 88vw; color: #fff; text-shadow: -.04em 0 0 rgba(255, 0, 80, .7), .04em 0 0 rgba(0, 220, 255, .7), 0 0 3vh var(--a); }
+.si-cut-1 { transform: rotate(-3deg); } .si-cut-2 { transform: rotate(2deg) translateY(-4vh); } .si-cut-3 { transform: rotate(-1deg) translateY(4vh); }
+@keyframes siCutIn { from { opacity: 0; transform: scale(1.6); filter: blur(10px); } to { opacity: 1; filter: none; } }
+
+/* Countdown */
+.si-count { position: relative; display: grid; place-items: center; width: 62vh; height: 62vh; }
+.si-count > * { grid-area: 1 / 1; }
+.si-num { font-family: var(--f); font-size: 36vh; font-weight: 900; line-height: 1; animation: siNum 1s cubic-bezier(.2, 1.4, .4, 1) both; font-variant-numeric: tabular-nums; }
+@keyframes siNum { 0% { transform: scale(2.6); opacity: 0; filter: blur(10px); } 22% { transform: scale(1); opacity: 1; filter: none; } 85% { opacity: 1; } 100% { transform: scale(.85); opacity: 0; } }
+.si-ring { width: 58vh; height: 58vh; border-radius: 50%; border: .5vh solid color-mix(in srgb, var(--b) 60%, transparent); box-shadow: 0 0 4vh var(--b), inset 0 0 4vh var(--b); animation: siRing 1s ease-out both; }
+@keyframes siRing { from { transform: scale(.6); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
+.si-count-final { align-self: end; margin-bottom: -10vh; font-family: var(--ui); font-weight: 800; font-size: 4.4vh; letter-spacing: .25em; text-transform: uppercase; color: var(--a); text-shadow: 0 0 2vh var(--a); animation: siCutIn .4s ease-out both; white-space: nowrap; }
+.si-count-tminus { width: 80vh; }
+.si-count-tminus .si-num { font-size: 26vh; letter-spacing: .02em; font-family: "SI Cond", sans-serif; animation-duration: .95s; }
+.si-count-tminus .si-ring { border-style: dashed; border-color: var(--b); }
+.si-count-roulette .si-num { font-size: 16vh; z-index: 2; }
+.si-roulette { width: 60vh; height: 60vh; }
+.si-roulette svg { width: 100%; height: 100%; filter: drop-shadow(0 2vh 4vh rgba(0, 0, 0, .7)); }
+.si-wheel-spin { transform-origin: 200px 200px; animation: siSpin 1.6s linear infinite; }
+.si-ball-orbit { transform-origin: 200px 200px; animation: siSpin .7s linear infinite reverse; }
+@keyframes siSpin { to { transform: rotate(360deg); } }
+.si-marquee-box { width: 70vh; height: 48vh; border-radius: 2vh; border: 1.2vh solid #3a0a10; background: #1a0306; box-shadow: 0 0 6vh var(--b), inset 0 0 0 1.4vh #1a0306, inset 0 0 0 2vh var(--b); position: relative; }
+.si-marquee-box::before { content: ''; position: absolute; inset: .4vh; border-radius: 1.6vh; background: radial-gradient(circle, #fff7d6 0 .5vh, var(--b) .6vh .8vh, transparent .9vh) 0 0 / 4vh 4vh; -webkit-mask: linear-gradient(#000 0 0) top/100% 4vh no-repeat, linear-gradient(#000 0 0) bottom/100% 4vh no-repeat, linear-gradient(#000 0 0) left/4vh 100% no-repeat, linear-gradient(#000 0 0) right/4vh 100% no-repeat; mask: linear-gradient(#000 0 0) top/100% 4vh no-repeat, linear-gradient(#000 0 0) bottom/100% 4vh no-repeat, linear-gradient(#000 0 0) left/4vh 100% no-repeat, linear-gradient(#000 0 0) right/4vh 100% no-repeat; animation: siBulbs .3s steps(2) infinite; }
+@keyframes siBulbs { 50% { filter: brightness(.4); } }
+.si-count-marquee .si-num { font-size: 30vh; --m2: var(--b); }
+.si-flame { width: 40vh; height: 60vh; border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%; background: radial-gradient(ellipse at 50% 80%, #fff3b0 0%, var(--a) 35%, #b8360a 60%, transparent 72%); filter: blur(1.5vh); animation: siFlicker .18s ease-in-out infinite alternate; transform-origin: 50% 90%; opacity: .55; }
+@keyframes siFlicker { from { transform: scale(1, 1) skewX(-2deg); opacity: .45; } to { transform: scale(1.05, 1.1) skewX(3deg); opacity: .65; } }
+.si-count-fire .si-num { font-size: 32vh; }
+
+/* Drop */
+.si-flash { position: absolute; inset: 0; background: #fff; animation: siFlash 1.1s ease-out forwards; z-index: 9; }
+@keyframes siFlash { 0% { opacity: 1; } 15% { opacity: .9; } 100% { opacity: 0; } }
+.si-rays { position: absolute; left: 50%; top: 50%; width: 220vmax; height: 220vmax; margin: -110vmax 0 0 -110vmax; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--a) 34%, transparent) 0 5deg, transparent 5deg 17deg, color-mix(in srgb, var(--b) 26%, transparent) 17deg 20deg, transparent 20deg 34deg); -webkit-mask: radial-gradient(circle, #000 0%, transparent 42%); mask: radial-gradient(circle, #000 0%, transparent 42%); animation: siSpin 40s linear infinite; opacity: .55; }
+.si-rays.dim { opacity: .2; }
+
+/* Off-Ansage */
+.si-line { z-index: 3; max-width: 86vw; font-family: var(--f); font-size: min(10vh, 6.4vw); font-weight: 900; line-height: 1.04; animation: siLine 2.8s cubic-bezier(.2, .9, .3, 1) both; }
+.si-line.last { --m2: var(--c); font-size: min(12.5vh, 7.6vw); animation: siLineLast 1.1s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes siLine { 0% { opacity: 0; transform: scale(1.18); letter-spacing: .25em; filter: blur(8px); } 16% { opacity: 1; transform: none; letter-spacing: .01em; filter: none; } 84% { opacity: 1; transform: scale(.985); } 100% { opacity: 0; transform: scale(.96); filter: blur(4px); } }
+@keyframes siLineLast { from { opacity: 0; transform: scale(2.2); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
+.si-hold { align-self: end; margin-bottom: 13vh; z-index: 3; font-family: var(--ui); font-size: 3.4vh; font-weight: 800; letter-spacing: .4em; text-transform: uppercase; color: var(--b); text-shadow: 0 0 2vh var(--b); animation: siBlink 1.8s ease-in-out infinite alternate; }
+@keyframes siBlink { from { opacity: .4; } to { opacity: 1; } }
+
+/* ============ STUDIO (Original) ============ */
+.si-studio .si-logo span { --m1: #fff; --m2: #ffe3ec; --m3: #ff9db4; --m4: #fff; }
+.si-studio .si-logo span.hot { --m2: var(--a); }
+.si-onair { display: flex; align-items: center; gap: 2vw; padding: 2.4vh 3.4vw; border-radius: 1.2vh; background: #2a0508; border: .5vh solid #5a0d14; box-shadow: 0 0 6vh rgba(255, 40, 40, .55), inset 0 0 4vh rgba(255, 60, 60, .5); animation: siOnAir 1.2s ease-out both; }
+.si-onair i { width: 3vh; height: 3vh; border-radius: 50%; background: #ff2a2a; box-shadow: 0 0 2vh #ff2a2a; animation: siBlink .7s steps(2) infinite; }
+.si-onair b { font-family: "SI Anton", sans-serif; font-weight: 400; font-size: 5vh; letter-spacing: .12em; text-transform: uppercase; color: #ffd9d9; text-shadow: 0 0 1.5vh #ff3b3b, 0 0 4vh #ff2a2a; }
+@keyframes siOnAir { 0% { opacity: 0; filter: brightness(0); } 20% { opacity: 1; filter: brightness(1.8); } 30% { filter: brightness(.3); } 45% { filter: brightness(1.4); } 100% { filter: none; } }
+.si-retro b, .si-teaser-head.si-retro { font-family: "SI Anton", sans-serif; font-weight: 400; letter-spacing: .02em; color: #fff; text-shadow: .06em .06em 0 var(--a), .12em .12em 0 #3a5fd9, 0 0 3vh rgba(0, 0, 0, .35); }
+.si-day .si-cut b { font-size: min(9vh, 6vw); }
+.si-day .si-vignette { background: radial-gradient(ellipse at center, transparent 60%, rgba(30, 10, 40, .35) 100%); }
+.si-day .si-grain { opacity: .05; }
+/* Treppenwelt */
+.si-muralla { overflow: hidden; background: #9ec9ff; }
+.si-mr-shot { position: absolute; inset: 0; opacity: 0; transition: opacity .12s; }
+.si-mr-shot svg { width: 100%; height: 100%; display: block; }
+.si-muralla[data-shot="1"] .s1, .si-muralla[data-shot="2"] .s2, .si-muralla[data-shot="3"] .s3, .si-muralla[data-shot="4"] .s4 { opacity: 1; }
+.si-muralla[data-shot="1"] .s1 svg { animation: siCam1 3.4s linear both; }
+.si-muralla[data-shot="2"] .s2 svg { animation: siCam2 3.4s linear both; }
+.si-muralla[data-shot="3"] .s3 svg { animation: siCam3 3.4s linear both; }
+.si-muralla[data-shot="4"] .s4 svg { animation: siCam4 3.4s linear both; }
+@keyframes siCam1 { from { transform: scale(1.02) translateX(1%); } to { transform: scale(1.14) translateX(-2%); } }
+@keyframes siCam2 { from { transform: scale(1.2) translate(4%, 3%) rotate(-2deg); } to { transform: scale(1.08) translate(-3%, -2%) rotate(1deg); } }
+@keyframes siCam3 { from { transform: scale(1.25) rotate(3deg); } to { transform: scale(1.05) rotate(-1deg); } }
+@keyframes siCam4 { from { transform: scale(1.12) translateY(-4%); } to { transform: scale(1.02) translateY(2%); } }
+.si-mr-sun { position: absolute; right: 8%; top: 6%; width: 18vh; height: 18vh; border-radius: 50%; background: radial-gradient(circle, #fff 0 30%, rgba(255, 245, 210, .6) 45%, transparent 70%); mix-blend-mode: screen; }
+.si-mr-host { position: absolute; z-index: 2; height: 36vh; left: 20%; bottom: 14%; transition: none; filter: drop-shadow(1vh 1.4vh 0 rgba(60, 20, 60, .35)); }
+.si-mr-host img { height: 100%; width: auto; display: block; -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent); }
+.si-studio .si-day .si-cut, .si-day .si-cut, .si-day .si-teaser-head { align-self: start; margin-top: 9vh; }
+.si-muralla[data-shot="1"] .si-mr-host { animation: siHop1 3.1s linear both; }
+.si-muralla[data-shot="2"] .si-mr-host { height: 44vh; animation: siHop2 3.1s linear both; }
+.si-muralla[data-shot="3"] .si-mr-host { height: 30vh; animation: siDance 3.1s ease-in-out both; }
+.si-muralla[data-shot="4"] .si-mr-host { height: 30vh; left: 44%; bottom: 62%; animation: siStand 2s ease-out both; }
+.si-muralla[data-fall="1"] .si-mr-host { animation: siFall 1.15s cubic-bezier(.55, 0, .9, .4) forwards; }
+@keyframes siHop1 { 0% { transform: translate(0, 0); } 12% { transform: translate(4vw, -6vh); } 24% { transform: translate(8vw, -9vh); } 36% { transform: translate(12vw, -15vh); } 48% { transform: translate(16vw, -18vh); } 60% { transform: translate(20vw, -24vh); } 72% { transform: translate(24vw, -27vh); } 100% { transform: translate(30vw, -32vh); } }
+@keyframes siHop2 { 0% { transform: translate(-10vw, 8vh); } 25% { transform: translate(-2vw, -4vh) rotate(-4deg); } 50% { transform: translate(6vw, -8vh) rotate(3deg); } 75% { transform: translate(14vw, -18vh) rotate(-3deg); } 100% { transform: translate(22vw, -24vh); } }
+@keyframes siDance { 0%, 100% { transform: translateX(14vw) rotate(0); } 20% { transform: translateX(16vw) rotate(-8deg) translateY(-3vh); } 40% { transform: translateX(18vw) rotate(8deg); } 60% { transform: translateX(20vw) rotate(-8deg) translateY(-3vh); } 80% { transform: translateX(22vw) rotate(6deg); } }
+@keyframes siStand { from { transform: translateY(-20vh); } to { transform: none; } }
+@keyframes siFall { 0% { transform: none; } 30% { transform: translateY(-6vh) rotate(-20deg); } 100% { transform: translateY(70vh) rotate(-200deg) scale(.6); opacity: .9; } }
+.si-ninja { position: absolute; z-index: 2; width: 9vh; opacity: 0; }
+.si-ninja svg { width: 100%; display: block; }
+.si-muralla[data-shot="2"] .si-ninja.n1 { right: 22%; bottom: 40%; animation: siNinja 3s ease-out .5s both; }
+.si-muralla[data-shot="3"] .si-ninja.n2 { left: 18%; bottom: 30%; animation: siNinja 3s ease-out .3s both; }
+.si-muralla[data-shot="3"] .si-ninja.n3 { right: 15%; bottom: 34%; animation: siNinja2 3s ease-out .9s both; }
+@keyframes siNinja { 0% { opacity: 0; transform: translate(14vw, -20vh) rotate(-30deg); } 25% { opacity: 1; transform: none; } 55% { transform: translateY(-2vh); } 62% { transform: translate(-3vw, -6vh) rotate(-60deg); } 100% { opacity: 0; transform: translate(-40vw, -60vh) rotate(-720deg); } }
+@keyframes siNinja2 { 0% { opacity: 0; transform: translate(-14vw, -20vh) rotate(30deg); } 25% { opacity: 1; transform: none; } 55% { transform: translateY(-2vh); } 62% { transform: translate(3vw, -6vh) rotate(60deg); } 100% { opacity: 0; transform: translate(40vw, -60vh) rotate(720deg); } }
+/* Studio */
+.si-studio-set { background: radial-gradient(120% 80% at 50% 110%, #3a1d4f 0%, #1c0f2c 45%, #0b0612 100%); perspective: 120vh; }
+.si-arches { position: absolute; inset: 0; display: flex; justify-content: space-between; padding: 0 2vw; align-items: flex-end; }
+.si-arches i { width: 11vw; height: calc(40vh + var(--i) * 0vh); border-radius: 50% 50% 0 0 / 30% 30% 0 0; background: linear-gradient(180deg, #ffb3c7 0%, #e98aa7 100%); opacity: .14; box-shadow: inset 0 0 0 1.4vh rgba(255, 255, 255, .1); }
+.si-arches i:nth-child(2n) { background: linear-gradient(180deg, #8fb3ff, #6a85e0); }
+.si-arches i:nth-child(1), .si-arches i:nth-child(7) { height: 70vh; opacity: .22; }
+.si-arches i:nth-child(2), .si-arches i:nth-child(6) { height: 58vh; opacity: .18; }
+.si-stairs { position: absolute; left: 50%; bottom: 0; width: 46vw; height: 60vh; transform: translateX(-50%); display: flex; flex-direction: column-reverse; align-items: center; }
+.si-stairs i { display: block; height: calc(60vh / 14); width: calc(46vw - var(--i) * 2.3vw); background: linear-gradient(180deg, #f2e9f7 0%, #c9b7d8 100%); border-top: .35vh solid #fff; box-shadow: 0 .6vh 1vh rgba(0, 0, 0, .35), inset 0 -.4vh 0 rgba(120, 80, 150, .35); opacity: .22; }
+.si-lit .si-stairs i { animation: siStepGlow 2.2s ease-in-out infinite; animation-delay: calc(var(--i) * -.12s); }
+@keyframes siStepGlow { 0%, 100% { opacity: .2; } 50% { opacity: .45; border-top-color: #ffd166; } }
+.si-bulbs-row { position: absolute; bottom: 0; width: 22vw; height: 2vh; background: radial-gradient(circle, #fff3c4 0 .45vh, #ffb347 .55vh .7vh, transparent .8vh) 0 0 / 2.2vh 2vh repeat-x; animation: siBulbs .35s steps(2) infinite; opacity: .8; }
+.si-bulbs-row.l { left: 1vw; } .si-bulbs-row.r { right: 1vw; animation-delay: .17s; }
+.si-cube { position: absolute; left: 50%; top: 4vh; width: 22vh; height: 16vh; margin-left: -11vh; perspective: 80vh; z-index: 1; }
+.si-cube-in { position: absolute; inset: 0; transform-style: preserve-3d; animation: siCube 14s linear infinite; }
+.si-cube-face { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(180deg, #170a24, #08040e); border: .4vh solid #2b1b3d; box-shadow: inset 0 0 3vh rgba(255, 79, 109, .35); overflow: hidden; backface-visibility: hidden; }
+.si-cube-face::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .25) 0 1px, transparent 1px 3px); }
+.si-cube-face.f { transform: translateZ(11vh); } .si-cube-face.r { transform: rotateY(90deg) translateZ(11vh); } .si-cube-face.b { transform: rotateY(180deg) translateZ(11vh); } .si-cube-face.l { transform: rotateY(-90deg) translateZ(11vh); }
+@keyframes siCube { to { transform: rotateY(-360deg); } }
+.si-cube.big { position: relative; left: auto; top: auto; margin: 0; width: 56vh; height: 42vh; perspective: 160vh; align-self: start; margin-top: 8vh; animation: siCubeIn 1.2s cubic-bezier(.2, 1.2, .4, 1) var(--hit) both; }
+.si-cube.big .si-cube-in { animation: siCubeTurn 1.6s cubic-bezier(.2, .9, .3, 1) var(--hit) both; }
+.si-cube.big .si-cube-face { border-width: .8vh; }
+.si-cube.big .si-cube-face.f { transform: translateZ(28vh); } .si-cube.big .si-cube-face.r { transform: rotateY(90deg) translateZ(28vh); } .si-cube.big .si-cube-face.b { transform: rotateY(180deg) translateZ(28vh); } .si-cube.big .si-cube-face.l { transform: rotateY(-90deg) translateZ(28vh); }
+@keyframes siCubeIn { from { transform: translateY(-50vh); } to { transform: none; } }
+@keyframes siCubeTurn { from { transform: rotateY(-270deg); } to { transform: rotateY(0); } }
+.si-cube-team { display: flex; flex-direction: column; align-items: center; gap: 1vh; }
+.si-cube-team .si-avatar { height: 30vh; max-width: 90%; }
+.si-cube-team b { font-family: "SI Anton", sans-serif; font-weight: 400; font-size: 3vh; letter-spacing: .1em; text-transform: uppercase; }
+.si-cube-plate { align-self: end; margin-bottom: 8vh; display: flex; flex-direction: column; gap: .6vh; animation: siDrop .7s ease-out calc(var(--hit) + .5s) both; }
+.si-cube-plate small { font-weight: 700; letter-spacing: .5em; font-size: 2.2vh; text-transform: uppercase; color: var(--team); }
+.si-cube-plate b { font-size: 9vh; font-weight: 400; text-transform: uppercase; line-height: 1; }
+.si-cube-plate span { font-size: 2.6vh; letter-spacing: .2em; text-transform: uppercase; opacity: .85; }
+/* Kandidatenpult */
+.si-podium { align-self: end; margin-bottom: 4vh; display: flex; flex-direction: column; align-items: center; }
+.si-pod-av { margin-bottom: -6vh; z-index: 1; animation: siHero 1s cubic-bezier(.2, 1.3, .35, 1) var(--hit) both; }
+.si-pod-av .si-avatar { height: 46vh; }
+.si-pod-desk { position: relative; z-index: 2; width: 56vh; padding: 3vh 2vw 2.4vh; border-radius: 3vh 3vh 1vh 1vh; background: linear-gradient(180deg, #ffd7e2 0%, #f39ab4 55%, #c86584 100%); box-shadow: 0 2vh 5vh rgba(0, 0, 0, .55), inset 0 .6vh 0 rgba(255, 255, 255, .6); color: #3a0c1c; display: flex; flex-direction: column; align-items: center; gap: .4vh; animation: siDeskIn .9s cubic-bezier(.2, 1.2, .4, 1) .1s both; }
+.si-pod-desk b { font-size: 7vh; font-weight: 400; line-height: 1; text-transform: uppercase; color: #fff; text-shadow: .05em .05em 0 #c41f45; }
+.si-pod-desk small { font-weight: 800; letter-spacing: .3em; text-transform: uppercase; font-size: 2vh; }
+.si-pod-bulbs { position: absolute; left: 1.5vh; right: 1.5vh; top: .8vh; height: 1.6vh; background: radial-gradient(circle, #fffbe6 0 .4vh, var(--team) .5vh .65vh, transparent .75vh) 0 0 / 2.2vh 1.6vh repeat-x; animation: siBulbs .25s steps(2) infinite; animation-delay: var(--hit); }
+@keyframes siDeskIn { from { transform: translateY(40vh); } to { transform: none; } }
+
+/* ============ SHOWBÜHNE ============ */
+.si-led-wall { background: #04030b; }
+.si-led-img { position: absolute; inset: 6vh 5vw 22vh; border-radius: 1vh; background: linear-gradient(120deg, var(--a), var(--d), var(--b), var(--a)); background-size: 400% 400%; animation: siLed 6s linear infinite; -webkit-mask: radial-gradient(circle, #000 52%, transparent 58%) 0 0 / 1.3vh 1.3vh; mask: radial-gradient(circle, #000 52%, transparent 58%) 0 0 / 1.3vh 1.3vh; opacity: .55; }
+.si[data-led="1"] .si-led-img { filter: hue-rotate(60deg); } .si[data-led="2"] .si-led-img { filter: hue-rotate(140deg); } .si[data-led="3"] .si-led-img { filter: hue-rotate(220deg); }
+@keyframes siLed { to { background-position: 400% 0; } }
+.si-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 22vh; background: linear-gradient(180deg, rgba(255, 255, 255, .06), transparent), repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 8vw); transform: perspective(40vh) rotateX(40deg); transform-origin: bottom; }
+.si-led-name { align-self: start; margin-top: 12vh; padding: 2vh 3vw; background: #000; border-radius: 1vh; box-shadow: 0 0 0 .6vh #111, 0 0 8vh color-mix(in srgb, var(--team) 60%, transparent); animation: siLedName 1s steps(6) var(--hit) both; }
+.si-led-name b { font-size: min(16vh, 11vw); font-weight: 900; text-transform: uppercase; color: var(--team); -webkit-mask: radial-gradient(circle, #000 55%, transparent 62%) 0 0 / 1vh 1vh; mask: radial-gradient(circle, #000 55%, transparent 62%) 0 0 / 1vh 1vh; text-shadow: 0 0 3vh var(--team); }
+@keyframes siLedName { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+
+/* ============ MUSICAL ============ */
+.si-theatre { background: radial-gradient(ellipse at 50% 0%, #3a0a10 0%, #120205 70%); }
+.si-curtain { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.si-curtain i { position: absolute; top: 0; bottom: 0; width: 51%; background: repeating-linear-gradient(90deg, #4e0610 0 1.6vw, #b3122e 1.6vw 3.2vw, #7a0b18 3.2vw 4.8vw); box-shadow: inset 0 -12vh 10vh rgba(0, 0, 0, .6), inset 0 6vh 4vh rgba(245, 197, 66, .25); transition: transform 2.6s cubic-bezier(.6, 0, .2, 1); }
+.si-curtain i:first-child { left: 0; } .si-curtain i + i { right: 0; }
+.si-theatre.open .si-curtain i:first-child { transform: translateX(-92%) skewX(-3deg); }
+.si-theatre.open .si-curtain i + i { transform: translateX(92%) skewX(3deg); }
+.si-pros { position: absolute; inset: 0; z-index: 4; pointer-events: none; border: 3vh solid transparent; border-top-width: 9vh; background: linear-gradient(180deg, #f5c542, #8a5a0a) border-box; -webkit-mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0); box-shadow: inset 0 0 4vh rgba(0, 0, 0, .7); }
+.si-foot { position: absolute; left: 3vh; right: 3vh; bottom: 0; height: 6vh; z-index: 4; display: flex; justify-content: space-around; align-items: end; }
+.si-foot i { width: 3vh; height: 3vh; border-radius: 50% 50% 0 0; background: radial-gradient(circle at 50% 100%, #fff3c4, #f5c542 40%, transparent 70%); box-shadow: 0 -4vh 6vh rgba(255, 200, 100, .45); }
+.si-house .si-bg { background: radial-gradient(ellipse at 50% 30%, #5a2a0c, #1a0506) !important; }
+.si-dimmed .si-theatre { filter: brightness(.55); transition: filter 1.2s; }
+.si-notice { max-width: 70vw; font-family: "SI Playfair", serif; font-style: italic; font-weight: 800; font-size: 5vh; color: #fff1c9; text-shadow: 0 0 2vh rgba(0, 0, 0, .8); animation: siFadeSlow 1.4s ease-out both; z-index: 5; }
+.si-musical .si-stage { z-index: 5; }
+.si-playbill { position: relative; z-index: 5; width: 58vh; padding: 5vh 4vh 4vh; background: linear-gradient(180deg, #fbf3df, #efe1bd); color: #2a1406; border: .5vh solid #b8892a; outline: .4vh solid #fbf3df; outline-offset: -1.6vh; box-shadow: 0 3vh 8vh rgba(0, 0, 0, .7); transform: rotate(-2deg); animation: siBill 1s cubic-bezier(.2, 1.2, .4, 1) both; }
+@keyframes siBill { from { transform: translateY(60vh) rotate(8deg); } to { transform: rotate(-2deg); } }
+.si-playbill small { display: block; font-family: "SI Playfair", serif; font-style: italic; font-weight: 800; font-size: 2.2vh; color: #8a5a0a; }
+.si-playbill > b { display: block; font-size: 7vh; letter-spacing: .06em; text-transform: uppercase; margin: .6vh 0 2vh; border-bottom: .3vh double #b8892a; }
+.si-acts { list-style: none; margin: 0; padding: 0; text-align: left; display: grid; gap: 1vh; }
+.si-acts li { font-family: "SI Playfair", serif; font-weight: 900; font-size: 2.7vh; opacity: 0; transform: translateX(-2vh); transition: opacity .4s, transform .4s; }
+.si-acts li.on { opacity: 1; transform: none; }
+.si-pb-show { display: block; margin-top: 2.4vh; font-family: "SI Playfair", serif; font-style: italic; font-size: 2vh; color: #8a5a0a; }
+.si-marquee-logo .si-logo { padding: 3vh 4vw; border-radius: 2vh; background: rgba(26, 3, 6, .7); box-shadow: 0 0 0 1vh #3a0a10, 0 0 0 1.4vh var(--b), 0 0 6vh var(--b); }
+.si-marquee { position: relative; align-self: start; margin-top: 8vh; padding: 3vh 5vw; border-radius: 2vh; background: #1a0306; display: flex; flex-direction: column; gap: .8vh; box-shadow: 0 0 0 1.2vh #3a0a10, 0 0 6vh var(--b); animation: siCutIn .7s ease-out var(--hit) both; }
+.si-marquee::before { content: ''; position: absolute; inset: -1.6vh; border-radius: 2.6vh; background: radial-gradient(circle, #fff7d6 0 .5vh, var(--b) .6vh .8vh, transparent .9vh) 0 0 / 3.2vh 3.2vh; -webkit-mask: linear-gradient(#000 0 0) top/100% 3vh no-repeat, linear-gradient(#000 0 0) bottom/100% 3vh no-repeat, linear-gradient(#000 0 0) left/3vh 100% no-repeat, linear-gradient(#000 0 0) right/3vh 100% no-repeat; mask: linear-gradient(#000 0 0) top/100% 3vh no-repeat, linear-gradient(#000 0 0) bottom/100% 3vh no-repeat, linear-gradient(#000 0 0) left/3vh 100% no-repeat, linear-gradient(#000 0 0) right/3vh 100% no-repeat; animation: siBulbs .3s steps(2) infinite; }
+.si-marquee small { font-family: "SI Playfair", serif; font-style: italic; font-size: 2.6vh; color: var(--b); }
+.si-marquee b { font-size: min(12vh, 9vw); line-height: 1; text-transform: uppercase; color: #fff7d6; text-shadow: 0 0 2vh var(--b), 0 0 5vh var(--a); }
+.si-marquee span { font-family: "SI Playfair", serif; font-style: italic; font-size: 3vh; color: #fff1c9; }
+
+/* ============ CASINO ============ */
+.si-felt { background: radial-gradient(ellipse at 50% 55%, #1f8a55 0%, #0e4a2c 48%, #03140b 100%); }
+.si-felt-line { position: absolute; left: 10%; right: 10%; top: 18%; bottom: -30%; border: .5vh solid rgba(232, 195, 90, .45); border-radius: 50% 50% 0 0 / 40% 40% 0 0; }
+.si-felt-spot { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(255, 240, 200, .18), transparent 55%); }
+.si-tablelight .si-felt { filter: brightness(.6); }
+.si-casino .si-teaser-head, .si-casino .si-line, .si-casino .si-hold { letter-spacing: .08em; }
+.si-deal { display: grid; grid-template-columns: repeat(4, 20vh); gap: 3vh 2.4vw; perspective: 120vh; }
+.si-pcard { position: relative; width: 20vh; height: 28vh; transform: translateY(-80vh) rotate(-30deg); opacity: 0; transition: transform .6s cubic-bezier(.2, .9, .3, 1), opacity .3s; transform-style: preserve-3d; }
+.si-pcard.dealt { transform: rotate(calc((var(--i) - 3.5) * 1.5deg)); opacity: 1; }
+.si-pcard.flip { transform: rotate(calc((var(--i) - 3.5) * 1.5deg)) rotateY(180deg); transition: transform .6s cubic-bezier(.2, .9, .3, 1); }
+.si-pcard .back, .si-pcard .front { position: absolute; inset: 0; border-radius: 1.4vh; backface-visibility: hidden; box-shadow: 0 1.4vh 3vh rgba(0, 0, 0, .6); }
+.si-pcard .back { background: repeating-linear-gradient(45deg, #9c1424 0 1vh, #c41f35 1vh 2vh); border: 1vh solid #f7f3ea; }
+.si-pcard .front { transform: rotateY(180deg); background: #f7f3ea; color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1vh; padding: 1.4vh; }
+.si-pcard .front small { font-size: 5vh; line-height: 1; color: #c41f35; }
+.si-pcard .front b { font-family: "SI Cinzel", serif; font-size: 2.2vh; line-height: 1.15; }
+.si-bulbframe { position: absolute; inset: 6vh 6vw; border-radius: 3vh; background: radial-gradient(circle, #fff7d6 0 .55vh, var(--a) .65vh .9vh, transparent 1vh) 0 0 / 3.6vh 3.6vh; -webkit-mask: linear-gradient(#000 0 0) top/100% 3.6vh no-repeat, linear-gradient(#000 0 0) bottom/100% 3.6vh no-repeat, linear-gradient(#000 0 0) left/3.6vh 100% no-repeat, linear-gradient(#000 0 0) right/3.6vh 100% no-repeat; mask: linear-gradient(#000 0 0) top/100% 3.6vh no-repeat, linear-gradient(#000 0 0) bottom/100% 3.6vh no-repeat, linear-gradient(#000 0 0) left/3.6vh 100% no-repeat, linear-gradient(#000 0 0) right/3.6vh 100% no-repeat; animation: siBulbs .22s steps(2) infinite; }
+.si-jackpot .si-bigword { --m1: #fff6cf; --m2: #f2c94c; --m3: #9a6a12; --m4: #ffe9a3; font-size: min(14vh, 10vw); }
+.si-bigcard { position: relative; width: 46vh; height: 64vh; perspective: 120vh; animation: siCardIn 1s cubic-bezier(.2, 1.2, .4, 1) both; }
+.si-bigcard .back, .si-bigcard .front { position: absolute; inset: 0; border-radius: 2.4vh; backface-visibility: hidden; box-shadow: 0 3vh 6vh rgba(0, 0, 0, .7); }
+.si-bigcard .back { background: repeating-linear-gradient(45deg, #9c1424 0 1.4vh, #c41f35 1.4vh 2.8vh); border: 1.6vh solid #f7f3ea; animation: siFlipBack .8s ease-in var(--hit) both; }
+.si-bigcard .front { background: linear-gradient(180deg, #fffdf6, #efe7d2); color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2vh; padding: 3vh; transform: rotateY(180deg); animation: siFlipFront .8s ease-out var(--hit) both; }
+.si-bigcard.musical .front { background: linear-gradient(180deg, #fbf3df, #efe1bd); border: .6vh solid #b8892a; }
+.si-bigcard.buehne .front { background: linear-gradient(160deg, #1b1240, #07051a); color: #fff; border: .6vh solid var(--team); }
+.si-bigcard .front b { font-size: 5.4vh; line-height: 1; text-transform: uppercase; }
+.si-bigcard .front small { font-size: 2.2vh; letter-spacing: .2em; text-transform: uppercase; opacity: .8; }
+.si-bigcard .cn { position: absolute; font-style: normal; font-family: "SI Cinzel", serif; font-size: 4vh; line-height: .9; color: #c41f35; text-align: center; }
+.si-bigcard .cn.tl { left: 2vh; top: 2vh; } .si-bigcard .cn.br { right: 2vh; bottom: 2vh; transform: rotate(180deg); }
+.si-card-av .si-avatar { height: 30vh; max-width: 36vh; }
+@keyframes siCardIn { from { transform: translateY(-80vh) rotate(-25deg); } to { transform: none; } }
+@keyframes siFlipBack { to { transform: rotateY(180deg); } }
+@keyframes siFlipFront { to { transform: rotateY(360deg); } }
+.si-slot { align-self: start; margin-top: 6vh; padding: 2vh 2vw 3vh; border-radius: 3vh; background: linear-gradient(180deg, #c41f35, #6b0a15); box-shadow: 0 0 0 1vh var(--a), 0 3vh 6vh rgba(0, 0, 0, .7); }
+.si-slot-top { font-family: "SI Cinzel", serif; font-size: 4vh; color: #fff6cf; letter-spacing: .3em; text-shadow: 0 0 2vh var(--a); }
+.si-reels { display: flex; gap: 1vw; margin: 1.4vh 0; }
+.si-reel { width: 14vh; height: 14vh; overflow: hidden; background: #fffdf6; border-radius: 1.2vh; box-shadow: inset 0 2vh 2vh rgba(0, 0, 0, .35), inset 0 -2vh 2vh rgba(0, 0, 0, .35); }
+.si-reel-in { display: flex; flex-direction: column; animation: siReel .18s linear infinite; animation-iteration-count: calc(9 + var(--d) * 3); }
+.si-reel-in span { height: 14vh; display: grid; place-items: center; font-family: "SI Cinzel", serif; font-size: 7vh; color: #c41f35; }
+@keyframes siReel { from { transform: translateY(0); } to { transform: translateY(-98vh); } }
+.si-slot-win { font-size: 7vh; text-transform: uppercase; color: #fff6cf; text-shadow: 0 0 2vh var(--a); animation: siCutIn .5s ease-out calc(var(--hit) + .2s) both; }
+
+/* ============ WILDNIS ============ */
+.si-wild { background: #0b1210; }
+.si-land { position: absolute; inset: 0; width: 100%; height: 100%; }
+.si-wild.night .si-land { filter: brightness(.8); }
+.si-letterbox { position: absolute; left: 0; right: 0; height: 11vh; background: #000; z-index: 6; }
+.si-letterbox.t { top: 0; } .si-letterbox.b { bottom: 0; }
+.si-cam { position: absolute; inset: 13vh 3vw; z-index: 6; font-family: "SI Mono", monospace; font-weight: 700; font-size: 2.2vh; color: #fff; text-shadow: 0 0 .6vh rgba(0, 0, 0, .9); pointer-events: none; }
+.si-cam .rec { position: absolute; left: 2vw; top: 1vh; color: #ff3030; animation: siBlink .7s steps(2) infinite; }
+.si-cam .tc { position: absolute; right: 2vw; top: 1vh; font-variant-numeric: tabular-nums; }
+.si-cam .bat { position: absolute; right: 2vw; bottom: 1vh; }
+.si-cam .lab { position: absolute; left: 2vw; bottom: 1vh; text-transform: uppercase; letter-spacing: .2em; }
+.si-cam .c { position: absolute; width: 4vh; height: 4vh; border: .35vh solid rgba(255, 255, 255, .85); }
+.si-cam .tl { left: 0; top: 0; border-right: 0; border-bottom: 0; } .si-cam .tr { right: 0; top: 0; border-left: 0; border-bottom: 0; } .si-cam .bl { left: 0; bottom: 0; border-right: 0; border-top: 0; } .si-cam .br { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+.si-doc .si-grain { opacity: .12; }
+.si-coords { display: flex; flex-direction: column; gap: 2vh; align-items: center; }
+.si-gps { font-family: "SI Mono", monospace; font-weight: 700; font-size: 4.4vh; letter-spacing: .12em; color: #ffcc66; min-height: 5vh; }
+.si-gps::after { content: '▌'; animation: siBlink .5s steps(2) infinite; color: #fff; }
+.si-place { font-family: "SI Stencil", sans-serif; font-weight: 900; font-size: 8vh; letter-spacing: .08em; text-transform: uppercase; min-height: 9vh; }
+.si-wildnis .si-present small { font-family: "SI Stencil", sans-serif; letter-spacing: .3em; }
+.si-map { position: relative; width: 100%; height: 100%; }
+.si-map-head { position: absolute; left: 6vw; top: 14vh; z-index: 2; font-family: "SI Stencil", sans-serif; font-size: 8vh; text-transform: uppercase; letter-spacing: .06em; text-shadow: 0 .6vh 2vh rgba(0, 0, 0, .7); animation: siStamp .5s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes siStamp { from { transform: scale(2.2) rotate(-6deg); opacity: 0; } to { transform: rotate(-2deg); opacity: 1; } }
+.si-map-svg { position: absolute; inset: 0; background: rgba(20, 30, 20, .45); }
+.si-map-svg svg { width: 100%; height: 100%; }
+.si-route { stroke-dashoffset: 0; clip-path: inset(0 calc((1 - var(--route, 0)) * 100%) 0 0); transition: clip-path .5s ease-out; }
+.si-wp { opacity: 0; transform-box: fill-box; transform-origin: center; transition: opacity .2s, transform .3s; transform: scale(2); }
+.si-wp.on { opacity: 1; transform: none; }
+.si-map-labels { position: absolute; inset: 0; }
+.si-wp-label { position: absolute; transform: translate(-50%, -190%) rotate(-3deg); padding: .6vh 1.2vw; background: #f1e4c6; color: #20160c; font-family: "SI Marker", cursive; font-size: 2.3vh; white-space: nowrap; box-shadow: 0 .8vh 1.6vh rgba(0, 0, 0, .5); opacity: 0; transition: opacity .3s, transform .3s; }
+.si-wp-label:nth-child(2n) { transform: translate(-50%, 90%) rotate(2deg); }
+.si-wp-label.on { opacity: 1; }
+.si-wildnis .si-line { font-family: "SI Stencil", sans-serif; letter-spacing: .02em; }
+.si-wildnis .si-bigword { font-family: "SI Stencil", sans-serif; font-size: min(18vh, 12vw); letter-spacing: .04em; transform: rotate(-3deg); }
+.si-body { position: absolute; inset: 0; display: grid; place-items: end center; overflow: hidden; filter: contrast(1.1) saturate(.85); animation: siHandheld 3.2s ease-in-out infinite; }
+.si-body .si-avatar { height: 78vh; max-width: 70vw; }
+@keyframes siHandheld { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-.6vw, .4vh) rotate(-.4deg); } 50% { transform: translate(.4vw, -.5vh) rotate(.3deg); } 75% { transform: translate(.6vw, .3vh) rotate(-.2deg); } }
+.si-tape { align-self: start; margin-top: 18vh; justify-self: start; margin-left: 6vw; padding: 1.4vh 2.4vw; background: #f1e4c6; color: #1b140c; transform: rotate(-3deg); box-shadow: 0 1vh 2vh rgba(0, 0, 0, .6); animation: siStamp .5s cubic-bezier(.2, 1.4, .4, 1) var(--hit) both; z-index: 3; }
+.si-tape b { font-family: "SI Marker", cursive; font-weight: 400; font-size: 7vh; }
+.si-quote { align-self: end; margin-bottom: 16vh; z-index: 3; font-family: "SI Type", monospace; font-size: 3.4vh; color: #fff; background: rgba(0, 0, 0, .55); padding: .8vh 1.6vw; animation: siFadeSlow 1s ease-out calc(var(--hit) + .6s) both; }
+.si-polaroid { position: relative; justify-self: start; margin-left: 12vw; padding: 2vh 2vh 7vh; background: #f6f2e8; color: #1b140c; transform: rotate(-5deg); box-shadow: 0 3vh 6vh rgba(0, 0, 0, .7); animation: siPolaroid 1s cubic-bezier(.2, 1.2, .4, 1) var(--hit) both; }
+.si-polaroid .ph { width: 44vh; height: 44vh; background: linear-gradient(160deg, #3d4b3a, #1a2218); display: grid; place-items: end center; overflow: hidden; }
+.si-polaroid .ph .si-avatar { height: 42vh; filter: sepia(.25) contrast(1.05); }
+.si-polaroid b { position: absolute; left: 0; right: 0; bottom: 1.4vh; font-family: "SI Marker", cursive; font-weight: 400; font-size: 4.4vh; }
+.si-polaroid .tape { position: absolute; top: -2vh; left: 50%; width: 14vh; height: 4vh; margin-left: -7vh; background: rgba(241, 228, 198, .8); transform: rotate(4deg); }
+@keyframes siPolaroid { from { transform: translateY(-80vh) rotate(25deg); } to { transform: rotate(-5deg); } }
+.si-items { justify-self: end; margin-right: 10vw; display: flex; flex-direction: column; gap: 1.6vh; text-align: left; }
+.si-items small { font-family: "SI Mono", monospace; font-weight: 700; font-size: 2.2vh; letter-spacing: .3em; text-transform: uppercase; color: #ffcc66; }
+.si-items span { font-family: "SI Stencil", sans-serif; font-size: 6vh; text-transform: uppercase; opacity: 0; animation: siItem .5s ease-out both; }
+.si-items span:nth-of-type(1) { animation-delay: calc(var(--hit) + .6s); } .si-items span:nth-of-type(2) { animation-delay: calc(var(--hit) + 1s); } .si-items span:nth-of-type(3) { animation-delay: calc(var(--hit) + 1.4s); }
+@keyframes siItem { from { opacity: 0; transform: translateX(6vw); } to { opacity: 1; transform: none; } }
+
+/* ============ WELTRAUM ============ */
+.si-space { background: radial-gradient(circle at 50% 120%, #0d1a40 0%, #02030a 60%); overflow: hidden; }
+.si-stars, .si-stars.two { position: absolute; inset: -50%; background-image: radial-gradient(1px 1px at 20% 30%, #fff, transparent), radial-gradient(1px 1px at 70% 60%, #fff, transparent), radial-gradient(1.5px 1.5px at 40% 80%, #fff, transparent), radial-gradient(1px 1px at 85% 15%, #cfe8ff, transparent), radial-gradient(1px 1px at 55% 45%, #fff, transparent); background-size: 17vw 23vh; animation: siDrift 60s linear infinite; opacity: .8; }
+.si-stars.two { background-size: 29vw 31vh; animation-duration: 90s; opacity: .5; }
+@keyframes siDrift { to { transform: translate(-10%, -6%); } }
+.si-earth { position: absolute; left: -30%; right: -30%; bottom: -150vh; height: 190vh; border-radius: 50%; background: radial-gradient(circle at 50% 8%, #3b7bd6 0%, #123a7a 8%, #071a3d 16%, #02060f 30%); box-shadow: 0 -2vh 6vh rgba(76, 201, 255, .5), inset 0 3vh 4vh rgba(150, 220, 255, .45); opacity: 0; transition: opacity 1.5s, transform 4s ease-out; }
+.si-space.orbit .si-earth { opacity: 1; }
+.si-hud-grid { position: absolute; inset: 0; background: linear-gradient(rgba(76, 201, 255, .06) 1px, transparent 1px) 0 0 / 100% 6vh, linear-gradient(90deg, rgba(76, 201, 255, .06) 1px, transparent 1px) 0 0 / 6vh 100%; }
+.si-space.orbit .si-hud-grid { opacity: .3; }
+.si-hud { position: absolute; inset: 3vh 3vw; font-family: "SI Mono", monospace; color: #9fe3ff; text-shadow: 0 0 1vh rgba(76, 201, 255, .6); }
+.si-hud-top { display: flex; justify-content: space-between; font-weight: 700; font-size: 2vh; letter-spacing: .2em; text-transform: uppercase; border-bottom: 1px solid rgba(76, 201, 255, .35); padding-bottom: 1vh; }
+.si-hud-top .met { color: #ffb02e; }
+.si-tel { position: absolute; right: 0; top: 8vh; display: grid; gap: 1.4vh; text-align: right; }
+.si-tel small { display: block; font-size: 1.5vh; opacity: .7; letter-spacing: .2em; }
+.si-tel b { font-size: 2.6vh; font-variant-numeric: tabular-nums; }
+.si-hud-c { position: absolute; width: 3vh; height: 3vh; border: 2px solid rgba(76, 201, 255, .7); }
+.si-hud-c.tl { left: -1vw; top: -1vh; border-right: 0; border-bottom: 0; } .si-hud-c.tr { right: -1vw; top: -1vh; border-left: 0; border-bottom: 0; } .si-hud-c.bl { left: -1vw; bottom: -1vh; border-right: 0; border-top: 0; } .si-hud-c.br { right: -1vw; bottom: -1vh; border-left: 0; border-top: 0; }
+.si-weltraum .si-present small, .si-weltraum .si-present b { font-family: "SI Cond", sans-serif; }
+.si-poll { width: min(70vw, 120vh); font-family: "SI Mono", monospace; text-align: left; }
+.si-poll-head { font-family: "SI Cond", sans-serif; font-weight: 800; font-size: 5vh; letter-spacing: .2em; text-transform: uppercase; color: #fff; margin-bottom: 3vh; border-left: 1vh solid #ffb02e; padding-left: 1.4vw; }
+.si-poll ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.4vh; }
+.si-poll li { display: flex; align-items: baseline; gap: 1.4vw; font-size: 3.4vh; font-weight: 700; color: #9fe3ff; opacity: .45; }
+.si-poll li .dots { flex: 1; border-bottom: .4vh dotted rgba(159, 227, 255, .5); }
+.si-poll li b { min-width: 9vh; text-align: center; padding: .2vh 1vw; border: .3vh solid rgba(159, 227, 255, .4); color: transparent; }
+.si-poll li.go { opacity: 1; }
+.si-poll li.go b { color: #031207; background: #18c964; border-color: #18c964; box-shadow: 0 0 2vh #18c964; animation: siGo .3s steps(2) 2; }
+@keyframes siGo { 50% { filter: brightness(2); } }
+.si-poll-done { margin-top: 3vh; font-size: 3vh; font-weight: 700; color: #ffb02e; opacity: 0; }
+.si-poll.done .si-poll-done { opacity: 1; animation: siFadeSlow .6s ease-out both; }
+.si-flightplan { width: 90vw; }
+.si-fp-svg svg { width: 100%; height: 38vh; }
+.si-orbit { stroke-dashoffset: 400; animation: siDash 4s linear forwards; }
+@keyframes siDash { to { stroke-dashoffset: 0; } }
+.si-flightplan ol { list-style: none; margin: -6vh 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4vh 2vw; text-align: left; }
+.si-flightplan li { font-family: "SI Mono", monospace; font-weight: 700; font-size: 2.4vh; color: #9fe3ff; border-left: .5vh solid #4cc9ff; padding-left: 1vw; opacity: 0; animation: siItem .4s ease-out both; animation-delay: calc(.3s + var(--i) * .5s); }
+.si-ignite .si-bg { background: radial-gradient(ellipse at 50% 120%, rgba(255, 150, 40, .55), #02030a 60%) !important; animation: siIgn .12s steps(2) infinite; }
+@keyframes siIgn { 50% { filter: brightness(1.4); } }
+.si-launch { position: absolute; inset: 0; z-index: 2; background: radial-gradient(ellipse at 50% 105%, rgba(255, 150, 50, .4), transparent 50%); }
+.si-rocket { position: absolute; left: 50%; bottom: 6vh; width: 14vh; margin-left: -7vh; animation: siLift 3.2s cubic-bezier(.55, 0, .9, .5) forwards; }
+.si-rocket svg { width: 100%; display: block; }
+.si-tower { position: absolute; left: calc(50% + 10vh); bottom: 0; width: 5vh; height: 62vh; background: repeating-linear-gradient(45deg, transparent 0 1.2vh, #556 1.2vh 1.6vh), repeating-linear-gradient(-45deg, transparent 0 1.2vh, #556 1.2vh 1.6vh); border-left: .6vh solid #667; border-right: .6vh solid #667; animation: siTower 3.2s ease-in forwards; }
+@keyframes siLift { 0% { transform: translateY(0); } 15% { transform: translateY(-2vh); } 100% { transform: translateY(-140vh) scale(.6); } }
+@keyframes siTower { to { transform: translateY(60vh); } }
+.si-liftoff .si-bigword { align-self: start; margin-top: 16vh; font-family: "SI Cond", sans-serif; font-size: min(16vh, 12vw); letter-spacing: .2em; }
+.si-patch { width: 46vh; height: 46vh; }
+.si-patch svg { width: 100%; height: 100%; filter: drop-shadow(0 2vh 4vh rgba(0, 0, 0, .7)); }
+.si-patch-wrap { align-self: start; margin-top: 7vh; animation: siPatch 1.4s cubic-bezier(.2, 1.2, .4, 1) both; }
+@keyframes siPatch { from { transform: scale(.2) rotate(-200deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.si-logo-wrap.patch { align-self: end; margin-bottom: 9vh; }
+.si-logo-wrap.patch .si-logo { font-size: min(7vh, 5vw); }
+.si-weltraum .si-line { font-family: "SI Cond", sans-serif; letter-spacing: .06em; }
+.si-weltraum .si-line::before, .si-weltraum .si-line::after { content: '['; color: #4cc9ff; -webkit-text-fill-color: #4cc9ff; margin: 0 .3em; font-weight: 600; }
+.si-weltraum .si-line::after { content: ']'; }
+.si-patch-wrap.team { margin-top: 5vh; animation-delay: var(--hit); }
+.si-patch-av { position: absolute; top: 14vh; left: 50%; transform: translateX(-50%); width: 26vh; height: 26vh; border-radius: 50%; overflow: hidden; display: grid; place-items: end center; animation: siFadeSlow .8s ease-out calc(var(--hit) + .6s) both; z-index: 2; }
+.si-patch-av .si-avatar { height: 26vh; max-width: none; }
+.si-ret { position: relative; justify-self: start; margin-left: 10vw; width: 56vh; height: 56vh; display: grid; place-items: center; }
+.si-ret > * { grid-area: 1 / 1; }
+.si-ret-av { width: 50vh; height: 50vh; border-radius: 50%; overflow: hidden; display: grid; place-items: end center; background: radial-gradient(circle, rgba(76, 201, 255, .15), transparent 70%); animation: siLock 1s ease-out var(--hit) both; }
+.si-ret-av .si-avatar { height: 48vh; }
+.si-ret .r1 { width: 56vh; height: 56vh; border-radius: 50%; border: .4vh solid #4cc9ff; box-shadow: 0 0 3vh #4cc9ff; animation: siSpin 6s linear infinite; border-style: dashed; }
+.si-ret .r2 { width: 64vh; height: 64vh; border-radius: 50%; border: .2vh solid rgba(76, 201, 255, .5); animation: siRetIn .8s ease-out both; }
+.si-ret .x { width: 100%; height: 100%; background: linear-gradient(#4cc9ff, #4cc9ff) center/ .3vh 100% no-repeat, linear-gradient(#4cc9ff, #4cc9ff) center/100% .3vh no-repeat; opacity: .5; animation: siRetIn .8s ease-out both; }
+@keyframes siLock { 0% { filter: brightness(3) blur(10px); opacity: 0; transform: scale(1.3); } 100% { filter: none; opacity: 1; transform: none; } }
+@keyframes siRetIn { from { transform: scale(2); opacity: 0; } }
+.si-ret-data { justify-self: end; margin-right: 8vw; text-align: left; display: flex; flex-direction: column; gap: 1.2vh; font-family: "SI Mono", monospace; color: #9fe3ff; animation: siItem .6s ease-out calc(var(--hit) + .3s) both; }
+.si-ret-data small { font-size: 2.2vh; letter-spacing: .3em; text-transform: uppercase; }
+.si-ret-data b { font-size: 10vh; color: #fff; line-height: 1; text-transform: uppercase; }
+.si-ret-data span { font-size: 2.8vh; }
+.si-ret-data .call { color: #ffb02e; }
+.si-ret-data em { font-style: normal; font-weight: 700; color: #18c964; font-size: 3vh; letter-spacing: .2em; }
+
+/* ============ PERSONEN (gemeinsam) ============ */
+.si-person .si-kicker { align-self: start; margin-top: 6vh; font-family: var(--ui); font-weight: 700; font-size: 2.6vh; letter-spacing: .6em; text-transform: uppercase; color: var(--b); animation: siDrop .6s ease-out both; z-index: 3; }
+.si-hero { align-self: end; margin-bottom: 20vh; z-index: 3; animation: siHero 1s cubic-bezier(.2, 1.3, .35, 1) var(--hit) both; }
+.si-hero.small { margin-bottom: 4vh; }
+.si-hero.small .si-avatar { height: 36vh; }
+.si-hero.left { justify-self: start; margin-left: 8vw; }
+@keyframes siHero { 0% { transform: translateY(14vh) scale(.7); opacity: 0; filter: brightness(3) blur(10px); } 60% { filter: brightness(1.6); } 100% { transform: none; opacity: 1; filter: none; } }
+.si-avatar { height: 52vh; width: auto; max-width: 42vw; object-fit: contain; filter: drop-shadow(0 0 3vh var(--team, var(--a))) drop-shadow(0 2vh 3vh rgba(0, 0, 0, .7)); }
+.si-avatar.host { height: 58vh; }
+.si-avatar.si-initials { width: 34vh; height: 34vh; border-radius: 50%; display: grid; place-items: center; font-family: "SI Display", sans-serif; font-size: 13vh; font-weight: 900; color: #fff; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--team) 60%, #fff), var(--team) 60%); box-shadow: 0 0 6vh var(--team); }
+.si-spot-cone { position: absolute; left: 50%; top: -10vh; width: 70vh; height: 120vh; margin-left: -35vh; background: linear-gradient(180deg, rgba(255, 250, 230, .55), rgba(255, 250, 230, 0) 85%); clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%); filter: blur(1vh); animation: siCone 1.7s ease-in both; mix-blend-mode: screen; }
+@keyframes siCone { 0% { opacity: 0; transform: rotate(-25deg); } 30% { opacity: .5; transform: rotate(18deg); } 60% { opacity: .4; transform: rotate(-10deg); } 100% { opacity: 1; transform: none; } }
+.si-plate { align-self: end; margin-bottom: 7vh; z-index: 4; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 1.6vw; align-items: center; padding: 1.4vh 3vw 1.4vh 1.4vw; background: linear-gradient(90deg, rgba(10, 10, 16, .92), rgba(10, 10, 16, .78)); border-top: .35vh solid var(--team); box-shadow: 0 2vh 5vh rgba(0, 0, 0, .6), 0 0 6vh color-mix(in srgb, var(--team) 40%, transparent); clip-path: polygon(0 0, 100% 0, 97% 100%, 0 100%); animation: siPlate .8s cubic-bezier(.2, 1.1, .3, 1) calc(var(--hit) + .15s) both; }
+.si-plate-bar { grid-row: 1 / 3; width: 1vw; height: 100%; min-height: 10vh; background: linear-gradient(180deg, var(--team), color-mix(in srgb, var(--team) 50%, #000)); box-shadow: 0 0 3vh var(--team); }
+.si-plate-name { font-family: var(--f); font-size: min(10vh, 6.4vw); font-weight: 900; line-height: 1; text-transform: uppercase; text-align: left; --m1: #fff; --m2: #fff; --m3: #d9dde4; --m4: #fff; }
+.si-plate small { font-family: var(--ui); font-weight: 700; font-size: 2.2vh; letter-spacing: .4em; text-transform: uppercase; color: var(--team); text-align: left; }
+@keyframes siPlate { from { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { clip-path: polygon(0 0, 100% 0, 97% 100%, 0 100%); } }
+.si-extra { display: flex; flex-direction: column; gap: .4vh; text-align: left; animation: siItem .5s ease-out calc(var(--hit) + .9s) both; }
+.si-extra small { font-family: var(--ui); font-size: 1.9vh; letter-spacing: .3em; text-transform: uppercase; color: var(--team); }
+.si-extra b { font-family: var(--f); font-size: 4vh; text-transform: uppercase; }
+/* Split */
+.si-split-l { justify-self: start; align-self: end; margin-left: 4vw; z-index: 2; animation: siSlideL .9s cubic-bezier(.2, 1.1, .3, 1) var(--hit) both; }
+.si-split-l .si-avatar { height: 82vh; max-width: 46vw; }
+.si-split-r { justify-self: end; margin-right: 6vw; max-width: 46vw; display: flex; flex-direction: column; align-items: flex-start; gap: 1.6vh; text-align: left; z-index: 3; }
+.si-split-r .si-kicker { align-self: auto; margin: 0; animation-delay: var(--hit); }
+.si-split-name { font-family: var(--f); font-size: min(15vh, 9vw); line-height: .92; text-transform: uppercase; color: #fff; text-shadow: 0 .6vh 0 color-mix(in srgb, var(--team) 70%, #000), 0 0 4vh var(--team); animation: siSlideR .8s cubic-bezier(.2, 1.1, .3, 1) calc(var(--hit) + .1s) both; }
+.si-split-tag { font-family: var(--ui); font-weight: 700; font-size: 3vh; letter-spacing: .12em; text-transform: uppercase; color: var(--team); animation: siSlideR .8s ease-out calc(var(--hit) + .35s) both; }
+.si-split-tag.bottom { align-self: end; margin-bottom: 6vh; }
+.si-split-bar { position: absolute; left: 0; right: 0; top: 50%; height: 30vh; margin-top: -15vh; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--team) 35%, transparent) 30%, transparent); transform: skewY(-6deg); animation: siBar .7s ease-out var(--hit) both; z-index: 1; }
+@keyframes siSlideL { from { transform: translateX(-60vw); } to { transform: none; } }
+@keyframes siSlideR { from { transform: translateX(40vw); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes siBar { from { transform: skewY(-6deg) scaleX(0); } to { transform: skewY(-6deg) scaleX(1); } }
+/* Typo */
+.si-type-bg { align-self: end; opacity: .35; filter: blur(.2vh); animation: siTypeBg 3s ease-out var(--hit) both; }
+.si-type-bg .si-avatar { height: 90vh; max-width: 70vw; }
+@keyframes siTypeBg { from { transform: scale(1.3); opacity: 0; } to { transform: scale(1); opacity: .45; } }
+.si-type-name { font-family: var(--f); font-size: min(22vh, 12vw); line-height: .9; text-transform: uppercase; z-index: 3; max-width: 94vw; }
+.si-type-name span { display: inline-block; color: #fff; text-shadow: 0 0 4vh var(--team), .05em .05em 0 color-mix(in srgb, var(--team) 70%, #000); animation: siSlam .45s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes siSlam { from { transform: scale(4) translateY(-.4em); opacity: 0; filter: blur(8px); } to { transform: none; opacity: 1; filter: none; } }
+.si-type-sub { align-self: end; margin-bottom: 10vh; display: flex; align-items: center; gap: 2vw; font-family: var(--ui); font-weight: 700; font-size: 3vh; letter-spacing: .3em; text-transform: uppercase; z-index: 3; animation: siFadeSlow .8s ease-out calc(var(--hit) + .7s) both; }
+.si-type-sub i { width: 6vw; height: .4vh; background: var(--team); }
+.lay-type .si-extra { align-self: start; margin-top: 8vh; text-align: center; align-items: center; }
+/* Zoom */
+.si-speed { position: absolute; inset: -20%; background: repeating-conic-gradient(from 0deg, transparent 0 3deg, rgba(255, 255, 255, .35) 3deg 3.3deg, transparent 3.3deg 9deg); -webkit-mask: radial-gradient(circle, transparent 15%, #000 65%); mask: radial-gradient(circle, transparent 15%, #000 65%); animation: siWarp 1.7s ease-in both; }
+@keyframes siWarp { from { transform: scale(.4) rotate(0); opacity: 0; } 50% { opacity: 1; } to { transform: scale(2) rotate(20deg); opacity: 0; } }
+.si-zoom-av { z-index: 2; animation: siZoomIn 1.7s cubic-bezier(.7, 0, .2, 1) both; }
+@keyframes siZoomIn { 0% { transform: scale(.02) rotate(-20deg); filter: blur(4px) brightness(3); opacity: 0; } 80% { transform: scale(1.08); filter: none; opacity: 1; } 100% { transform: scale(1); } }
+.si-zoom-name { align-self: end; margin-bottom: 12vh; z-index: 3; font-family: var(--f); font-size: min(14vh, 9vw); line-height: 1; text-transform: uppercase; color: #fff; text-shadow: 0 0 4vh var(--team); animation: siStampBig .5s cubic-bezier(.2, 1.6, .4, 1) var(--hit) both; }
+@keyframes siStampBig { from { transform: scale(3); opacity: 0; } to { transform: none; opacity: 1; } }
+.si-zoom-kick { align-self: start; margin-top: 6vh; font-family: var(--ui); font-weight: 700; font-size: 2.6vh; letter-spacing: .6em; text-transform: uppercase; color: var(--team); }
+.si-zoom-tag { align-self: end; margin-bottom: 7vh; font-family: var(--ui); font-weight: 700; font-size: 2.8vh; letter-spacing: .2em; text-transform: uppercase; animation: siFadeSlow .8s ease-out calc(var(--hit) + .5s) both; }
+/* XXL-Showtreppe */
+.si-xxl { position: absolute; left: 50%; bottom: 0; width: 70vw; height: 88vh; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; perspective: 80vh; }
+.si-xxl i { display: block; height: calc(88vh / 12); width: calc(22vw + (12 - var(--i)) * 4vw); background: linear-gradient(180deg, #fff9fb, #e6d7ef); border-bottom: .5vh solid #b9a3cc; box-shadow: 0 -.4vh 0 rgba(255, 255, 255, .8) inset, 0 1vh 2vh rgba(0, 0, 0, .4); position: relative; opacity: .9; }
+.si-xxl i:nth-child(n) { order: calc(12 - var(--i)); }
+.si-xxl i::before, .si-xxl i::after { content: ''; position: absolute; top: 30%; width: 1.4vh; height: 1.4vh; border-radius: 50%; background: #ffd166; box-shadow: 0 0 2vh #ffb347; animation: siStepLight 1.2s linear infinite; animation-delay: calc(var(--i) * -.1s); }
+.si-xxl i::before { left: 1vw; } .si-xxl i::after { right: 1vw; }
+@keyframes siStepLight { 0%, 100% { opacity: .25; } 10% { opacity: 1; } }
+.si-musical .si-xxl i { background: linear-gradient(180deg, #ffe9a3, #b8892a); border-bottom-color: #6b4a0a; }
+.si-buehne .si-xxl i { background: linear-gradient(180deg, #1b1240, #07051a); border-bottom-color: var(--b); box-shadow: 0 -.4vh 0 var(--a) inset; }
+.si-walker { position: absolute; left: 50%; top: 2vh; z-index: 3; transform-origin: 50% 100%; animation: siWalk 4.6s cubic-bezier(.3, .1, .3, 1) both; }
+.si-walker .si-avatar { height: 60vh; }
+@keyframes siWalk { 0% { transform: translateX(-50%) translateY(0) scale(.28); } 15% { transform: translateX(-50%) translateY(6vh) scale(.36); } 25% { transform: translateX(-50%) translateY(5vh) scale(.4); } 37% { transform: translateX(-50%) translateY(13vh) scale(.5); } 47% { transform: translateX(-50%) translateY(12vh) scale(.55); } 60% { transform: translateX(-50%) translateY(22vh) scale(.68); } 70% { transform: translateX(-50%) translateY(21vh) scale(.74); } 85% { transform: translateX(-50%) translateY(32vh) scale(.92); } 100% { transform: translateX(-50%) translateY(34vh) scale(1); } }
+.lay-stairs .si-plate { animation-delay: 4.4s; }
+.lay-stairs .si-kicker { animation-delay: 3.8s; }
+
+/* Alle zusammen */
+.si-all .si-row { z-index: 3; display: flex; justify-content: center; align-items: end; gap: 1.6vw; flex-wrap: wrap; max-width: 94vw; margin-top: 4vh; }
+.si-mini { display: flex; flex-direction: column; align-items: center; gap: 1vh; animation: siHero .8s cubic-bezier(.2, 1.3, .35, 1) both; }
+.si-mini .si-avatar { height: 26vh; max-width: 14vw; }
+.si-mini .si-avatar.si-initials { width: 16vh; height: 16vh; font-size: 6vh; }
+.si-mini b { font-family: var(--ui); font-weight: 800; font-size: 2.3vh; letter-spacing: .08em; text-transform: uppercase; padding: .6vh 1vw; background: rgba(10, 10, 16, .9); border-top: .3vh solid var(--team); white-space: nowrap; max-width: 15vw; overflow: hidden; text-overflow: ellipsis; }
+.si-all .si-hosts { align-self: end; margin-bottom: 17vh; font-family: var(--ui); font-size: 2.8vh; font-weight: 700; color: var(--b); letter-spacing: .5em; text-transform: uppercase; }
+.si-all .si-tagline { align-self: end; margin-bottom: 6vh; font-family: var(--f); font-size: min(6.5vh, 4.4vw); font-weight: 900; animation: siLineLast 1.1s cubic-bezier(.2, 1.4, .4, 1) .9s both; }
+.si-media { display: none; }
+.reduced-motion .si *, .reduced-motion .si { animation-duration: .01s !important; }
+
+/* ============ iPads: das ganze Display als Licht ============ */
+body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
+.si-ipad { position: fixed; inset: 0; z-index: 40; background: #000; display: grid; place-items: center; overflow: hidden; container-type: size; }
+.si-ipad.inline { position: absolute; }
+.si-ipad-cv { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: auto; }
+.si-ipad-text { position: relative; z-index: 1; text-align: center; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .6); padding: 6%; }
+.si-ipad-big { font-family: "SI Display", sans-serif; font-weight: 900; font-size: clamp(1.4rem, 16cqmin, 12rem); line-height: 1; text-transform: uppercase; }
+.si-ipad-big.ip-studio { font-family: "SI Anton", sans-serif; font-weight: 400; }
+.si-ipad-big.ip-musical { font-family: "SI Playfair", serif; }
+.si-ipad-big.ip-casino { font-family: "SI Cinzel", serif; }
+.si-ipad-big.ip-wildnis { font-family: "SI Stencil", sans-serif; }
+.si-ipad-big.ip-weltraum { font-family: "SI Cond", sans-serif; }
+.si-ipad-big[data-fx="count"] { font-size: clamp(2rem, 40cqmin, 20rem); }
+.si-ipad-big[data-fx="go"] { color: #eafff1; text-shadow: 0 0 4cqmin #18c964; font-size: clamp(2rem, 30cqmin, 16rem); }
+.si-ipad-big[data-fx="you"] { animation: siYou .5s ease-in-out infinite alternate; }
+@keyframes siYou { to { transform: scale(1.06); } }
+.si-ipad-small { margin-top: .6em; font-family: "SI Display", sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: clamp(.6rem, 4.2cqmin, 2rem); }
+
+/* Initialen (Teams ohne Avatar) in großen Layouts rund halten */
+.si-split-l .si-avatar.si-initials, .si-body .si-avatar.si-initials, .si-type-bg .si-avatar.si-initials { width: 44vh; height: 44vh; font-size: 17vh; max-width: none; }
+.si-split-l .si-avatar.si-initials { margin-bottom: 14vh; }
+.si-body .si-avatar.si-initials { margin-bottom: 18vh; }
+.si-pod-av .si-avatar.si-initials, .si-card-av .si-avatar.si-initials, .si-ret-av .si-avatar.si-initials, .si-patch-av .si-avatar.si-initials, .si-polaroid .ph .si-avatar.si-initials, .si-cube-team .si-avatar.si-initials { width: 26vh; height: 26vh; font-size: 10vh; }
+.si-ret-av .si-avatar.si-initials, .si-patch-av .si-avatar.si-initials { margin-bottom: 12vh; }
+.si-polaroid .ph .si-avatar.si-initials { margin-bottom: 9vh; }
+.si-studio .si-person .si-kicker { margin-top: 23vh; }
+.si-studio .si-person.lay-cube .si-kicker, .si-studio .si-person.lay-stairs .si-kicker { margin-top: 6vh; }
+
+.lay-bodycam .si-extra { justify-self: end; margin-right: 6vw; align-self: center; z-index: 3; background: rgba(0, 0, 0, .55); padding: 1.4vh 1.6vw; }
+.lay-bodycam .si-extra b { font-family: "SI Stencil", sans-serif; }
+.lay-split .si-split-r .si-extra b, .lay-reticle .si-extra b { font-size: 3.4vh; }
+.si-fallline { align-self: center !important; margin-top: 0 !important; }
+.si-flash.short { animation-duration: .45s; }
+.si-rocket svg { filter: drop-shadow(0 0 2.5vh rgba(255, 190, 90, .55)) drop-shadow(0 2vh 3vh rgba(0, 0, 0, .8)); }
+.si-liftoff .si-bg { background: radial-gradient(ellipse at 50% 110%, rgba(255, 150, 50, .45), #02030a 55%) !important; }
