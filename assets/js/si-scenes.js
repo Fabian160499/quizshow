@@ -1,7 +1,8 @@
 // Show-Intro – Regie je Thema: Eröffnung (automatisch), Personen-Auftritte, Finale.
 // Alle sichtbaren Texte kommen aus si.tx / si.teams / si.host (im Editor änderbar).
 
-import { h, later, atTime, esc, frag, logoEl, avatarOf, nowEl } from './si-core.js';
+import { h, later, atTime, esc, frag, logoEl, avatarOf, nowEl, initials, holoCard } from './si-core.js';
+import { mount3D, HOST_POSES, COHOST_POSES, imgUrl } from './si-3d.js';
 import { mediaUrl } from './client.js';
 import { MAPS } from './map-data.js';
 const nowElSafe = () => nowEl(0);
@@ -17,6 +18,31 @@ export const THEME_LOOK = {
   weltraum: { a: '#4cc9ff', b: '#7fe3ff', c: '#ffffff', d: '#0b2a4a', bg: '#010307', metal: 'chrome', font: 'si-orbit', parts: 'stars' },
 };
 export const look = (theme) => THEME_LOOK[theme] || THEME_LOOK.studio;
+
+// ---- Figuren für die 3D-Bühne ----
+const DEFAULT_HOST = 'assets/img/avatar-host.webp';
+const DEFAULT_COHOST = 'assets/img/avatar-cohost.webp';
+// Ganzkörper-Posen (stehen, gehen, Mikro); ein eigenes Bild aus dem Editor ersetzt sie
+function hostFigures(s) {
+  const own = s.show.hostAvatar;
+  return own && own !== DEFAULT_HOST && own !== imgUrl(DEFAULT_HOST) ? { stand: own } : HOST_POSES;
+}
+function coHostFigures(s) {
+  const own = s.show.coHostAvatar;
+  return own && own !== DEFAULT_COHOST && own !== imgUrl(DEFAULT_COHOST) ? { stand: own } : COHOST_POSES;
+}
+// Rundes Team-Bild (Avatar oder Initialen) als Bild-URL für die 3D-Bühne
+function teamFigureUrl(t) {
+  if (t.avatar) return t.avatar;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512;
+  const g = cv.getContext('2d');
+  const gr = g.createRadialGradient(256, 200, 20, 256, 256, 256); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.18, t.color || '#888'); gr.addColorStop(1, '#000000');
+  g.fillStyle = gr; g.beginPath(); g.arc(256, 256, 250, 0, 7); g.fill();
+  g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
+  g.fillStyle = '#ffffff'; g.font = '900 220px "SI Anton", "SI Display", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(initials(t.name), 256, 270);
+  return cv.toDataURL('image/png');
+}
 export const FONT = {
   'si-display': '900 100px "SI Display", system-ui, sans-serif', 'si-anton': '400 100px "SI Anton", "SI Display", sans-serif', 'si-playfair': '900 100px "SI Playfair", Georgia, serif',
   'si-cinzel': '800 100px "SI Cinzel", Georgia, serif', 'si-stencil': '900 100px "SI Stencil", "SI Display", sans-serif', 'si-cond': '800 100px "SI Cond", "SI Display", sans-serif', 'si-orbit': '400 100px "SI Orbit", "SI Display", sans-serif',
@@ -411,6 +437,8 @@ function autoStudio(c) {
   const bg = h('div', { class: 'si-setslot' });
   root.append(bg, stage);
   const at = (t, fn) => atTime(el, t, fn);
+  // Echte 3D-Bühne (Treppenwelt → Platsch → Studio); ohne WebGL die bisherigen Bühnenbilder
+  let use3D = mount3D(c, { mode: 'auto', font: FONT[L.font], figures: hostFigures(s) }, () => { use3D = false; bg.replaceChildren(set(c, nowEl(el) < boom ? 'muralla' : 'studio')); });
   // Cold Open: Aufnahme-Leuchtschild, dann „präsentieren“
   at(0, () => { if (el < tl.teaser) stage.replaceChildren(h('div', { class: 'si-onair' }, h('i'), h('b', {}, si.tx['cold.a']))); });
   sound('clunk', 0.2, el);
@@ -419,7 +447,7 @@ function autoStudio(c) {
   // Vorspann: Treppenwelt, vier Einstellungen, Spieltitel, Ninjas, Sprung in den Pool
   const shotLen = (boom - tl.teaser) / 4;
   at(tl.teaser, () => {
-    if (el > boom) return;
+    if (el > boom || use3D) return;
     const mr = set(c, 'muralla');
     bg.replaceChildren(mr);
     root.classList.add('si-day');
@@ -444,7 +472,7 @@ function autoStudio(c) {
   sound('hit', boom, el);
   at(boom, () => {
     root.classList.remove('si-day'); root.classList.add('si-lit');
-    bg.replaceChildren(set(c, 'studio'));
+    if (!use3D) bg.replaceChildren(set(c, 'studio'));
     c.voice(si.clips.drop, si.tx['voice.drop'], boom + 0.4);
     dropLogo(c, stage);
     c.fx((fx) => { if (el < boom + 1) { fx.burst(140, 'spark', fx.w / 2, fx.h * 0.6, 1.3, ['#ffffff', '#9ee7f7', '#5bc0ff']); fx.cannon(-1, 70); fx.cannon(1, 70); } fx.beamN = 6; });
@@ -1022,10 +1050,21 @@ export function personScene(c, kind) {
   c.jingle(P.jingle, P.song, HIT);
   c.shake(HIT, kind === 'host');
   root.classList.add('si-lit');
-  const bg = h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open')))));
+  const setMode = si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open')));
+  const bg = h('div', { class: 'si-setslot' });
   root.append(bg);
+  // Original-Studio in 3D: Treppenabgang (Moderation), Hero-Shot auf dem Podest (Teams, Co-Moderation)
+  let use3D = false;
+  if (si.theme === 'studio') {
+    const t = kind === 'team' ? (s.teams[P.k] || {}) : null;
+    const figures = kind === 'host' ? hostFigures(s) : kind === 'coHost' ? coHostFigures(s) : { main: teamFigureUrl(t) };
+    use3D = mount3D(c, { mode: kind, k: P.k, color: P.color, font: FONT[L.font], figures, hit: HIT }, () => { use3D = false; bg.replaceChildren(set(c, setMode)); if (node.dataset.l3d) node.replaceChildren(...(LAYOUTS[node.dataset.l3d] || LAYOUTS.spot)(c, P).childNodes); });
+    if (use3D) { P.layout3d = P.layout; P.layout = kind === 'team' ? 'holo' : (kind === 'host' ? 'stairs3d' : 'hero3d'); }
+  }
+  if (!use3D) bg.append(set(c, setMode));
   if (si.theme === 'voice') bg.querySelector('.si-vfloor')?.append(h('b', { class: 'si-vfloortext' }, P.name));
   const node = (LAYOUTS[P.layout] || LAYOUTS.spot)(c, P);
+  if (P.layout3d) node.dataset.l3d = kind === 'host' ? 'stairs' : P.layout3d;
   node.classList.add('si-stage', 'si-person', `lay-${P.layout}`, kind);
   node.style.setProperty('--team', P.color);
   node.style.setProperty('--hit', `${Math.max(0, HIT - el)}s`);
@@ -1034,10 +1073,10 @@ export function personScene(c, kind) {
     fx.beams = 0.9; fx.beamColor = P.color; fx.ambient = { rate: 0.4 };
     if (si.theme === 'wildnis') { fx.fire = 0; fx.beams = 0.12; }
     if (el < HIT + 1) later(Math.max(0, HIT - el), () => {
-      fx.burst(kind === 'host' ? 220 : 120, 'spark', fx.w / 2, fx.h * 0.45, 1.1);
+      fx.burst(Math.round((kind === 'host' ? 220 : 120) * (use3D ? 0.35 : 1)), 'spark', fx.w / 2, fx.h * 0.45, 1.1);
       fx.flare(fx.w / 2, fx.h * 0.4);
-      if (kind === 'host' || P.layout === 'zoom') { fx.cannon(-1, 90); fx.cannon(1, 90); }
-      if (si.theme === 'buehne' || si.theme === 'studio') { fx.fountain(fx.w * 0.1, 2.2); fx.fountain(fx.w * 0.9, 2.2); }
+      if ((kind === 'host' || P.layout === 'zoom') && !use3D) { fx.cannon(-1, 90); fx.cannon(1, 90); }
+      if ((si.theme === 'buehne' || si.theme === 'studio') && !use3D) { fx.fountain(fx.w * 0.1, 2.2); fx.fountain(fx.w * 0.9, 2.2); }
       if (si.theme === 'casino') fx.rain(50, 'coin');
     });
   });
@@ -1073,6 +1112,23 @@ const LAYOUTS = {
   cube(c, P) {
     const face = h('div', { class: 'si-cube-team' }, P.avatar(), h('b', {}, P.name));
     return h('div', {}, cube(c, face, 'big'), h('div', { class: 'si-cube-plate' }, h('small', {}, P.kicker), h('b', { class: c.L.font }, P.name), h('span', {}, P.tag)), extraEl(P));
+  },
+  // 3D-Treppenabgang: nur Texte, die Bühne kommt aus si-3d.js. Name mit Lichtstreifen.
+  stairs3d(c, P) {
+    return h('div', {}, h('div', { class: 'si-sweep' }, P.kicker ? h('small', {}, P.kicker) : null, h('b', { class: c.L.font, style: { fontSize: P.fit(60, 13) } }, P.name), P.tag ? h('span', {}, P.tag) : null));
+  },
+  hero3d(c, P) {
+    return h('div', {}, h('div', { class: 'si-sweep left' }, P.kicker ? h('small', {}, P.kicker) : null, h('b', { class: c.L.font, style: { fontSize: P.fit(48, 12) } }, P.name), P.tag ? h('span', {}, P.tag) : null));
+  },
+  // Hero-Shot eines Teams: holografische Spielerkarte neben dem Podest
+  holo(c, P) {
+    const tx = c.si.tx;
+    const t = c.s.teams[P.k] || {};
+    return h('div', {}, holoCard({
+      name: P.name, color: P.color, avatar: avatarOf({ name: t.name, color: t.color, avatar: t.avatar }), kicker: P.kicker, tag: P.tag, extra: P.extra, extraLabel: P.extraLabel,
+      nr: P.k + 1, n: c.s.teams.length, games: (c.si.games || []).length, title: tx['card.title'], lNr: tx['card.nr'], lTeams: tx['card.teams'], lGames: tx['card.games'],
+      side: P.k % 2 ? 'left' : 'right', delay: Math.max(0, HIT + 0.45 - c.el),
+    }));
   },
   // Showtreppe: Abgang über die XXL-Treppe mit Lauflicht
   stairs(c, P) {
@@ -1189,7 +1245,10 @@ export function allScene(c) {
   c.jingle('all', null, 0.1);
   c.shake(0.1, true);
   root.classList.add('si-lit');
-  root.append(h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open'))))));
+  const slot = h('div', { class: 'si-setslot' });
+  root.append(slot);
+  const allMode = si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open')));
+  if (!(si.theme === 'studio' && mount3D(c, { mode: 'all', font: FONT[L.font], figures: hostFigures(s), figures2: s.show.coHost ? coHostFigures(s) : null }, () => slot.append(set(c, allMode))))) slot.append(set(c, allMode));
   root.append(h('div', { class: 'si-stage si-all' },
     h('div', { class: 'si-rays', 'aria-hidden': 'true' }),
     h('div', { class: 'si-logo-wrap small' }, logoEl(s.show.name, L)),

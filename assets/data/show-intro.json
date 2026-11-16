@@ -1,0 +1,1282 @@
+{
+  "info": "Katalog des Show-Intros: Themen, Zeitachsen, alle Texte (Standard) und Feld-Beschriftungen für den Editor. Platzhalter: {show} {subtitle} {host} {cohost} {hosts} {n} {nWort} {nwort} {games} {gamesWort} {gameswort}; bei Teams zusätzlich {team} {nr}; bei Moderation {name}; bei Spielen {nr} {title}.",
+  "order": [
+    "studio",
+    "bielefeld",
+    "voice",
+    "buehne",
+    "musical",
+    "casino",
+    "wildnis",
+    "weltraum"
+  ],
+  "groups": [
+    "Eröffnung (Beamer)",
+    "Off-Sprecher (gesprochen)",
+    "Teams",
+    "Moderation",
+    "iPads",
+    "Spickzettel Moderation"
+  ],
+  "fields": [
+    {
+      "key": "cold.a",
+      "group": "Eröffnung (Beamer)",
+      "label": "Erste Einblendung"
+    },
+    {
+      "key": "cold.b",
+      "group": "Eröffnung (Beamer)",
+      "label": "Zweite Einblendung"
+    },
+    {
+      "key": "cold.kicker",
+      "group": "Eröffnung (Beamer)",
+      "label": "Zeile über „präsentiert“"
+    },
+    {
+      "key": "cold.present",
+      "group": "Eröffnung (Beamer)",
+      "label": "„präsentiert“"
+    },
+    {
+      "key": "teaser.head",
+      "group": "Eröffnung (Beamer)",
+      "label": "Überschrift vor den Spielen"
+    },
+    {
+      "key": "teaser.item",
+      "group": "Eröffnung (Beamer)",
+      "label": "Spiel-Zeile ({nr}, {title})"
+    },
+    {
+      "key": "poll.title",
+      "group": "Eröffnung (Beamer)",
+      "label": "Go/No-Go: Überschrift",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "poll.row",
+      "group": "Eröffnung (Beamer)",
+      "label": "Go/No-Go: Zeile je Team ({nr}, {team})",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "poll.go",
+      "group": "Eröffnung (Beamer)",
+      "label": "Go/No-Go: Antwort",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "poll.done",
+      "group": "Eröffnung (Beamer)",
+      "label": "Go/No-Go: Abschluss",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "count.label",
+      "group": "Eröffnung (Beamer)",
+      "label": "Countdown: Zeichen vor der Zahl",
+      "only": [
+        "buehne",
+        "musical",
+        "casino",
+        "wildnis",
+        "weltraum",
+        "bielefeld",
+        "voice"
+      ]
+    },
+    {
+      "key": "count.final",
+      "group": "Eröffnung (Beamer)",
+      "label": "Countdown: Einblendung kurz vor Schluss",
+      "only": [
+        "buehne",
+        "musical",
+        "casino",
+        "wildnis",
+        "weltraum",
+        "bielefeld",
+        "voice"
+      ]
+    },
+    {
+      "key": "chair.text",
+      "group": "Eröffnung (Beamer)",
+      "label": "Leuchtschrift am Stuhl beim Umdrehen",
+      "only": [
+        "voice"
+      ]
+    },
+    {
+      "key": "drop.big",
+      "group": "Eröffnung (Beamer)",
+      "label": "Großes Wort beim Höhepunkt"
+    },
+    {
+      "key": "drop.sub",
+      "group": "Eröffnung (Beamer)",
+      "label": "Zeile unter dem Logo"
+    },
+    {
+      "key": "hold",
+      "group": "Eröffnung (Beamer)",
+      "label": "Wartezeile nach der Eröffnung"
+    },
+    {
+      "key": "tagline",
+      "group": "Eröffnung (Beamer)",
+      "label": "Schlusszeile (alle zusammen)"
+    },
+    {
+      "key": "voice.cold",
+      "group": "Off-Sprecher (gesprochen)",
+      "label": "Ganz am Anfang",
+      "say": true
+    },
+    {
+      "key": "voice.count",
+      "group": "Off-Sprecher (gesprochen)",
+      "label": "Vor dem Höhepunkt",
+      "say": true
+    },
+    {
+      "key": "voice.drop",
+      "group": "Off-Sprecher (gesprochen)",
+      "label": "Beim Höhepunkt",
+      "say": true
+    },
+    {
+      "key": "lines",
+      "group": "Off-Sprecher (gesprochen)",
+      "label": "Off-Ansage (eine Zeile pro Einblendung, wird auch angezeigt)",
+      "say": true,
+      "multi": true
+    },
+    {
+      "key": "voice.all",
+      "group": "Off-Sprecher (gesprochen)",
+      "label": "Zum Schluss (alle zusammen)",
+      "say": true
+    },
+    {
+      "key": "hud.tel",
+      "group": "Eröffnung (Beamer)",
+      "label": "Telemetrie-Begriffe (mit · getrennt)",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "hud.status",
+      "group": "Teams",
+      "label": "Status-Zeile in der Zielerfassung",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "cam.rec",
+      "group": "Eröffnung (Beamer)",
+      "label": "Kamera-Anzeige „REC“",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "slot.top",
+      "group": "Teams",
+      "label": "Schild über dem Spielautomaten",
+      "only": [
+        "casino"
+      ]
+    },
+    {
+      "key": "team.kicker",
+      "group": "Teams",
+      "label": "Kleine Zeile über dem Namen ({nr}, {n})"
+    },
+    {
+      "key": "stat.1",
+      "group": "Teams",
+      "label": "Statistik 1: Beschriftung",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "stat.2",
+      "group": "Teams",
+      "label": "Statistik 2: Beschriftung",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "stat.3",
+      "group": "Teams",
+      "label": "Statistik 3: Beschriftung",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "stat.skill",
+      "group": "Teams",
+      "label": "Ladebalken: Beschriftung",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "card.title",
+      "group": "Teams",
+      "label": "Spielerkarte: Titel",
+      "only": [
+        "studio"
+      ]
+    },
+    {
+      "key": "card.nr",
+      "group": "Teams",
+      "label": "Spielerkarte: Zeile Team-Nummer",
+      "only": [
+        "studio"
+      ]
+    },
+    {
+      "key": "card.teams",
+      "group": "Teams",
+      "label": "Spielerkarte: Zeile Teams",
+      "only": [
+        "studio"
+      ]
+    },
+    {
+      "key": "card.games",
+      "group": "Teams",
+      "label": "Spielerkarte: Zeile Spiele",
+      "only": [
+        "studio"
+      ]
+    },
+    {
+      "key": "hud.nav",
+      "group": "Eröffnung (Beamer)",
+      "label": "Menüleiste oben (mit · getrennt)",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "hud.crews",
+      "group": "Eröffnung (Beamer)",
+      "label": "Panel: Crews",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "hud.telTitle",
+      "group": "Eröffnung (Beamer)",
+      "label": "Panel: Telemetrie",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "host.kicker",
+      "group": "Moderation",
+      "label": "Moderation: kleine Zeile"
+    },
+    {
+      "key": "host.call",
+      "group": "Moderation",
+      "label": "Moderation: Ansage ({name})",
+      "say": true
+    },
+    {
+      "key": "host.tag",
+      "group": "Moderation",
+      "label": "Moderation: Zeile unter dem Namen"
+    },
+    {
+      "key": "coHost.kicker",
+      "group": "Moderation",
+      "label": "Co-Moderation: kleine Zeile"
+    },
+    {
+      "key": "coHost.call",
+      "group": "Moderation",
+      "label": "Co-Moderation: Ansage ({name})",
+      "say": true
+    },
+    {
+      "key": "coHost.tag",
+      "group": "Moderation",
+      "label": "Co-Moderation: Zeile unter dem Namen"
+    },
+    {
+      "key": "ipad.wait",
+      "group": "iPads",
+      "label": "Nach der Eröffnung"
+    },
+    {
+      "key": "ipad.start",
+      "group": "iPads",
+      "label": "Beim Höhepunkt"
+    },
+    {
+      "key": "ipad.go",
+      "group": "iPads",
+      "label": "Go/No-Go: Anzeige auf dem iPad",
+      "only": [
+        "weltraum"
+      ]
+    },
+    {
+      "key": "ipad.you",
+      "group": "iPads",
+      "label": "Eigenes Team wird vorgestellt (groß)"
+    },
+    {
+      "key": "ipad.youSub",
+      "group": "iPads",
+      "label": "Eigenes Team wird vorgestellt (klein)"
+    },
+    {
+      "key": "ipad.other",
+      "group": "iPads",
+      "label": "Anderes Team wird vorgestellt ({team})"
+    },
+    {
+      "key": "ipad.host",
+      "group": "iPads",
+      "label": "Moderation wird vorgestellt ({name})"
+    },
+    {
+      "key": "ipad.all",
+      "group": "iPads",
+      "label": "Alle zusammen"
+    },
+    {
+      "key": "greeting",
+      "group": "Spickzettel Moderation",
+      "label": "Begrüßung (nur in der Regie sichtbar)",
+      "long": true
+    }
+  ],
+  "teamFields": [
+    {
+      "key": "call",
+      "label": "Ansage",
+      "say": true
+    },
+    {
+      "key": "tag",
+      "label": "Zeile unter dem Namen"
+    },
+    {
+      "key": "extra",
+      "label": "Extra"
+    },
+    {
+      "key": "s1",
+      "label": "Statistik 1: Wert",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "s2",
+      "label": "Statistik 2: Wert",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "s3",
+      "label": "Statistik 3: Wert",
+      "only": [
+        "wildnis"
+      ]
+    },
+    {
+      "key": "skill",
+      "label": "Skill-Ranking in Prozent (0–100)",
+      "only": [
+        "wildnis"
+      ]
+    }
+  ],
+  "themes": {
+    "studio": {
+      "name": "Original-Studio",
+      "desc": "Wie im Fernsehen: Vorspann in rosa-blauen Treppenwelten, Retro-Studio, XXL-Showtreppe, Videowürfel und Bigband",
+      "tl": {
+        "cold": 0,
+        "teaser": 3,
+        "count": null,
+        "boom": 15.5,
+        "lines": 21,
+        "line": 2.8,
+        "bpm": 134.4
+      },
+      "labels": {
+        "cold.a": "Einblendung im Schwarzbild",
+        "cold.b": "Einblendung beim Sprung in den Pool",
+        "extra": "Lieblingsspiel"
+      },
+      "music": {
+        "bpm": 138,
+        "styles": [
+          "big band",
+          "brass section",
+          "swing",
+          "retro TV show theme",
+          "trumpets",
+          "saxophones",
+          "live drums",
+          "energetic"
+        ],
+        "negative": [
+          "vocals",
+          "edm",
+          "lo-fi"
+        ]
+      },
+      "t": {
+        "cold.a": "Achtung – die Aufzeichnung läuft",
+        "cold.b": "Eine Show. {nWort} Teams. Ein Job.",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Heute in der Show",
+        "teaser.item": "Spiel {nr} · {title}",
+        "drop.big": "",
+        "drop.sub": "{subtitle}",
+        "hold": "Gleich: die Kandidaten des Abends",
+        "tagline": "Die Show gehört … noch … uns!",
+        "voice.cold": "Achtung, Achtung. Die Aufzeichnung läuft. Bitte bleiben Sie ganz entspannt.",
+        "voice.count": "",
+        "voice.drop": "Meine Damen und Herren: {show}!",
+        "lines": [
+          "{nWort} Teams.",
+          "{gamesWort} Spiele.",
+          "Drei Gewinnstufen.",
+          "Eine Münze, die alles verändern kann.",
+          "Und am Ende nur eine Frage:",
+          "Wer stiehlt uns die Show?"
+        ],
+        "voice.all": "Das sind sie. Die Teams des Abends. Und eines davon stiehlt uns heute die Show.",
+        "team.kicker": "Kandidat {nr} von {n}",
+        "host.kicker": "Gastgeber",
+        "host.call": "Und hier ist er – der Mann, dem diese Show gehört. Noch. {name}!",
+        "host.tag": "Hat seinen Job noch",
+        "coHost.kicker": "An seiner Seite",
+        "coHost.call": "An seiner Seite – und schon mit einem Auge auf seinem Job: {name}!",
+        "coHost.tag": "Will den Job vielleicht auch",
+        "ipad.wait": "Gleich geht's los …",
+        "ipad.start": "Die Show beginnt!",
+        "ipad.you": "IHR SEID DRAN!",
+        "ipad.youSub": "Aufstehen · winken · jubeln",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Applaus für {name}!",
+        "ipad.all": "Viel Glück!",
+        "greeting": "Da bin ich wieder! Herzlich willkommen zu „{show}“! Heute geht es um nichts Geringeres als meinen Job – {nwort} Teams wollen ihn haben. Seid ihr bereit?",
+        "card.title": "Kandidaten-Karte",
+        "card.nr": "Team-Nr.",
+        "card.teams": "Teams heute",
+        "card.games": "Spiele"
+      },
+      "team": {
+        "call": [
+          "Sie kamen, sie sahen – und wollen jetzt die Show: {team}!",
+          "Sie haben trainiert. Sie haben gelernt. Zumindest ein bisschen: {team}!",
+          "Sie haben keinen Plan, aber eine Strategie: {team}!",
+          "Nur aus einem einzigen Grund hier – dieser Show: {team}!",
+          "Zu Hause schon Sieger. Heute auch hier? {team}!",
+          "Und das Team, das sich am meisten zutraut: {team}!"
+        ],
+        "tag": [
+          "Wollen die Show",
+          "Haben fleißig geübt",
+          "Mit Strategie, ohne Plan",
+          "Nur wegen der Show hier",
+          "Zu Hause ungeschlagen",
+          "Trauen sich alles zu"
+        ],
+        "extra": [
+          "Die leichten 5",
+          "Ich seh ein Land",
+          "Kassenschlager",
+          "Song Song Song",
+          "Dummes Zeug",
+          "Das Finale"
+        ]
+      }
+    },
+    "buehne": {
+      "name": "Showbühne",
+      "desc": "Große Samstagabendshow: LED-Wand, Moving Heads, Funkenfontänen, Konfetti",
+      "tl": {
+        "cold": 0,
+        "teaser": 3.5,
+        "count": 9.5,
+        "boom": 14.5,
+        "lines": 20,
+        "line": 2.6,
+        "bpm": 128
+      },
+      "labels": {
+        "cold.a": "Einblendung im Schwarzbild",
+        "cold.b": "Einblendung auf der LED-Wand",
+        "extra": "Stärke"
+      },
+      "music": {
+        "bpm": 128,
+        "styles": [
+          "epic tv show opener",
+          "festival edm",
+          "orchestral hits",
+          "big drop",
+          "brass stabs",
+          "euphoric"
+        ],
+        "negative": [
+          "vocals",
+          "lo-fi",
+          "acoustic"
+        ]
+      },
+      "t": {
+        "cold.a": "Live aus dem Studio",
+        "cold.b": "Heute Abend",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Heute in der Show",
+        "teaser.item": "Spiel {nr} · {title}",
+        "count.label": "",
+        "count.final": "Showtime!",
+        "drop.big": "",
+        "drop.sub": "{subtitle}",
+        "hold": "Bühne frei für die Teams!",
+        "tagline": "Möge das beste Team gewinnen!",
+        "voice.cold": "Meine Damen und Herren, live aus dem Studio …",
+        "voice.count": "",
+        "voice.drop": "",
+        "lines": [
+          "{nWort} Teams.",
+          "{gamesWort} Spiele.",
+          "Drei Gewinnstufen.",
+          "Und nur ein Team …",
+          "… stiehlt heute die Show!"
+        ],
+        "voice.all": "Das sind sie – die Teams des Abends! Applaus!",
+        "team.kicker": "Team {nr} von {n}",
+        "host.kicker": "Moderation",
+        "host.call": "Und hier ist Ihr Gastgeber des Abends … {name}!",
+        "host.tag": "Ihr Gastgeber",
+        "coHost.kicker": "Co-Moderation",
+        "coHost.call": "An der Seite unserer Moderation: {name}!",
+        "coHost.tag": "Die Co-Moderation",
+        "ipad.wait": "Gleich werden die Teams vorgestellt …",
+        "ipad.start": "Die Show beginnt!",
+        "ipad.you": "IHR SEID DRAN!",
+        "ipad.youSub": "Aufstehen · winken · jubeln",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Applaus für {name}!",
+        "ipad.all": "Viel Glück!",
+        "greeting": "Guten Abend und herzlich willkommen bei „{show}“! {nWort} Teams, ein Ziel: Heute Abend die Show zu stehlen. Seid ihr bereit?"
+      },
+      "team": {
+        "call": [
+          "Applaus für … {team}!",
+          "Hier kommt … {team}!",
+          "Lauter, Leute – für {team}!",
+          "Mit dabei heute Abend: {team}!",
+          "Begrüßt mit mir … {team}!",
+          "Und zu guter Letzt: {team}!"
+        ],
+        "tag": [
+          "Heute holen wir uns die Show",
+          "Bereit für alles",
+          "Zum Siegen geboren",
+          "Unschlagbar gut gelaunt",
+          "Wir wollen den Pokal",
+          "Wir stehlen die Show"
+        ],
+        "extra": [
+          "Allgemeinwissen",
+          "Musik",
+          "Sport",
+          "Schätzen",
+          "Popkultur",
+          "Geografie"
+        ]
+      }
+    },
+    "musical": {
+      "name": "Musical",
+      "desc": "Broadway: Saallicht dimmt, Programmheft, Glühbirnen-Schriftzug, roter Vorhang, Spotlights",
+      "tl": {
+        "cold": 0,
+        "teaser": 5,
+        "count": 11.5,
+        "boom": 16.5,
+        "lines": 22,
+        "line": 2.8,
+        "bpm": 132
+      },
+      "labels": {
+        "cold.a": "Durchsage im Saal",
+        "cold.b": "Zeile auf dem Programmheft",
+        "extra": "Rolle"
+      },
+      "music": {
+        "bpm": 132,
+        "styles": [
+          "broadway overture",
+          "big orchestra",
+          "brass fanfare",
+          "show tune",
+          "timpani",
+          "strings",
+          "glamorous"
+        ],
+        "negative": [
+          "vocals",
+          "edm",
+          "lo-fi"
+        ]
+      },
+      "t": {
+        "cold.a": "Bitte schalten Sie jetzt Ihre Mobiltelefone aus.",
+        "cold.b": "Heute Abend im Programm",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Programm",
+        "teaser.item": "{nr}. Akt · {title}",
+        "count.label": "",
+        "count.final": "Vorhang auf!",
+        "drop.big": "",
+        "drop.sub": "{subtitle}",
+        "hold": "Das Ensemble betritt die Bühne!",
+        "tagline": "Vorhang auf – die Show beginnt!",
+        "voice.cold": "Meine Damen und Herren, bitte schalten Sie jetzt Ihre Mobiltelefone aus. Die Vorstellung beginnt.",
+        "voice.count": "",
+        "voice.drop": "Vorhang auf!",
+        "lines": [
+          "{nWort} Ensembles.",
+          "{gamesWort} Akte.",
+          "Drei Zugaben.",
+          "Und nur eine Hauptrolle …",
+          "… stiehlt heute die Show!"
+        ],
+        "voice.all": "Meine Damen und Herren: das Ensemble des Abends!",
+        "team.kicker": "Ensemble {nr} von {n}",
+        "host.kicker": "Der Star des Abends",
+        "host.call": "Und nun … der Star des Abends … {name}!",
+        "host.tag": "in der Hauptrolle",
+        "coHost.kicker": "Zweite Hauptrolle",
+        "coHost.call": "In der zweiten Hauptrolle: {name}!",
+        "coHost.tag": "in der zweiten Hauptrolle",
+        "ipad.wait": "Das Ensemble macht sich bereit …",
+        "ipad.start": "Vorhang auf!",
+        "ipad.you": "EUER AUFTRITT!",
+        "ipad.youSub": "Verbeugen · winken · strahlen",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Standing Ovations für {name}!",
+        "ipad.all": "Toi, toi, toi!",
+        "greeting": "Meine Damen und Herren, willkommen am Broadway! Heute Abend spielt ihr die Hauptrolle – aber nur ein Ensemble bekommt am Ende den Applaus. Vorhang auf für „{show}“!"
+      },
+      "team": {
+        "call": [
+          "Meine Damen und Herren … {team}!",
+          "In der Rolle der Favoriten: {team}!",
+          "Frisch vom Broadway: {team}!",
+          "Mit Standing Ovations: {team}!",
+          "Das Ensemble aus dem {nr}. Rang: {team}!",
+          "Und als großes Finale: {team}!"
+        ],
+        "tag": [
+          "Die Hauptrolle ist unsere",
+          "Bühne frei!",
+          "Wir singen uns zum Sieg",
+          "Applaus, Applaus!",
+          "Showtime!",
+          "Zugabe!"
+        ],
+        "extra": [
+          "Die Unbesiegbaren",
+          "Die Glanzlichter",
+          "Die Herzensbrecher",
+          "Die Showstopper",
+          "Die Primadonnen",
+          "Die Publikumslieblinge"
+        ]
+      }
+    },
+    "casino": {
+      "name": "Casino",
+      "desc": "Las Vegas: Spieltisch, Karten werden ausgeteilt, Roulette-Countdown, Jackpot",
+      "tl": {
+        "cold": 0,
+        "teaser": 3.5,
+        "count": 10,
+        "boom": 15,
+        "lines": 20.5,
+        "line": 2.7,
+        "bpm": 112
+      },
+      "labels": {
+        "cold.a": "Erste Einblendung",
+        "cold.b": "Zweite Einblendung",
+        "extra": "Glückszahl"
+      },
+      "music": {
+        "bpm": 112,
+        "styles": [
+          "las vegas",
+          "spy jazz",
+          "big band",
+          "brass",
+          "upright bass",
+          "vibraphone",
+          "glamorous",
+          "suspense"
+        ],
+        "negative": [
+          "vocals",
+          "edm",
+          "lo-fi"
+        ]
+      },
+      "t": {
+        "cold.a": "Mesdames et Messieurs …",
+        "cold.b": "Faites vos jeux!",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Die Karten des Abends",
+        "teaser.item": "Runde {nr} · {title}",
+        "count.label": "",
+        "count.final": "Rien ne va plus!",
+        "drop.big": "JACKPOT",
+        "drop.sub": "{subtitle}",
+        "hold": "Die Spieler nehmen Platz!",
+        "tagline": "Möge das Glück mit euch sein!",
+        "voice.cold": "Mesdames et Messieurs … faites vos jeux.",
+        "voice.count": "Rien ne va plus.",
+        "voice.drop": "",
+        "lines": [
+          "{nWort} Spieler am Tisch.",
+          "{gamesWort} Runden.",
+          "Drei Jackpots.",
+          "Nichts geht mehr …",
+          "… wer sprengt heute die Bank?"
+        ],
+        "voice.all": "Das sind sie – die Spieler des Abends. Möge das Glück mit Ihnen sein!",
+        "team.kicker": "Spieler {nr} am Tisch",
+        "host.kicker": "Die Bank",
+        "host.call": "Und hier ist die Bank … {name}!",
+        "host.tag": "Die Bank gewinnt immer",
+        "coHost.kicker": "Croupier",
+        "coHost.call": "Am Roulettetisch: {name}!",
+        "coHost.tag": "Am Roulettetisch",
+        "ipad.wait": "Die Spieler nehmen Platz …",
+        "ipad.start": "JACKPOT!",
+        "ipad.you": "IHR SEID AM ZUG!",
+        "ipad.youSub": "All in · winken · jubeln",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Applaus für {name}!",
+        "ipad.all": "Viel Glück!",
+        "greeting": "Willkommen im Casino „{show}“! Die Einsätze sind hoch, die Bank gewinnt selten – und heute Abend räumt nur ein Team ab. Faites vos jeux!",
+        "slot.top": "JACKPOT"
+      },
+      "team": {
+        "call": [
+          "Am Tisch begrüßen wir … {team}!",
+          "Die Würfel sind gefallen für … {team}!",
+          "Mit dem höchsten Einsatz: {team}!",
+          "Ein Ass im Ärmel: {team}!",
+          "Alles auf Rot für … {team}!",
+          "Und zum Schluss setzt alles auf Sieg: {team}!"
+        ],
+        "tag": [
+          "All in!",
+          "Pokerface aufgesetzt",
+          "Das Glück ist mit uns",
+          "Wir sprengen die Bank",
+          "Nichts geht mehr",
+          "Jackpot oder nichts"
+        ],
+        "extra": [
+          "7",
+          "21",
+          "13",
+          "32",
+          "17",
+          "0"
+        ]
+      }
+    },
+    "wildnis": {
+      "name": "Wildnis / Survival",
+      "desc": "Survival-Doku: Nebelberge, Sechsecke in Waldgrün und Oliv, Namensschild mit Rissen, Team-Statistiken mit Skill-Ranking, Route auf der Karte",
+      "tl": {
+        "cold": 0,
+        "teaser": 5.5,
+        "count": 13,
+        "boom": 18,
+        "lines": 23.5,
+        "line": 2.9,
+        "bpm": 96
+      },
+      "labels": {
+        "cold.a": "GPS-Koordinaten",
+        "cold.b": "Ort",
+        "extra": "3 Gegenstände (mit · getrennt)"
+      },
+      "music": {
+        "bpm": 96,
+        "styles": [
+          "survival documentary",
+          "tribal drums",
+          "taiko",
+          "dark cello ostinato",
+          "epic",
+          "primal",
+          "cinematic"
+        ],
+        "negative": [
+          "vocals",
+          "edm",
+          "pop"
+        ]
+      },
+      "t": {
+        "cold.a": "68°24′11″ N · 17°25′40″ E",
+        "cold.b": "Irgendwo im Nirgendwo",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Die Route",
+        "teaser.item": "Prüfung {nr} · {title}",
+        "count.label": "",
+        "count.final": "Feuer!",
+        "drop.big": "TAG 1",
+        "drop.sub": "{subtitle}",
+        "hold": "Die Teams werden ausgesetzt …",
+        "tagline": "Nur die Stärksten kommen durch!",
+        "voice.cold": "Kein Netz. Keine Hilfe. Nur das, was ihr im Kopf habt.",
+        "voice.count": "",
+        "voice.drop": "Tag eins.",
+        "lines": [
+          "{nWort} Teams.",
+          "Keine Hilfe.",
+          "{gamesWort} Prüfungen.",
+          "Nur die Stärksten kommen durch …",
+          "… und nur ein Team stiehlt heute die Show!"
+        ],
+        "voice.all": "Sie sind ausgesetzt. Ab jetzt zählt nur noch eins: durchhalten.",
+        "team.kicker": "Team",
+        "host.kicker": "Expeditionsleitung",
+        "host.call": "Und hier ist euer Expeditionsleiter … {name}!",
+        "host.tag": "Kennt jeden Weg",
+        "coHost.kicker": "Guide",
+        "coHost.call": "Euer Guide durch die Wildnis: {name}!",
+        "coHost.tag": "Euer Guide",
+        "ipad.wait": "Die Teams werden ausgesetzt …",
+        "ipad.start": "TAG 1",
+        "ipad.you": "IHR SEID DRAN!",
+        "ipad.youSub": "Aufstehen · winken · durchhalten",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Applaus für {name}!",
+        "ipad.all": "Durchhalten!",
+        "greeting": "Willkommen in der Wildnis! Kein Handy, kein Netz, nur euer Wissen. {gamesWort} Prüfungen trennen euch vom Sieg – wer hält durch und stiehlt die Show?",
+        "cam.rec": "● REC",
+        "stat.1": "Erfahrung",
+        "stat.2": "Geheimwaffe",
+        "stat.3": "Motivation",
+        "stat.skill": "Skill-Ranking"
+      },
+      "team": {
+        "call": [
+          "Teilnehmer Nummer {nr}: {team}!",
+          "Ausgesetzt am Fjord: {team}!",
+          "Sie haben nur drei Gegenstände: {team}!",
+          "Ohne Netz, ohne Hilfe: {team}!",
+          "Bereit für die Wildnis: {team}!",
+          "Und als letztes Team ausgesetzt: {team}!"
+        ],
+        "tag": [
+          "„Wir geben nicht auf.“",
+          "„Kälte? Kennen wir nicht.“",
+          "„Feuer machen wir mit Wissen.“",
+          "„Wir kommen durch.“",
+          "„Hunger auf den Sieg.“",
+          "„Bis zum letzten Tag.“"
+        ],
+        "extra": [
+          "Messer · Tarp · Feuerstahl",
+          "Axt · Angelschnur · Topf",
+          "Säge · Schlafsack · Seil",
+          "Kompass · Plane · Messer",
+          "Feuerstahl · Topf · Paracord",
+          "Machete · Hängematte · Lupe"
+        ],
+        "s1": [
+          "12 Quizabende",
+          "Erstes Mal dabei",
+          "3 Jahre",
+          "Seit der Schulzeit",
+          "7 Pub-Quizze",
+          "Hobby-Profis"
+        ],
+        "s2": [
+          "Allgemeinwissen",
+          "Musik",
+          "Geografie",
+          "Schätzfragen",
+          "Popkultur",
+          "Bauchgefühl"
+        ],
+        "s3": [
+          "100 %",
+          "120 %",
+          "95 %",
+          "110 %",
+          "100 %",
+          "150 %"
+        ],
+        "skill": [
+          "72",
+          "55",
+          "80",
+          "64",
+          "47",
+          "90"
+        ]
+      }
+    },
+    "weltraum": {
+      "name": "Weltraum-Mission",
+      "desc": "Missionskontrolle im Dashboard-Look: holografischer Globus, Glas-Panels, Go/No-Go über alle iPads, Countdown T–10, Liftoff",
+      "tl": {
+        "cold": 0,
+        "poll": 3.6,
+        "teaser": 10.4,
+        "count": 15.5,
+        "boom": 25.5,
+        "lines": 31,
+        "line": 2.8,
+        "bpm": 84
+      },
+      "labels": {
+        "cold.a": "Kopfzeile Missionskontrolle",
+        "cold.b": "Missionsname",
+        "extra": "Rufzeichen"
+      },
+      "music": {
+        "bpm": 84,
+        "styles": [
+          "epic space cinematic",
+          "pipe organ",
+          "huge synth pads",
+          "launch",
+          "hans zimmer style",
+          "rising tension",
+          "orchestral"
+        ],
+        "negative": [
+          "vocals",
+          "pop",
+          "lo-fi"
+        ]
+      },
+      "t": {
+        "cold.a": "Missionskontrolle · {show}",
+        "cold.b": "Mission QS-01",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Flugplan",
+        "teaser.item": "Etappe {nr} · {title}",
+        "poll.title": "Go / No-Go-Abfrage",
+        "poll.row": "Crew {nr} · {team}",
+        "poll.go": "GO",
+        "poll.done": "Flugleitung: Wir sind GO für den Start.",
+        "count.label": "T–",
+        "count.final": "Zündsequenz gestartet",
+        "drop.big": "LIFTOFF",
+        "drop.sub": "{subtitle}",
+        "hold": "Die Crews gehen an Bord!",
+        "tagline": "Mission „Show“ – wir sind GO!",
+        "voice.cold": "Missionskontrolle an alle Stationen. Wir beginnen die Go-No-Go-Abfrage für den Start.",
+        "voice.count": "T minus zehn Sekunden. Zündsequenz läuft.",
+        "voice.drop": "Liftoff! Wir haben Liftoff!",
+        "lines": [
+          "Missionskontrolle an alle Crews:",
+          "{nWort} Raumschiffe.",
+          "{gamesWort} Etappen.",
+          "Ein Ziel.",
+          "Nur eine Crew landet heute ganz oben …",
+          "… und stiehlt die Show!"
+        ],
+        "voice.all": "Alle Crews an Bord. Mission läuft.",
+        "team.kicker": "Crew {nr} von {n}",
+        "host.kicker": "Kommandant",
+        "host.call": "Und hier ist Ihr Kommandant … {name}!",
+        "host.tag": "Kommandant der Mission",
+        "coHost.kicker": "Missionskontrolle",
+        "coHost.call": "In der Missionskontrolle: {name}!",
+        "coHost.tag": "Leitet die Missionskontrolle",
+        "ipad.wait": "Crew bereit. Warten auf Freigabe …",
+        "ipad.start": "LIFTOFF",
+        "ipad.go": "GO",
+        "ipad.you": "IHR SEID DRAN!",
+        "ipad.youSub": "Aufstehen · winken · jubeln",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Applaus für {name}!",
+        "ipad.all": "Mission läuft!",
+        "greeting": "Missionskontrolle an alle Crews: Willkommen an Bord von „{show}“! {gamesWort} Etappen, drei Raumstationen – und nur eine Crew landet heute ganz oben.",
+        "hud.tel": "ALT · VEL · Q · SCHUB",
+        "hud.status": "STATUS: GO",
+        "hud.nav": "Start · Crews · Flugplan · Countdown · Liftoff",
+        "hud.crews": "Crews an Bord",
+        "hud.telTitle": "Telemetrie"
+      },
+      "team": {
+        "call": [
+          "Crew {nr}, Startrampe {nr}: {team}!",
+          "Andockmanöver bestätigt – willkommen an Bord: {team}!",
+          "Aus der Umlaufbahn zugeschaltet: {team}!",
+          "Triebwerke auf Volllast für … {team}!",
+          "Signal empfangen, Funkkontakt steht: {team}!",
+          "Letzte Crew, volle Ladung: {team}!"
+        ],
+        "tag": [
+          "Bereit für den Start",
+          "Ziel: die Sterne",
+          "Kein Planet zu weit",
+          "Volle Schubkraft",
+          "Kurs gesetzt",
+          "Countdown läuft"
+        ],
+        "extra": [
+          "ORION",
+          "APOLLO",
+          "NOVA",
+          "ATLAS",
+          "VEGA",
+          "TITAN"
+        ]
+      }
+    },
+    "bielefeld": {
+      "name": "Bielefeld",
+      "desc": "Die Stadt, die es angeblich nicht gibt: Ortsschild, Flug über den Teuto zur Sparrenburg, durch die Altstadt zum Jahnplatz – Höhepunkt mit Stadion-Stimmung in Schwarz-Weiß-Blau",
+      "tl": {
+        "cold": 0,
+        "teaser": 4.6,
+        "count": 12.6,
+        "boom": 17.6,
+        "lines": 23,
+        "line": 2.8,
+        "bpm": 120
+      },
+      "labels": {
+        "cold.a": "Ortsschild (groß)",
+        "cold.b": "Zweifel (Einblendung)",
+        "extra": "Stadtteil"
+      },
+      "music": {
+        "bpm": 120,
+        "styles": [
+          "stadium anthem",
+          "stomp clap",
+          "football crowd chant",
+          "brass",
+          "big drums",
+          "euphoric"
+        ],
+        "negative": [
+          "vocals with lyrics",
+          "lo-fi"
+        ]
+      },
+      "t": {
+        "cold.a": "Bielefeld",
+        "cold.b": "Gibt es das überhaupt?",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Heute in Bielefeld",
+        "teaser.item": "Spiel {nr} · {title}",
+        "count.label": "",
+        "count.final": "Alle auf die Alm!",
+        "drop.big": "Bielefeld gibt es doch!",
+        "drop.sub": "{subtitle}",
+        "hold": "Die Teams laufen ein …",
+        "tagline": "Bielefeld gibt es – und heute gehört die Show euch!",
+        "voice.cold": "Es gibt Gerüchte … dass es Bielefeld gar nicht gibt. Wir haben nachgesehen.",
+        "voice.count": "",
+        "voice.drop": "Bielefeld gibt es doch!",
+        "lines": [
+          "Zwischen Teuto und Sparrenburg …",
+          "{nWort} Teams.",
+          "{gamesWort} Spiele.",
+          "Eine Stadt, die es angeblich nicht gibt …",
+          "… und heute stiehlt hier jemand die Show!"
+        ],
+        "voice.all": "Das sind sie – die Teams aus der Stadt, die es angeblich nicht gibt!",
+        "team.kicker": "Team {nr} von {n}",
+        "host.kicker": "Gastgeber",
+        "host.call": "Und hier ist er – der beste Beweis, dass es Bielefeld gibt: {name}!",
+        "host.tag": "Gibt es wirklich",
+        "coHost.kicker": "Co-Moderation",
+        "coHost.call": "Direkt von der Sparrenburg: {name}!",
+        "coHost.tag": "Hält die Stellung",
+        "ipad.wait": "Gleich laufen die Teams ein …",
+        "ipad.start": "Bielefeld gibt es doch!",
+        "ipad.you": "IHR SEID DRAN!",
+        "ipad.youSub": "Aufstehen · Schal hoch · jubeln",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Applaus für {name}!",
+        "ipad.all": "Auf geht's!",
+        "greeting": "Guten Abend, Bielefeld! Ja, uns gibt es wirklich. Herzlich willkommen zu „{show}“ – {nwort} Teams wollen heute die Show stehlen!"
+      },
+      "team": {
+        "call": [
+          "Aus der Altstadt: {team}!",
+          "Vom Jahnplatz direkt zu uns: {team}!",
+          "Frisch vom Teuto: {team}!",
+          "Mit Blick von der Sparrenburg: {team}!",
+          "Lautstark wie die Alm: {team}!",
+          "Und – falls es euch wirklich gibt: {team}!"
+        ],
+        "tag": [
+          "Wir gibt es wirklich",
+          "Mittendrin statt nur dabei",
+          "Mit Rückenwind vom Teuto",
+          "Die Burg gehört uns",
+          "Laut wie die Alm",
+          "Unsichtbar, aber gefährlich"
+        ],
+        "extra": [
+          "Mitte",
+          "Schildesche",
+          "Brackwede",
+          "Sennestadt",
+          "Heepen",
+          "Jöllenbeck"
+        ]
+      }
+    },
+    "voice": {
+      "name": "The Voice (Blind Audition)",
+      "desc": "Blind Audition: ein roter Coach-Stuhl pro Team (mit Namen), Neon-Bühne in Pink und Rot – jedes Team dreht seinen Stuhl um, für die Moderation drehen sich alle",
+      "tl": {
+        "cold": 0,
+        "teaser": 4,
+        "count": 10,
+        "boom": 15,
+        "lines": 20.5,
+        "line": 2.8,
+        "bpm": 100
+      },
+      "labels": {
+        "cold.a": "Erste Einblendung",
+        "cold.b": "Zweite Einblendung",
+        "extra": "Lieblingssong"
+      },
+      "music": {
+        "bpm": 100,
+        "styles": [
+          "emotional pop ballad",
+          "piano",
+          "strings",
+          "big drum drop",
+          "anthemic",
+          "goosebumps"
+        ],
+        "negative": [
+          "lyrics",
+          "lo-fi"
+        ]
+      },
+      "t": {
+        "cold.a": "Blind Audition",
+        "cold.b": "Nur die Stimme zählt",
+        "cold.kicker": "{hosts}",
+        "cold.present": "präsentieren",
+        "teaser.head": "Heute auf der Bühne",
+        "teaser.item": "Spiel {nr} · {title}",
+        "count.label": "",
+        "count.final": "Buzzer!",
+        "chair.text": "Ich will dich!",
+        "drop.big": "",
+        "drop.sub": "{subtitle}",
+        "hold": "Die Stühle sind umgedreht …",
+        "tagline": "Nur ein Team stiehlt heute die Show!",
+        "voice.cold": "Sie hören euch. Aber sie sehen euch nicht.",
+        "voice.count": "",
+        "voice.drop": "",
+        "lines": [
+          "{nWort} Stühle.",
+          "{nWort} Teams.",
+          "{gamesWort} Spiele.",
+          "Nur ein Buzzer …",
+          "… und nur ein Team stiehlt heute die Show!"
+        ],
+        "voice.all": "Das sind sie – die Talente des Abends!",
+        "team.kicker": "Talent {nr} von {n}",
+        "host.kicker": "Coach",
+        "host.call": "Und hier ist der Coach des Abends: {name}!",
+        "host.tag": "Hat den Buzzer in der Hand",
+        "coHost.kicker": "Coach",
+        "coHost.call": "Coach Nummer zwei: {name}!",
+        "coHost.tag": "Buzzert, wenn es Gänsehaut gibt",
+        "ipad.wait": "Die Stühle drehen sich gleich …",
+        "ipad.start": "Ich will dich!",
+        "ipad.you": "IHR SEID DRAN!",
+        "ipad.youSub": "Mikro an · winken · strahlen",
+        "ipad.other": "Applaus für {team}!",
+        "ipad.host": "Applaus für {name}!",
+        "ipad.all": "Gänsehaut!",
+        "greeting": "Herzlich willkommen zu den Blind Auditions von „{show}“! Die Stühle sind noch umgedreht – heute zählt nur eins: Wer stiehlt uns die Show?"
+      },
+      "team": {
+        "call": [
+          "Und jetzt auf der Bühne: {team}!",
+          "Die Stühle sind noch umgedreht … {team}!",
+          "Hört genau hin: {team}!",
+          "Wer buzzert für … {team}?",
+          "Mit Gänsehaut-Garantie: {team}!",
+          "Und zum Schluss der Blind Auditions: {team}!"
+        ],
+        "tag": [
+          "Stimme: unschlagbar",
+          "{nWort} Stühle, ein Ziel",
+          "Gänsehaut pur",
+          "Bereit für den Buzzer",
+          "Volle Power",
+          "Das letzte Talent"
+        ],
+        "extra": [
+          "Bohemian Rhapsody",
+          "Atemlos",
+          "Hallelujah",
+          "Dancing Queen",
+          "Major Tom",
+          "Wonderwall"
+        ]
+      }
+    }
+  }
+}

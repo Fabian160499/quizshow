@@ -839,3 +839,65 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .lay-allchairs .si-hero.voice .si-avatar { height: 44vh; }
 .lay-allchairs .si-plate { margin-bottom: 33vh; align-self: end; justify-self: end; margin-right: 6vw; }
 .si-all .si-chairs.final { position: relative; bottom: auto; margin-top: 8vh; animation: none; } .si-voice .si-all .si-hosts { margin-bottom: 14vh; }
+
+/* ======================= 3D-Bühne (si-3d.js) ======================= */
+.si-3d-wrap { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.si-3d-wrap canvas.si-3d { width: 100%; height: 100%; display: block; }
+.si.si-3don .si-haze { display: none; }
+.si.si-3don .si-vignette { opacity: .35; }
+
+/* Bauchbinde mit Lichtstreifen (Treppenabgang, Co-Moderation) */
+.si-sweep { position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%); display: grid; justify-items: center; gap: .6vh; text-align: center; z-index: 6; }
+.si-sweep.left { left: 6vw; transform: none; justify-items: start; text-align: left; }
+.si-sweep small { font: 700 clamp(12px, 1.5vw, 26px)/1 'SI Cond', 'SI Display', sans-serif; letter-spacing: .4em; text-transform: uppercase; color: #ffe7b8; opacity: 0; animation: siSweepIn .7s cubic-bezier(.2, .8, .2, 1) calc(var(--hit) + .25s) both; }
+.si-sweep b { position: relative; display: block; line-height: .95; color: transparent; letter-spacing: .02em; text-transform: uppercase;
+  background: linear-gradient(100deg, #fff 0%, #fff 42%, #fff6d8 47%, #ffffff 50%, #ffd27a 53%, #fff 58%, #fff 100%) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 0 18px rgba(255, 200, 120, .45)) drop-shadow(0 6px 30px rgba(0, 0, 0, .8));
+  clip-path: inset(0 100% 0 0); animation: siSweepWipe .9s cubic-bezier(.7, 0, .2, 1) calc(var(--hit) + .45s) forwards, siSweepShine 3.2s ease-in-out calc(var(--hit) + 1.2s) infinite; }
+.si-sweep b::after { content: ''; position: absolute; top: -10%; bottom: -10%; width: 6%; left: -10%; background: linear-gradient(90deg, transparent, #fff, transparent); filter: blur(4px); mix-blend-mode: screen; opacity: 0; animation: siSweepBar .9s cubic-bezier(.7, 0, .2, 1) calc(var(--hit) + .45s) forwards; }
+.si-sweep span { font: 600 clamp(14px, 1.7vw, 30px)/1.2 'SI Exo', 'SI Display', sans-serif; color: #fff; opacity: 0; text-shadow: 0 2px 16px #000; animation: siSweepIn .7s ease calc(var(--hit) + 1.2s) both; }
+@keyframes siSweepIn { from { opacity: 0; transform: translateY(1.5vh); letter-spacing: .8em; } to { opacity: 1; transform: none; } }
+@keyframes siSweepWipe { to { clip-path: inset(0 0 0 0); } }
+@keyframes siSweepBar { 0% { opacity: 1; left: -10%; } 90% { opacity: 1; } 100% { opacity: 0; left: 105%; } }
+@keyframes siSweepShine { 0%, 60% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+/* Holografische Spielerkarte */
+.si-holo { position: absolute; top: 50%; right: 7vw; width: min(30vw, 46vh); aspect-ratio: 5 / 7; transform: translateY(-50%); perspective: 1400px; z-index: 6; }
+.si-holo.left { right: auto; left: 7vw; }
+.si-holo-in { position: absolute; inset: 0; border-radius: 1.6vw; overflow: hidden; padding: 6% 7%; display: flex; flex-direction: column; align-items: center; gap: 2.2%; text-align: center; color: #fff;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--team) 55%, #0b0716) 0%, #0b0716 55%, color-mix(in srgb, var(--team) 35%, #05030a) 100%);
+  border: .35vw solid color-mix(in srgb, var(--team) 70%, #fff);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .35) inset, 0 0 3vw color-mix(in srgb, var(--team) 70%, transparent), 0 3vh 6vh rgba(0, 0, 0, .7);
+  transform-style: preserve-3d; animation: siHoloIn 1s cubic-bezier(.2, .9, .25, 1.15) var(--delay) both, siHoloFloat 6s ease-in-out calc(var(--delay) + 1s) infinite; }
+.si-holo-foil { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: overlay; opacity: .32;
+  background: repeating-linear-gradient(115deg, #ff3d7f 0%, #ffd23d 6%, #3dffb0 12%, #3dc5ff 18%, #b23dff 24%, #ff3d7f 30%) 0 0 / 300% 300%,
+    repeating-radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .25) 0 2px, transparent 2px 9px);
+  animation: siFoil 4s linear infinite; }
+.si-holo-glare { position: absolute; inset: -40%; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .55) 49%, transparent 58%); mix-blend-mode: overlay; animation: siGlare 3.6s ease-in-out calc(var(--delay) + .3s) infinite; }
+.si-holo-head { position: relative; width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.si-holo-head small { font: 700 clamp(9px, 1vw, 16px)/1 'SI Cond', sans-serif; letter-spacing: .3em; text-transform: uppercase; opacity: .85; }
+.si-holo-chip { width: 14%; aspect-ratio: 4 / 3; border-radius: .4vw; background: linear-gradient(135deg, #f7e08a, #b8862b 45%, #ffe9a6 55%, #a1721c); box-shadow: 0 0 0 1px rgba(0, 0, 0, .3) inset; }
+.si-holo-av { position: relative; width: 52%; aspect-ratio: 1; margin-top: 2%; border-radius: 50%; overflow: hidden; border: .3vw solid #fff; box-shadow: 0 0 2.5vw var(--team), 0 0 0 .6vw color-mix(in srgb, var(--team) 40%, transparent); }
+.si-holo-av .si-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 0; font-size: 6vw; }
+.si-holo-kick { position: relative; font: 700 clamp(9px, 1vw, 16px)/1.1 'SI Cond', sans-serif; letter-spacing: .25em; text-transform: uppercase; color: color-mix(in srgb, var(--team) 40%, #fff); }
+.si-holo-name { position: relative; font: 400 clamp(20px, 3.2vw, 60px)/.95 'SI Anton', 'SI Display', sans-serif; text-transform: uppercase; text-shadow: 0 0 1.5vw var(--team); overflow-wrap: anywhere; }
+.si-holo-tag { position: relative; font: 600 clamp(10px, 1.1vw, 18px)/1.25 'SI Exo', sans-serif; opacity: .9; }
+.si-holo-stats { position: relative; width: 100%; margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4%; }
+.si-holo-stat { padding: 8% 0; border-radius: .6vw; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); display: grid; gap: 6%; }
+.si-holo-stat small { font: 700 clamp(7px, .7vw, 12px)/1 'SI Cond', sans-serif; letter-spacing: .15em; text-transform: uppercase; opacity: .75; }
+.si-holo-stat b { font: 400 clamp(16px, 2.2vw, 40px)/1 'SI Anton', sans-serif; font-variant-numeric: tabular-nums; }
+.si-holo-extra { position: relative; width: 100%; padding: 3% 0 0; border-top: 1px solid rgba(255, 255, 255, .2); display: grid; gap: 2%; }
+.si-holo-extra small { font: 700 clamp(7px, .7vw, 12px)/1 'SI Cond', sans-serif; letter-spacing: .2em; text-transform: uppercase; opacity: .7; }
+.si-holo-extra b { font: 700 clamp(11px, 1.2vw, 20px)/1.15 'SI Exo', sans-serif; }
+@keyframes siHoloIn { 0% { opacity: 0; transform: rotateY(-100deg) translateZ(-30vw) scale(.6); filter: brightness(4); } 60% { opacity: 1; filter: brightness(1.6); } 100% { opacity: 1; transform: none; filter: none; } }
+@keyframes siHoloFloat { 0%, 100% { transform: rotateY(-7deg) rotateX(3deg); } 50% { transform: rotateY(7deg) rotateX(-2deg) translateY(-1vh); } }
+@keyframes siFoil { to { background-position: 300% 300%, 0 0; } }
+@keyframes siGlare { 0% { transform: translateX(-60%); } 55%, 100% { transform: translateX(60%); } }
+/* Auf dem eigenen Team-iPad: Karte groß in der Mitte */
+.si-ipad .si-holo { right: auto; left: 50%; width: min(80vw, 56vh); transform: translate(-50%, -50%); }
+.si-ipad .si-holo-in { border-radius: 4vw; border-width: .8vw; }
+.si-ipad .si-holo-head small, .si-ipad .si-holo-kick, .si-ipad .si-holo-stat small, .si-ipad .si-holo-extra small { font-size: clamp(5px, 2.2vw, 18px); }
+.si-ipad .si-holo-name { font-size: clamp(12px, 7.5vw, 72px); }
+.si-ipad .si-holo-tag, .si-ipad .si-holo-extra b { font-size: clamp(7px, 2.8vw, 22px); }
+.si-ipad .si-holo-stat b { font-size: clamp(10px, 6vw, 48px); }
+.si.si-3don .si-rays { display: none; }

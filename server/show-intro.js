@@ -371,6 +371,12 @@ function teamData(db, teamId) {
       host: person ? person.ipad : '',
       label: t.tx['count.label'] || '',
     },
+    // Eigene Spielerkarte: nur das Team, das gerade vorgestellt wird, bekommt sie (kurz vor dem Beamer)
+    card: k >= 0 && k === idx && t.teams[k] ? {
+      kicker: t.teams[k].kicker, tag: t.teams[k].tag, extra: t.teams[k].extra, extraLabel: String((THEMES[c.theme].labels || {}).extra || ''),
+      nr: k + 1, n: pr.teams.length, games: (pr.games || []).length,
+      title: t.tx['card.title'] || '', lNr: t.tx['card.nr'] || '', lTeams: t.tx['card.teams'] || '', lGames: t.tx['card.games'] || '',
+    } : null,
   };
 }
 

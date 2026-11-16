@@ -132,11 +132,18 @@ function buildPage(file) {
   return html;
 }
 
-// Bilder aus assets/img als data:-URIs einbetten.
+const THREE_FILES = ['three.min.js', 'CopyShader.js', 'LuminosityHighPassShader.js', 'EffectComposer.js', 'RenderPass.js', 'ShaderPass.js', 'UnrealBloomPass.js', 'Reflector.js'];
+const threeSrc = () => THREE_FILES.map((f) => fs.readFileSync(path.join(SRC, 'assets', 'vendor', 'three', f), 'utf8')).join('\n;\n');
+const FIGURES = ['host-stand', 'host-walk', 'host-mic', 'cohost-stand', 'cohost-walk', 'cohost-mic'].map((n) => `assets/img/${n}.webp`);
+const figureImgs = () => Object.fromEntries([...FIGURES, 'assets/img/avatar-host.webp', 'assets/img/avatar-cohost.webp'].map((p) => [p, `data:image/webp;base64,${fs.readFileSync(path.join(SRC, p)).toString('base64')}`]));
+// three.js und Figuren einmal auf der äußeren Seite (die Bildschirme holen sie sich über parent/top)
+const threeInject = () => `window.__THREE_SRC = ${JSON.stringify(threeSrc()).replace(/<\/(script)/gi, '<\\/$1')};\nwindow.__SI_IMG = ${JSON.stringify(figureImgs())};`;
+// Bilder aus assets/img als data:-URIs einbetten (Figuren der 3D-Bühne nicht: die liegen einmal in window.__SI_IMG).
 const MIME = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml' };
 const imageCache = {};
 function inlineImages(text) {
-  return text.replace(/assets\/img\/([\w.-]+)/g, (_, name) => {
+  return text.replace(/assets\/img\/([\w.-]+)/g, (all, name) => {
+    if (FIGURES.includes(all)) return all;
     if (!imageCache[name]) {
       const file = path.join(SRC, 'assets', 'img', name);
       const mime = MIME[path.extname(name).toLowerCase()] || 'application/octet-stream';
@@ -207,7 +214,7 @@ window.addEventListener('message', (ev) => {
 `;
 
 const mainJs = bundle(MAIN_PRELUDE + mainCode, SRC);
-main = main.replace(mainScript[0], () => `<script>${siMusic()}</script>\n<script>${mainJs}</script>`);
+main = main.replace(mainScript[0], () => `<script>${siMusic()}\n${threeInject()}</script>\n<script>${mainJs}</script>`);
 if (/(src|href)="(assets|demo)\//.test(main) || /import\s*\{/.test(main.replace(/<script>[\s\S]*<\/script>/, ''))) {
   throw new Error('Externe Datei in der Hauptseite übrig');
 }

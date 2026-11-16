@@ -40,7 +40,8 @@
         const k = si.phase.startsWith('team:') ? Number(si.phase.slice(5)) : -1;
         const person = si.phase === 'host' ? ip.host : si.phase === 'coHost' ? ip.coHost : null;
         const v = { phase: si.phase, at: si.at, seq: si.seq, theme: si.theme, tl: si.tl, idx, n: s.teams.length,
-          tx: { wait: ip.wait, start: ip.start, go: ip.go, you: ip.you, youSub: ip.youSub, all: ip.all, label: ip.label, other: k >= 0 ? ip.team[k].other : '', host: person ? person.ipad : '' } };
+          tx: { wait: ip.wait, start: ip.start, go: ip.go, you: ip.you, youSub: ip.youSub, all: ip.all, label: ip.label, other: k >= 0 ? ip.team[k].other : '', host: person ? person.ipad : '' },
+          card: k === idx && ip.team[k] ? { kicker: ip.team[k].kicker, tag: ip.team[k].tag, extra: ip.team[k].extra, extraLabel: si.extraLabel || '', nr: k + 1, n: s.teams.length, games: (si.games || []).length, title: si.tx['card.title'] || '', lNr: si.tx['card.nr'] || '', lTeams: si.tx['card.teams'] || '', lGames: si.tx['card.games'] || '' } : null };
         document.body.replaceChildren(siTeam(v, s.teams[idx], s.teams, () => Date.now()));
       }
     });

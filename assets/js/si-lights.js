@@ -2,7 +2,7 @@
 // Jedes iPad kennt seine Position im Raum (idx von n) und die Serverzeit; daraus
 // entstehen synchrone Lauflichter, Wellen, Stroboskop, Glühbirnen-Ketten usw.
 
-import { h, clamp } from './si-core.js';
+import { h, clamp, holoCard, avatarOf } from './si-core.js';
 
 const PAL = {
   voice: ['#ff1f6b', '#ff2d55', '#ffffff', '#3a0012'],
@@ -139,8 +139,18 @@ export function siTeam(v, me, teams, now, opts = {}) {
     fill('#02030a'); dots('#ffffff', t * 4, 40, 0.9); radial('#4cc9ff', 0.35, 0.5, 1.3, 1); say('', tx.wait);
   };
 
+  // Original-Studio: das vorgestellte Team bekommt seine Spielerkarte kurz vor dem Beamer aufs iPad
+  let card = null;
+  const showCard = () => {
+    if (card || !v.card || theme !== 'studio') return !!card;
+    const d = v.card;
+    card = holoCard({ name: me.name, color: me.color, avatar: avatarOf(me), kicker: d.kicker, tag: d.tag, extra: d.extra, extraLabel: String(d.extraLabel || '').replace(/\s*\(.*\)\s*/g, ''), nr: d.nr, n: d.n, games: d.games, title: d.title, lNr: d.lNr, lTeams: d.lTeams, lGames: d.lGames, delay: 0 });
+    root.append(card);
+    return true;
+  };
   const teamProgram = (t, k) => {
     if (k === v.idx) {
+      if (t >= HIT - 0.7 && showCard()) { if (t < HIT + 0.25 && t > HIT) { fill('#ffffff'); } else { black(); radial(me.color, 0.55 + 0.25 * Math.sin(t * 5), 0.5, 0.5, 0.75); bulbs('#fff1c9', t, 8, 0.6); } say(''); return; }
       if (t < HIT) { const hz = 3 + t * 10; fill(strobe(t, hz) ? me.color : '#000000', 1); say(''); return; }
       if (t < HIT + 0.25) { fill('#ffffff'); say(''); return; }
       fill(me.color); radial('#ffffff', 0.55 + 0.25 * Math.sin(t * 5), 0.5, 0.45, 0.6);

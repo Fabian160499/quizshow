@@ -60,7 +60,7 @@
       { id: 't5', name: 'Brainstorm', color: '#ff7a00' },
       { id: 't6', name: 'Glückspilze', color: '#b16cff' },
     ];
-    let SHOW = { name: 'Wer stiehlt uns die Show', subtitle: 'Die Live-Show mit acht Spielen', host: 'Fabian', coHost: 'Lena', hostAvatar: 'assets/img/avatar-host.webp', coHostAvatar: 'assets/img/avatar-cohost.webp' };
+    let SHOW = { name: 'Wer stiehlt uns die Show', subtitle: 'Die Live-Show mit acht Spielen', host: 'Fabian', coHost: 'Fabi H', hostAvatar: 'assets/img/avatar-host.webp', coHostAvatar: 'assets/img/avatar-cohost.webp' };
     const GAMES = ['Die leichten 5', 'Dummes Zeug', 'Ich seh ein Land', 'Kassenschlager', '5 ist Trumpf', 'Song Song Song', 'Wer wird Millionär', 'Nerdfragen'];
     const CAT = window.__SI_CAT || await (await fetch('assets/data/show-intro.json')).json();
     // Aus dem Editor geöffnet: eure echten Teams, Namen, Avatare und Texte
@@ -152,6 +152,7 @@
     }
     document.getElementById('start-btn').onclick = start;
     document.getElementById('play').onclick = () => { if (document.getElementById('start')) start(); else go(0); };
+    window.__siGo = go; // direkt zu einem Auftritt springen (Tests)
     document.getElementById('next').onclick = () => { if (phase < PHASES.length - 1) go(phase + 1); };
     document.getElementById('auto').onclick = (e) => { autoOn = !autoOn; e.target.textContent = `Automatisch: ${autoOn ? 'an' : 'aus'}`; if (!autoOn) clearTimeout(autoTimer); else if (phase >= 0) go(phase); };
     sel.onchange = () => { if (phase >= 0) go(0); else document.getElementById('desc').textContent = CAT.themes[theme()].desc; };
