@@ -1,10 +1,8 @@
 {
   "info": "Katalog des Show-Intros: Themen, Zeitachsen, alle Texte (Standard) und Feld-Beschriftungen für den Editor. Platzhalter: {show} {subtitle} {host} {cohost} {hosts} {n} {nWort} {nwort} {games} {gamesWort} {gameswort}; bei Teams zusätzlich {team} {nr}; bei Moderation {name}; bei Spielen {nr} {title}.",
   "order": [
-    "studio",
     "bielefeld",
     "voice",
-    "buehne",
     "musical",
     "casino",
     "wildnis",
@@ -86,7 +84,6 @@
       "group": "Eröffnung (Beamer)",
       "label": "Countdown: Zeichen vor der Zahl",
       "only": [
-        "buehne",
         "musical",
         "casino",
         "wildnis",
@@ -100,7 +97,6 @@
       "group": "Eröffnung (Beamer)",
       "label": "Countdown: Einblendung kurz vor Schluss",
       "only": [
-        "buehne",
         "musical",
         "casino",
         "wildnis",
@@ -235,38 +231,6 @@
       "label": "Ladebalken: Beschriftung",
       "only": [
         "wildnis"
-      ]
-    },
-    {
-      "key": "card.title",
-      "group": "Teams",
-      "label": "Spielerkarte: Titel",
-      "only": [
-        "studio"
-      ]
-    },
-    {
-      "key": "card.nr",
-      "group": "Teams",
-      "label": "Spielerkarte: Zeile Team-Nummer",
-      "only": [
-        "studio"
-      ]
-    },
-    {
-      "key": "card.teams",
-      "group": "Teams",
-      "label": "Spielerkarte: Zeile Teams",
-      "only": [
-        "studio"
-      ]
-    },
-    {
-      "key": "card.games",
-      "group": "Teams",
-      "label": "Spielerkarte: Zeile Spiele",
-      "only": [
-        "studio"
       ]
     },
     {
@@ -419,211 +383,6 @@
     }
   ],
   "themes": {
-    "studio": {
-      "name": "Original-Studio",
-      "desc": "Wie im Fernsehen: Vorspann in rosa-blauen Treppenwelten, Retro-Studio, XXL-Showtreppe, Videowürfel und Bigband",
-      "tl": {
-        "cold": 0,
-        "teaser": 3,
-        "count": null,
-        "boom": 15.5,
-        "lines": 21,
-        "line": 2.8,
-        "bpm": 134.4
-      },
-      "labels": {
-        "cold.a": "Einblendung im Schwarzbild",
-        "cold.b": "Einblendung beim Sprung in den Pool",
-        "extra": "Lieblingsspiel"
-      },
-      "music": {
-        "bpm": 138,
-        "styles": [
-          "big band",
-          "brass section",
-          "swing",
-          "retro TV show theme",
-          "trumpets",
-          "saxophones",
-          "live drums",
-          "energetic"
-        ],
-        "negative": [
-          "vocals",
-          "edm",
-          "lo-fi"
-        ]
-      },
-      "t": {
-        "cold.a": "Achtung – die Aufzeichnung läuft",
-        "cold.b": "Eine Show. {nWort} Teams. Ein Job.",
-        "cold.kicker": "{hosts}",
-        "cold.present": "präsentieren",
-        "teaser.head": "Heute in der Show",
-        "teaser.item": "Spiel {nr} · {title}",
-        "drop.big": "",
-        "drop.sub": "{subtitle}",
-        "hold": "Gleich: die Kandidaten des Abends",
-        "tagline": "Die Show gehört … noch … uns!",
-        "voice.cold": "Achtung, Achtung. Die Aufzeichnung läuft. Bitte bleiben Sie ganz entspannt.",
-        "voice.count": "",
-        "voice.drop": "Meine Damen und Herren: {show}!",
-        "lines": [
-          "{nWort} Teams.",
-          "{gamesWort} Spiele.",
-          "Drei Gewinnstufen.",
-          "Eine Münze, die alles verändern kann.",
-          "Und am Ende nur eine Frage:",
-          "Wer stiehlt uns die Show?"
-        ],
-        "voice.all": "Das sind sie. Die Teams des Abends. Und eines davon stiehlt uns heute die Show.",
-        "team.kicker": "Kandidat {nr} von {n}",
-        "host.kicker": "Gastgeber",
-        "host.call": "Und hier ist er – der Mann, dem diese Show gehört. Noch. {name}!",
-        "host.tag": "Hat seinen Job noch",
-        "coHost.kicker": "An seiner Seite",
-        "coHost.call": "An seiner Seite – und schon mit einem Auge auf seinem Job: {name}!",
-        "coHost.tag": "Will den Job vielleicht auch",
-        "ipad.wait": "Gleich geht's los …",
-        "ipad.start": "Die Show beginnt!",
-        "ipad.you": "IHR SEID DRAN!",
-        "ipad.youSub": "Aufstehen · winken · jubeln",
-        "ipad.other": "Applaus für {team}!",
-        "ipad.host": "Applaus für {name}!",
-        "ipad.all": "Viel Glück!",
-        "greeting": "Da bin ich wieder! Herzlich willkommen zu „{show}“! Heute geht es um nichts Geringeres als meinen Job – {nwort} Teams wollen ihn haben. Seid ihr bereit?",
-        "card.title": "Kandidaten-Karte",
-        "card.nr": "Team-Nr.",
-        "card.teams": "Teams heute",
-        "card.games": "Spiele"
-      },
-      "team": {
-        "call": [
-          "Sie kamen, sie sahen – und wollen jetzt die Show: {team}!",
-          "Sie haben trainiert. Sie haben gelernt. Zumindest ein bisschen: {team}!",
-          "Sie haben keinen Plan, aber eine Strategie: {team}!",
-          "Nur aus einem einzigen Grund hier – dieser Show: {team}!",
-          "Zu Hause schon Sieger. Heute auch hier? {team}!",
-          "Und das Team, das sich am meisten zutraut: {team}!"
-        ],
-        "tag": [
-          "Wollen die Show",
-          "Haben fleißig geübt",
-          "Mit Strategie, ohne Plan",
-          "Nur wegen der Show hier",
-          "Zu Hause ungeschlagen",
-          "Trauen sich alles zu"
-        ],
-        "extra": [
-          "Die leichten 5",
-          "Ich seh ein Land",
-          "Kassenschlager",
-          "Song Song Song",
-          "Dummes Zeug",
-          "Das Finale"
-        ]
-      }
-    },
-    "buehne": {
-      "name": "Showbühne",
-      "desc": "Große Samstagabendshow: LED-Wand, Moving Heads, Funkenfontänen, Konfetti",
-      "tl": {
-        "cold": 0,
-        "teaser": 3.5,
-        "count": 9.5,
-        "boom": 14.5,
-        "lines": 20,
-        "line": 2.6,
-        "bpm": 128
-      },
-      "labels": {
-        "cold.a": "Einblendung im Schwarzbild",
-        "cold.b": "Einblendung auf der LED-Wand",
-        "extra": "Stärke"
-      },
-      "music": {
-        "bpm": 128,
-        "styles": [
-          "epic tv show opener",
-          "festival edm",
-          "orchestral hits",
-          "big drop",
-          "brass stabs",
-          "euphoric"
-        ],
-        "negative": [
-          "vocals",
-          "lo-fi",
-          "acoustic"
-        ]
-      },
-      "t": {
-        "cold.a": "Live aus dem Studio",
-        "cold.b": "Heute Abend",
-        "cold.kicker": "{hosts}",
-        "cold.present": "präsentieren",
-        "teaser.head": "Heute in der Show",
-        "teaser.item": "Spiel {nr} · {title}",
-        "count.label": "",
-        "count.final": "Showtime!",
-        "drop.big": "",
-        "drop.sub": "{subtitle}",
-        "hold": "Bühne frei für die Teams!",
-        "tagline": "Möge das beste Team gewinnen!",
-        "voice.cold": "Meine Damen und Herren, live aus dem Studio …",
-        "voice.count": "",
-        "voice.drop": "",
-        "lines": [
-          "{nWort} Teams.",
-          "{gamesWort} Spiele.",
-          "Drei Gewinnstufen.",
-          "Und nur ein Team …",
-          "… stiehlt heute die Show!"
-        ],
-        "voice.all": "Das sind sie – die Teams des Abends! Applaus!",
-        "team.kicker": "Team {nr} von {n}",
-        "host.kicker": "Moderation",
-        "host.call": "Und hier ist Ihr Gastgeber des Abends … {name}!",
-        "host.tag": "Ihr Gastgeber",
-        "coHost.kicker": "Co-Moderation",
-        "coHost.call": "An der Seite unserer Moderation: {name}!",
-        "coHost.tag": "Die Co-Moderation",
-        "ipad.wait": "Gleich werden die Teams vorgestellt …",
-        "ipad.start": "Die Show beginnt!",
-        "ipad.you": "IHR SEID DRAN!",
-        "ipad.youSub": "Aufstehen · winken · jubeln",
-        "ipad.other": "Applaus für {team}!",
-        "ipad.host": "Applaus für {name}!",
-        "ipad.all": "Viel Glück!",
-        "greeting": "Guten Abend und herzlich willkommen bei „{show}“! {nWort} Teams, ein Ziel: Heute Abend die Show zu stehlen. Seid ihr bereit?"
-      },
-      "team": {
-        "call": [
-          "Applaus für … {team}!",
-          "Hier kommt … {team}!",
-          "Lauter, Leute – für {team}!",
-          "Mit dabei heute Abend: {team}!",
-          "Begrüßt mit mir … {team}!",
-          "Und zu guter Letzt: {team}!"
-        ],
-        "tag": [
-          "Heute holen wir uns die Show",
-          "Bereit für alles",
-          "Zum Siegen geboren",
-          "Unschlagbar gut gelaunt",
-          "Wir wollen den Pokal",
-          "Wir stehlen die Show"
-        ],
-        "extra": [
-          "Allgemeinwissen",
-          "Musik",
-          "Sport",
-          "Schätzen",
-          "Popkultur",
-          "Geografie"
-        ]
-      }
-    },
     "musical": {
       "name": "Musical",
       "desc": "Broadway: Saallicht dimmt, Programmheft, Glühbirnen-Schriftzug, roter Vorhang, Spotlights",

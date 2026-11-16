@@ -1,7 +1,6 @@
 // Show-Intro im Browser – Inszenierung auf TV-Niveau für Beamer und Team-iPads.
 //
-// Jedes Thema hat eine eigene Regie (si-scenes.js): Original-Studio (Treppenwelt-Vorspann,
-// Videowürfel, XXL-Showtreppe), Showbühne, Musical, Casino, Wildnis (Survival-Doku),
+// Jedes Thema hat eine eigene Regie (si-scenes.js): Bielefeld, The Voice, Musical, Casino, Wildnis (Survival-Doku),
 // Weltraum (Missionskontrolle mit Go/No-Go über alle iPads, Liftoff).
 // Zeitachse je Thema aus dem Katalog (si.tl); die Standard-Musik ist genau darauf komponiert
 // (assets/music/<thema>-intro.mp3, Höhepunkt = tl.boom), eigene Musik ersetzt sie.

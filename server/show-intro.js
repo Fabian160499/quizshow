@@ -45,16 +45,15 @@ const SFX = {
   stab: { sec: 3, p: 'bright orchestral brass stab hit, tv show sting, big hall' },
   fanfare: { sec: 4, p: 'triumphant big band brass fanfare for a tv show host entrance, short and powerful' },
 };
+const SFX_DEFAULT = 'modern Saturday night TV game show style'; // Bielefeld, The Voice
 const SFX_STYLE = {
-  studio: 'retro Saturday night TV show with a live big band',
-  buehne: 'modern Saturday night TV game show style',
   musical: 'Broadway musical theatre style with orchestra',
   casino: 'Las Vegas casino glamour style, jazzy and luxurious',
   wildnis: 'survival documentary style, tribal drums, primal and raw',
   weltraum: 'sci-fi space epic style, synthesizers and huge spaces',
 };
 function sfxPrompts(theme) {
-  const style = SFX_STYLE[theme] || SFX_STYLE.buehne;
+  const style = SFX_STYLE[theme] || SFX_DEFAULT;
   return Object.fromEntries(Object.entries(SFX).map(([k, v]) => [`sfx:${k}`, { text: `${v.p}, ${style}`, sec: v.sec }]));
 }
 
@@ -371,12 +370,6 @@ function teamData(db, teamId) {
       host: person ? person.ipad : '',
       label: t.tx['count.label'] || '',
     },
-    // Eigene Spielerkarte: nur das Team, das gerade vorgestellt wird, bekommt sie (kurz vor dem Beamer)
-    card: k >= 0 && k === idx && t.teams[k] ? {
-      kicker: t.teams[k].kicker, tag: t.teams[k].tag, extra: t.teams[k].extra, extraLabel: String((THEMES[c.theme].labels || {}).extra || ''),
-      nr: k + 1, n: pr.teams.length, games: (pr.games || []).length,
-      title: t.tx['card.title'] || '', lNr: t.tx['card.nr'] || '', lTeams: t.tx['card.teams'] || '', lGames: t.tx['card.games'] || '',
-    } : null,
   };
 }
 

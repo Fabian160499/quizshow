@@ -1,8 +1,7 @@
 // Show-Intro – Regie je Thema: Eröffnung (automatisch), Personen-Auftritte, Finale.
 // Alle sichtbaren Texte kommen aus si.tx / si.teams / si.host (im Editor änderbar).
 
-import { h, later, atTime, esc, frag, logoEl, avatarOf, nowEl, initials, holoCard } from './si-core.js';
-import { mount3D, HOST_POSES, COHOST_POSES, imgUrl } from './si-3d.js';
+import { h, later, atTime, esc, frag, logoEl, avatarOf, nowEl } from './si-core.js';
 import { mediaUrl } from './client.js';
 import { MAPS } from './map-data.js';
 const nowElSafe = () => nowEl(0);
@@ -10,39 +9,12 @@ const nowElSafe = () => nowEl(0);
 export const THEME_LOOK = {
   voice: { a: '#ff1f6b', b: '#ff2d55', c: '#ffffff', d: '#3a0012', bg: '#060005', metal: 'chrome', font: 'si-display', parts: 'sparks' },
   bielefeld: { a: '#1565c0', b: '#ffffff', c: '#f5c400', d: '#0a0a0a', bg: '#05070d', metal: 'chrome', font: 'si-anton', parts: 'confetti' },
-  studio: { a: '#ff4f6d', b: '#6f8cff', c: '#ffd166', d: '#8b5cf6', bg: '#120a1c', metal: 'chrome', font: 'si-anton', parts: 'confetti' },
-  buehne: { a: '#ff2d8a', b: '#1fd6f2', c: '#ffd23d', d: '#7c5cff', bg: '#07051a', metal: 'chrome', font: 'si-display', parts: 'confetti' },
   musical: { a: '#e0193a', b: '#f5c542', c: '#fff1c9', d: '#7a0b18', bg: '#1a0306', metal: 'gold', font: 'si-playfair', parts: 'notes' },
   casino: { a: '#e8c35a', b: '#1f9d5b', c: '#d6243a', d: '#0b3d24', bg: '#03140b', metal: 'gold', font: 'si-cinzel', parts: 'cards' },
   wildnis: { a: '#c9c42c', b: '#e9e4cf', c: '#6d9a3a', d: '#1d3a1f', bg: '#08110a', metal: 'bronze', font: 'si-stencil', parts: 'embers' },
   weltraum: { a: '#4cc9ff', b: '#7fe3ff', c: '#ffffff', d: '#0b2a4a', bg: '#010307', metal: 'chrome', font: 'si-orbit', parts: 'stars' },
 };
-export const look = (theme) => THEME_LOOK[theme] || THEME_LOOK.studio;
-
-// ---- Figuren für die 3D-Bühne ----
-const DEFAULT_HOST = 'assets/img/avatar-host.webp';
-const DEFAULT_COHOST = 'assets/img/avatar-cohost.webp';
-// Ganzkörper-Posen (stehen, gehen, Mikro); ein eigenes Bild aus dem Editor ersetzt sie
-function hostFigures(s) {
-  const own = s.show.hostAvatar;
-  return own && own !== DEFAULT_HOST && own !== imgUrl(DEFAULT_HOST) ? { stand: own } : HOST_POSES;
-}
-function coHostFigures(s) {
-  const own = s.show.coHostAvatar;
-  return own && own !== DEFAULT_COHOST && own !== imgUrl(DEFAULT_COHOST) ? { stand: own } : COHOST_POSES;
-}
-// Rundes Team-Bild (Avatar oder Initialen) als Bild-URL für die 3D-Bühne
-function teamFigureUrl(t) {
-  if (t.avatar) return t.avatar;
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512;
-  const g = cv.getContext('2d');
-  const gr = g.createRadialGradient(256, 200, 20, 256, 256, 256); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.18, t.color || '#888'); gr.addColorStop(1, '#000000');
-  g.fillStyle = gr; g.beginPath(); g.arc(256, 256, 250, 0, 7); g.fill();
-  g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
-  g.fillStyle = '#ffffff'; g.font = '900 220px "SI Anton", "SI Display", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(initials(t.name), 256, 270);
-  return cv.toDataURL('image/png');
-}
+export const look = (theme) => THEME_LOOK[theme] || THEME_LOOK.bielefeld;
 export const FONT = {
   'si-display': '900 100px "SI Display", system-ui, sans-serif', 'si-anton': '400 100px "SI Anton", "SI Display", sans-serif', 'si-playfair': '900 100px "SI Playfair", Georgia, serif',
   'si-cinzel': '800 100px "SI Cinzel", Georgia, serif', 'si-stencil': '900 100px "SI Stencil", "SI Display", sans-serif', 'si-cond': '800 100px "SI Cond", "SI Display", sans-serif', 'si-orbit': '400 100px "SI Orbit", "SI Display", sans-serif',
@@ -50,17 +22,15 @@ export const FONT = {
 
 // Reihenfolge der Team-Auftritte je Thema: kein Team wird gleich vorgestellt.
 const TEAM_LAYOUTS = {
-  studio: ['podium', 'split', 'cube', 'type', 'spot', 'zoom'],
   voice: ['teamchair', 'teamchair', 'teamchair', 'teamchair', 'teamchair', 'teamchair'],
   bielefeld: ['sign', 'scarf', 'split', 'type', 'spot', 'zoom'],
-  buehne: ['spot', 'type', 'led', 'split', 'zoom', 'card'],
   musical: ['spot', 'card', 'marquee', 'split', 'type', 'zoom'],
   casino: ['card', 'slot', 'split', 'spot', 'type', 'zoom'],
   wildnis: ['stats', 'hexteam', 'bodycam', 'statsR', 'polaroid', 'hexteamR'],
   weltraum: ['reticle', 'patch', 'split', 'type', 'spot', 'zoom'],
 };
-const HOST_LAYOUT = { voice: 'allchairs', bielefeld: 'scarf', studio: 'stairs', buehne: 'stairs', musical: 'stairs', casino: 'card', wildnis: 'bodycam', weltraum: 'patch' };
-const COHOST_LAYOUT = { voice: 'allchairs', bielefeld: 'sign', studio: 'split', buehne: 'split', musical: 'marquee', casino: 'split', wildnis: 'polaroid', weltraum: 'reticle' };
+const HOST_LAYOUT = { voice: 'allchairs', bielefeld: 'scarf', musical: 'stairs', casino: 'card', wildnis: 'bodycam', weltraum: 'patch' };
+const COHOST_LAYOUT = { voice: 'allchairs', bielefeld: 'sign', musical: 'marquee', casino: 'split', wildnis: 'polaroid', weltraum: 'reticle' };
 
 // ---------------------------------------------------------------------------------
 // Bühnenbilder (bleiben über alle Phasen stehen)
@@ -68,10 +38,8 @@ const COHOST_LAYOUT = { voice: 'allchairs', bielefeld: 'sign', studio: 'split', 
 function set(c, mode) {
   const { si } = c;
   const th = si.theme;
-  if (th === 'studio') return mode === 'muralla' ? murallaSet() : studioSet(c);
   if (th === 'voice') return voiceSet(mode);
   if (th === 'bielefeld') return mode === 'city' ? cityPanorama() : stadiumSet(mode);
-  if (th === 'buehne') return h('div', { class: 'si-set si-led-wall' }, h('i', { class: 'si-led-img' }), h('i', { class: 'si-floor' }));
   if (th === 'musical') return h('div', { class: `si-set si-theatre ${mode === 'closed' ? 'closed' : 'open'}` }, h('div', { class: 'si-curtain' }, h('i'), h('i')), h('div', { class: 'si-pros' }), h('div', { class: 'si-foot' }, Array.from({ length: 13 }, () => h('i'))));
   if (th === 'casino') return h('div', { class: 'si-set si-felt' }, h('i', { class: 'si-felt-line' }), h('i', { class: 'si-felt-spot' }));
   if (th === 'wildnis') return wildSet(c, mode);
@@ -79,67 +47,11 @@ function set(c, mode) {
   return h('div', { class: 'si-set' });
 }
 
-// ---- Studio: Retro-Studio mit XXL-Showtreppe, Videowürfel, Tunnel-Bögen ----
-function studioSet(c) {
-  const steps = Array.from({ length: 14 }, (_, i) => h('i', { '--i': String(i) }));
-  return h('div', { class: 'si-set si-studio-set' },
-    h('div', { class: 'si-arches' }, Array.from({ length: 7 }, (_, i) => h('i', { '--i': String(i) }))),
-    h('div', { class: 'si-stairs' }, steps),
-    h('div', { class: 'si-bulbs-row l' }), h('div', { class: 'si-bulbs-row r' }),
-    cube(c, logoEl(c.s.show.name, c.L, 'tiny')));
-}
 function cube(c, content, cls = '') {
   const faces = ['f', 'r', 'b', 'l'].map((k) => h('div', { class: `si-cube-face ${k}` }, k === 'f' ? content : (k === 'b' ? content.cloneNode(true) : logoEl(c.s.show.name, c.L, 'tiny'))));
   return h('div', { class: `si-cube ${cls}`.trim() }, h('div', { class: 'si-cube-in' }, faces));
 }
 
-// ---- Studio-Vorspann: Treppenwelt in Rot, Rosa, Blau, Violett ----
-const MR = { sky1: '#8fc3ff', sky2: '#e9f4ff', red: '#d9433f', redD: '#a92f37', redL: '#ef6a5e', pink: '#f6a9bb', pinkD: '#d98199', blue: '#3a5fd9', blueL: '#7393f2', blueD: '#2a45a8', vio: '#6b4bb8', vioD: '#4c3391', vioL: '#8b6fd6' };
-function stairPoly(x0, y0, x1, y1, n, thick = 60) {
-  // Treppe von (x0,y0) unten nach (x1,y1) oben, n Stufen, Unterseite als schräge Wange
-  const dx = (x1 - x0) / n; const dy = (y1 - y0) / n;
-  let d = `M${x0},${y0 + thick}`;
-  d += ` L${x0},${y0}`;
-  for (let i = 0; i < n; i++) { d += ` L${x0 + dx * i},${y0 + dy * (i + 1)} L${x0 + dx * (i + 1)},${y0 + dy * (i + 1)}`; }
-  d += ` L${x1},${y1 + thick} Z`;
-  return d;
-}
-function crenel(x0, x1, y, h_ = 40, w = 70) {
-  let d = `M${x0},${y + h_}`;
-  for (let x = x0; x < x1; x += w * 2) d += ` L${x},${y} L${Math.min(x + w, x1)},${y} L${Math.min(x + w, x1)},${y + h_} L${Math.min(x + 2 * w, x1)},${y + h_}`;
-  return `${d} L${x1},${y + h_} Z`;
-}
-function murallaShots() {
-  const sky = `<defs><linearGradient id="mrsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${MR.sky1}"/><stop offset="1" stop-color="${MR.sky2}"/></linearGradient><linearGradient id="mrpool" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#35c6e8"/><stop offset="1" stop-color="#1679b8"/></linearGradient></defs><rect width="1600" height="900" fill="url(#mrsky)"/>`;
-  const slits = (x, y, n, col, gap = 70) => Array.from({ length: n }, (_, i) => `<rect x="${x + i * gap}" y="${y}" width="16" height="120" rx="8" fill="${col}"/>`).join('');
-  const s1 = `${sky}<rect x="1180" y="180" width="420" height="720" fill="${MR.blue}"/><rect x="1180" y="180" width="60" height="720" fill="${MR.blueD}"/>
-    <path d="${crenel(260, 1220, 210, 50, 60)}" fill="${MR.red}"/><rect x="260" y="258" width="960" height="642" fill="${MR.red}"/><rect x="260" y="258" width="960" height="30" fill="${MR.redD}"/>
-    ${slits(340, 340, 4, MR.pink)}${slits(860, 340, 4, MR.pink)}
-    <path d="${stairPoly(260, 900, 900, 420, 12, 90)}" fill="${MR.pink}"/><path d="${stairPoly(260, 900, 900, 420, 12, 90)}" fill="none" stroke="${MR.pinkD}" stroke-width="3"/>
-    <path d="${stairPoly(1600, 900, 1250, 560, 7, 70).replace(/M1600/, 'M1600')}" fill="${MR.vio}"/>`;
-  const s2 = `${sky}<rect x="0" y="120" width="1600" height="780" fill="${MR.pink}"/><path d="${crenel(0, 1600, 80, 50, 80)}" fill="${MR.pink}"/>
-    <rect x="1120" y="250" width="120" height="420" rx="60" fill="${MR.blue}"/><rect x="1300" y="250" width="40" height="300" rx="20" fill="${MR.blueD}"/>
-    <path d="${stairPoly(-40, 960, 1100, 160, 14, 160)}" fill="${MR.vio}"/><path d="${stairPoly(-40, 960, 1100, 160, 14, 160)}" fill="none" stroke="${MR.vioD}" stroke-width="5"/>`;
-  const s3 = `${sky}<rect x="0" y="0" width="1600" height="900" fill="${MR.blue}"/><rect x="0" y="0" width="1600" height="900" fill="url(#mrsky)" opacity=".25"/>
-    ${slits(120, 120, 3, MR.blueD, 90)}${slits(1250, 120, 3, MR.blueD, 90)}
-    <rect x="0" y="330" width="1600" height="70" fill="${MR.red}"/><rect x="0" y="400" width="1600" height="16" fill="${MR.redD}"/>
-    <path d="${stairPoly(150, 900, 820, 400, 10, 80)}" fill="${MR.pink}"/><path d="${stairPoly(1500, 900, 780, 400, 10, 80)}" fill="${MR.vio}"/>
-    <rect x="700" y="160" width="200" height="170" fill="${MR.blueL}"/><path d="${crenel(700, 900, 120, 40, 40)}" fill="${MR.blueL}"/>`;
-  const s4 = `${sky}<path d="${crenel(0, 1600, 330, 60, 90)}" fill="${MR.red}"/><rect x="0" y="388" width="1600" height="512" fill="${MR.red}"/>
-    <path d="M300,560 L1300,560 L1500,900 L100,900 Z" fill="${MR.pink}"/><path d="M420,600 L1180,600 L1320,880 L280,880 Z" fill="url(#mrpool)"/>
-    <path d="M420,600 L1180,600 L1190,625 L410,625 Z" fill="#9ee7f7" opacity=".7"/>
-    <path d="${stairPoly(0, 900, 320, 560, 6, 60)}" fill="${MR.vio}"/>`;
-  return [s1, s2, s3, s4];
-}
-function murallaSet() {
-  const shots = murallaShots().map((svg, i) => frag(`<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${svg}</svg>`, `si-mr-shot s${i + 1}`));
-  return h('div', { class: 'si-set si-muralla' }, shots, h('div', { class: 'si-mr-sun' }));
-}
-function ninja(cls = '') {
-  return frag('<svg viewBox="0 0 100 160" aria-hidden="true"><circle cx="50" cy="28" r="20" fill="#0d0d12"/><rect x="30" y="22" width="40" height="9" rx="4" fill="#e23b3b"/><rect x="38" y="24" width="24" height="5" rx="2" fill="#f5e6d0"/><path d="M28 52 Q50 44 72 52 L66 112 L34 112 Z" fill="#0d0d12"/><path d="M34 110 L24 156 L40 156 L48 116 Z M66 110 L76 156 L60 156 L52 116 Z" fill="#0d0d12"/><path d="M30 58 L4 84 L12 90 L36 70 Z M70 58 L96 40 L90 32 L66 50 Z" fill="#0d0d12"/></svg>', `si-ninja ${cls}`.trim());
-}
-
-// ---- Wildnis: Landschaft (Drohnenflug), Breitbild, Kamera-Einblendungen ----
 function wildSet(c, mode) {
   const cv = h('canvas', { class: 'si-land', 'aria-hidden': 'true' });
   requestAnimationFrame(() => landscape(cv, c));
@@ -426,95 +338,9 @@ function dropLogo(c, stage, extras = []) {
 // ERÖFFNUNG je Thema
 // ---------------------------------------------------------------------------------
 export function autoScene(c) {
-  ({ voice: autoVoice, bielefeld: autoBielefeld, studio: autoStudio, buehne: autoBuehne, musical: autoMusical, casino: autoCasino, wildnis: autoWild, weltraum: autoSpace })[c.si.theme in THEME_LOOK ? c.si.theme : 'studio'](c);
+  ({ voice: autoVoice, bielefeld: autoBielefeld, musical: autoMusical, casino: autoCasino, wildnis: autoWild, weltraum: autoSpace })[c.si.theme in THEME_LOOK ? c.si.theme : 'bielefeld'](c);
 }
 
-// ---- STUDIO (wie im Fernsehen) ----
-function autoStudio(c) {
-  const { root, si, s, L, el, sound } = c;
-  const tl = si.tl; const boom = tl.boom;
-  const stage = h('div', { class: 'si-stage' });
-  const bg = h('div', { class: 'si-setslot' });
-  root.append(bg, stage);
-  const at = (t, fn) => atTime(el, t, fn);
-  // Echte 3D-Bühne (Treppenwelt → Platsch → Studio); ohne WebGL die bisherigen Bühnenbilder
-  let use3D = mount3D(c, { mode: 'auto', font: FONT[L.font], figures: hostFigures(s) }, () => { use3D = false; bg.replaceChildren(set(c, nowEl(el) < boom ? 'muralla' : 'studio')); });
-  // Cold Open: Aufnahme-Leuchtschild, dann „präsentieren“
-  at(0, () => { if (el < tl.teaser) stage.replaceChildren(h('div', { class: 'si-onair' }, h('i'), h('b', {}, si.tx['cold.a']))); });
-  sound('clunk', 0.2, el);
-  c.voice(si.clips.cold, si.tx['voice.cold'], 0.3);
-  at(1.5, () => { if (el < tl.teaser) stage.replaceChildren(presents(c, si.tx['cold.kicker'], si.tx['cold.present'])); });
-  // Vorspann: Treppenwelt, vier Einstellungen, Spieltitel, Ninjas, Sprung in den Pool
-  const shotLen = (boom - tl.teaser) / 4;
-  at(tl.teaser, () => {
-    if (el > boom || use3D) return;
-    const mr = set(c, 'muralla');
-    bg.replaceChildren(mr);
-    root.classList.add('si-day');
-    const host = h('div', { class: 'si-mr-host' }, h('img', { src: s.show.hostAvatar || 'assets/img/avatar-host.webp', alt: '' }));
-    mr.append(host, ninja('n1'), ninja('n2'), ninja('n3'));
-    for (let k = 0; k < 4; k++) {
-      atTime(el, tl.teaser + k * shotLen, () => { mr.dataset.shot = String(k + 1); if (el < tl.teaser + (k + 1) * shotLen) sound('whoosh', tl.teaser + k * shotLen, el, 0.45, 0.4); });
-    }
-    atTime(el, boom - 1.15, () => { mr.dataset.fall = '1'; sound('whoosh', boom - 1.15, el, 1.0, 0.5); });
-  });
-  at(tl.teaser + 0.2, () => { if (el < tl.teaser + 1.3) stage.replaceChildren(h('div', { class: 'si-teaser-head si-retro' }, si.tx['teaser.head'])); });
-  const games = si.games.slice(0, 8);
-  const slot = games.length ? (boom - 1.4 - (tl.teaser + 1.3)) / games.length : 0;
-  games.forEach((g, i) => {
-    const t0 = tl.teaser + 1.3 + i * slot;
-    sound('pop', t0, el);
-    at(t0, () => { if (el > boom - 1.2) return; stage.replaceChildren(h('div', { class: `si-cut si-retro si-cut-${i % 4}` }, h('b', {}, g.label))); });
-  });
-  at(boom - 1.2, () => { if (el > boom) return; stage.replaceChildren(si.tx['cold.b'] ? h('div', { class: 'si-cut si-retro si-fallline' }, h('b', {}, si.tx['cold.b'])) : ''); });
-  // Höhepunkt: Platsch → Studio mit Videowürfel und Showtreppe
-  c.shake(boom, true);
-  sound('hit', boom, el);
-  at(boom, () => {
-    root.classList.remove('si-day'); root.classList.add('si-lit');
-    if (!use3D) bg.replaceChildren(set(c, 'studio'));
-    c.voice(si.clips.drop, si.tx['voice.drop'], boom + 0.4);
-    dropLogo(c, stage);
-    c.fx((fx) => { if (el < boom + 1) { fx.burst(140, 'spark', fx.w / 2, fx.h * 0.6, 1.3, ['#ffffff', '#9ee7f7', '#5bc0ff']); fx.cannon(-1, 70); fx.cannon(1, 70); } fx.beamN = 6; });
-  });
-  linesAndHold(c, stage);
-}
-
-// ---- SHOWBÜHNE ----
-function autoBuehne(c) {
-  const { root, si, s, L, el, sound } = c;
-  const tl = si.tl; const boom = tl.boom;
-  const bg = h('div', { class: 'si-setslot' }); const stage = h('div', { class: 'si-stage' });
-  root.append(bg, stage);
-  const at = (t, fn) => atTime(el, t, fn);
-  sound('boom', 0.1, el);
-  c.voice(si.clips.cold, si.tx['voice.cold'], 0.3);
-  c.fx((fx) => { fx.ambient = { rate: 0.2 }; });
-  at(0.3, () => { if (el < 1.0) stage.replaceChildren(h('div', { class: 'si-kicker-big' }, si.tx['cold.a'])); });
-  at(1.0, () => { if (el < 1.6 && si.tx['cold.b']) stage.replaceChildren(h('div', { class: 'si-kicker-big' }, si.tx['cold.b'])); });
-  at(1.6, () => { if (el < tl.teaser) stage.replaceChildren(presents(c, si.tx['cold.kicker'], si.tx['cold.present'])); c.fx((fx) => { fx.beams = 0.35; fx.beamFrom = 'both'; fx.beamN = 6; }); });
-  at(tl.teaser, () => { bg.replaceChildren(set(c)); root.classList.add('si-led-on'); });
-  sound('whoosh', tl.teaser, el, 0.8);
-  at(tl.teaser, () => { if (el < tl.teaser + 0.9) stage.replaceChildren(h('div', { class: 'si-teaser-head' }, si.tx['teaser.head'])); });
-  const games = si.games.slice(0, 8);
-  const slot = games.length ? (tl.count - tl.teaser - 0.9) / games.length : 0;
-  games.forEach((g, i) => {
-    const t0 = tl.teaser + 0.9 + i * slot;
-    if (i % 2) sound('whoosh', t0, el, 0.35, 0.5); else sound('tick', t0, el, 0);
-    at(t0, () => { if (el > tl.count) return; stage.replaceChildren(h('div', { class: `si-cut si-cut-${i % 4}` }, h('b', {}, g.label))); root.dataset.led = String(i % 4); });
-  });
-  countdown(c, stage, 5, tl.count, boom, 'neon');
-  c.shake(boom, true); sound('hit', boom, el);
-  at(boom, () => {
-    root.classList.add('si-lit');
-    c.voice(si.clips.drop, si.tx['voice.drop'], boom + 0.3);
-    dropLogo(c, stage);
-    c.fx((fx) => { if (el < boom + 1) { fx.cannon(-1, 80); fx.cannon(1, 80); for (const x of [0.08, 0.25, 0.75, 0.92]) fx.fountain(fx.w * x, 3.2); } });
-  });
-  linesAndHold(c, stage);
-}
-
-// Countdown (Zahlen) – Stil je Thema per CSS
 function countdown(c, stage, from, t0, boom, style) {
   const { si, L, el, sound } = c;
   const step = (boom - t0) / from;
@@ -1035,7 +861,7 @@ export function personScene(c, kind) {
     const k = Number(si.phase.slice(5));
     const t = s.teams[k] || { name: '?', color: '#888' };
     const tt = si.teams[k] || {};
-    P = { kind, k, name: t.name, color: t.color, avatar: () => avatarOf({ name: t.name, color: t.color, avatar: t.avatar }), kicker: tt.kicker, tag: tt.tag, extra: tt.extra, call: tt.call, clip: si.clips[`team:${t.id}`], song: si.songs && si.songs[`team:${t.id}`], stats: tt, jingle: `team${(k % 6) + 1}`, layout: (TEAM_LAYOUTS[si.theme] || TEAM_LAYOUTS.studio)[k % 6] };
+    P = { kind, k, name: t.name, color: t.color, avatar: () => avatarOf({ name: t.name, color: t.color, avatar: t.avatar }), kicker: tt.kicker, tag: tt.tag, extra: tt.extra, call: tt.call, clip: si.clips[`team:${t.id}`], song: si.songs && si.songs[`team:${t.id}`], stats: tt, jingle: `team${(k % 6) + 1}`, layout: (TEAM_LAYOUTS[si.theme] || TEAM_LAYOUTS.bielefeld)[k % 6] };
   } else {
     const co = kind === 'coHost';
     const p = (co ? si.coHost : si.host) || { name: '', call: '', kicker: '', tag: '' };
@@ -1050,21 +876,10 @@ export function personScene(c, kind) {
   c.jingle(P.jingle, P.song, HIT);
   c.shake(HIT, kind === 'host');
   root.classList.add('si-lit');
-  const setMode = si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open')));
-  const bg = h('div', { class: 'si-setslot' });
+  const bg = h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open')))));
   root.append(bg);
-  // Original-Studio in 3D: Treppenabgang (Moderation), Hero-Shot auf dem Podest (Teams, Co-Moderation)
-  let use3D = false;
-  if (si.theme === 'studio') {
-    const t = kind === 'team' ? (s.teams[P.k] || {}) : null;
-    const figures = kind === 'host' ? hostFigures(s) : kind === 'coHost' ? coHostFigures(s) : { main: teamFigureUrl(t) };
-    use3D = mount3D(c, { mode: kind, k: P.k, color: P.color, font: FONT[L.font], figures, hit: HIT }, () => { use3D = false; bg.replaceChildren(set(c, setMode)); if (node.dataset.l3d) node.replaceChildren(...(LAYOUTS[node.dataset.l3d] || LAYOUTS.spot)(c, P).childNodes); });
-    if (use3D) { P.layout3d = P.layout; P.layout = kind === 'team' ? 'holo' : (kind === 'host' ? 'stairs3d' : 'hero3d'); }
-  }
-  if (!use3D) bg.append(set(c, setMode));
   if (si.theme === 'voice') bg.querySelector('.si-vfloor')?.append(h('b', { class: 'si-vfloortext' }, P.name));
   const node = (LAYOUTS[P.layout] || LAYOUTS.spot)(c, P);
-  if (P.layout3d) node.dataset.l3d = kind === 'host' ? 'stairs' : P.layout3d;
   node.classList.add('si-stage', 'si-person', `lay-${P.layout}`, kind);
   node.style.setProperty('--team', P.color);
   node.style.setProperty('--hit', `${Math.max(0, HIT - el)}s`);
@@ -1073,10 +888,9 @@ export function personScene(c, kind) {
     fx.beams = 0.9; fx.beamColor = P.color; fx.ambient = { rate: 0.4 };
     if (si.theme === 'wildnis') { fx.fire = 0; fx.beams = 0.12; }
     if (el < HIT + 1) later(Math.max(0, HIT - el), () => {
-      fx.burst(Math.round((kind === 'host' ? 220 : 120) * (use3D ? 0.35 : 1)), 'spark', fx.w / 2, fx.h * 0.45, 1.1);
+      fx.burst(kind === 'host' ? 220 : 120, 'spark', fx.w / 2, fx.h * 0.45, 1.1);
       fx.flare(fx.w / 2, fx.h * 0.4);
-      if ((kind === 'host' || P.layout === 'zoom') && !use3D) { fx.cannon(-1, 90); fx.cannon(1, 90); }
-      if ((si.theme === 'buehne' || si.theme === 'studio') && !use3D) { fx.fountain(fx.w * 0.1, 2.2); fx.fountain(fx.w * 0.9, 2.2); }
+      if (kind === 'host' || P.layout === 'zoom') { fx.cannon(-1, 90); fx.cannon(1, 90); }
       if (si.theme === 'casino') fx.rain(50, 'coin');
     });
   });
@@ -1112,23 +926,6 @@ const LAYOUTS = {
   cube(c, P) {
     const face = h('div', { class: 'si-cube-team' }, P.avatar(), h('b', {}, P.name));
     return h('div', {}, cube(c, face, 'big'), h('div', { class: 'si-cube-plate' }, h('small', {}, P.kicker), h('b', { class: c.L.font }, P.name), h('span', {}, P.tag)), extraEl(P));
-  },
-  // 3D-Treppenabgang: nur Texte, die Bühne kommt aus si-3d.js. Name mit Lichtstreifen.
-  stairs3d(c, P) {
-    return h('div', {}, h('div', { class: 'si-sweep' }, P.kicker ? h('small', {}, P.kicker) : null, h('b', { class: c.L.font, style: { fontSize: P.fit(60, 13) } }, P.name), P.tag ? h('span', {}, P.tag) : null));
-  },
-  hero3d(c, P) {
-    return h('div', {}, h('div', { class: 'si-sweep left' }, P.kicker ? h('small', {}, P.kicker) : null, h('b', { class: c.L.font, style: { fontSize: P.fit(48, 12) } }, P.name), P.tag ? h('span', {}, P.tag) : null));
-  },
-  // Hero-Shot eines Teams: holografische Spielerkarte neben dem Podest
-  holo(c, P) {
-    const tx = c.si.tx;
-    const t = c.s.teams[P.k] || {};
-    return h('div', {}, holoCard({
-      name: P.name, color: P.color, avatar: avatarOf({ name: t.name, color: t.color, avatar: t.avatar }), kicker: P.kicker, tag: P.tag, extra: P.extra, extraLabel: P.extraLabel,
-      nr: P.k + 1, n: c.s.teams.length, games: (c.si.games || []).length, title: tx['card.title'], lNr: tx['card.nr'], lTeams: tx['card.teams'], lGames: tx['card.games'],
-      side: P.k % 2 ? 'left' : 'right', delay: Math.max(0, HIT + 0.45 - c.el),
-    }));
   },
   // Showtreppe: Abgang über die XXL-Treppe mit Lauflicht
   stairs(c, P) {
@@ -1245,10 +1042,7 @@ export function allScene(c) {
   c.jingle('all', null, 0.1);
   c.shake(0.1, true);
   root.classList.add('si-lit');
-  const slot = h('div', { class: 'si-setslot' });
-  root.append(slot);
-  const allMode = si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open')));
-  if (!(si.theme === 'studio' && mount3D(c, { mode: 'all', font: FONT[L.font], figures: hostFigures(s), figures2: s.show.coHost ? coHostFigures(s) : null }, () => slot.append(set(c, allMode))))) slot.append(set(c, allMode));
+  root.append(h('div', { class: 'si-setslot' }, set(c, si.theme === 'wildnis' ? 'mist' : (si.theme === 'weltraum' ? 'orbit' : (si.theme === 'bielefeld' ? 'night' : (si.theme === 'voice' ? 'on' : 'open'))))));
   root.append(h('div', { class: 'si-stage si-all' },
     h('div', { class: 'si-rays', 'aria-hidden': 'true' }),
     h('div', { class: 'si-logo-wrap small' }, logoEl(s.show.name, L)),

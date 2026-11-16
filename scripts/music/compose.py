@@ -1105,7 +1105,7 @@ class Voice(Studio):
         return fade_out(m.render(3.0, 0.9), 0.4)
 
 
-THEMES = {'voice': Voice, 'bielefeld': Bielefeld, 'studio': Studio, 'buehne': Buehne, 'musical': Musical, 'casino': Casino, 'wildnis': Wildnis, 'weltraum': Weltraum}
+THEMES = {'voice': Voice, 'bielefeld': Bielefeld, 'musical': Musical, 'casino': Casino, 'wildnis': Wildnis, 'weltraum': Weltraum}
 
 
 def main(ids):

@@ -1,6 +1,0 @@
-Fremde Bibliotheken
-
-three.js r147 (assets/vendor/three) – MIT-Lizenz, Copyright © 2010-2022 three.js authors.
-Lizenztext: assets/vendor/three/LICENSE.txt
-
-qrcode (assets/js/vendor/qrcode.js) – siehe assets/js/vendor/qrcode-LICENSE.txt

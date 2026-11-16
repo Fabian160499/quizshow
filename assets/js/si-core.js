@@ -253,9 +253,7 @@ export class Fx {
     g.clearRect(0, 0, w, H);
     g.globalCompositeOperation = 'lighter';
     const t = (now - this.t0) / 1000;
-    // Über der 3D-Bühne: keine gemalten Lichtkegel, weniger Schwebeteilchen (die Bühne hat echte)
-    const in3D = !!(this.c.closest && this.c.closest('.si-3don'));
-    if (this.beams > 0.01 && !in3D) {
+    if (this.beams > 0.01) {
       const n = this.beamN;
       for (let i = 0; i < n; i++) {
         const fromBottom = this.beamFrom === 'bottom' || (this.beamFrom === 'both' && i % 2);
@@ -286,7 +284,7 @@ export class Fx {
     if (this.warp > 0.01) {
       for (let k = 0; k < 4 * this.warp; k++) { const a = Math.random() * Math.PI * 2; this.p.push({ x: w / 2 + Math.cos(a) * 10, y: H / 2 + Math.sin(a) * 10, vx: Math.cos(a) * 2, vy: Math.sin(a) * 2, life: 1, decay: 0.006, size: 1, kind: 'streak', col: '#ffffff', drag: 1.07 }); }
     }
-    if (this.ambient && Math.random() < this.ambient.rate * (in3D ? 0.2 : 1)) this.spawnAmbient();
+    if (this.ambient && Math.random() < this.ambient.rate) this.spawnAmbient();
     for (const q of this.p) {
       q.vy += q.grav || 0; if (q.drag) { q.vx *= q.drag; q.vy *= q.drag; }
       q.x += q.vx; q.y += q.vy; q.rot = (q.rot || 0) + (q.vr || 0); q.life -= q.decay;
@@ -353,33 +351,4 @@ export class Fx {
     else if (k === 'bubbles') this.p.push({ x: Math.random() * this.w, y: this.h + 10, vx: (Math.random() - 0.5) * 0.4, vy: -0.8 - Math.random() * 1.2, life: 1, decay: 0.003, size: 0.8 + Math.random() * 1.6, kind: 'spark', col: ['#ffb3c7', '#8fb3ff', '#ffffff'][i], grav: 0 });
     else this.p.push({ x: Math.random() * this.w, y: this.h + 10, vx: (Math.random() - 0.5) * 0.5, vy: -0.6 - Math.random(), life: 1, decay: 0.003, size: 0.8 + Math.random() * 1.6, kind: 'spark', col: this.color(i), grav: 0 });
   }
-}
-
-// ======================= Holografische Spielerkarte (Beamer und eigenes Team-iPad) =======================
-// d: { name, color, avatar (Element), kicker, tag, extra, extraLabel, nr, n, games, title, lNr, lTeams, lGames, side, delay (s) }
-export function holoCard(d) {
-  const counts = [];
-  const stat = (label, val) => { const b = h('b', {}, '0'); counts.push([b, Number(val) || 0]); return label ? h('div', { class: 'si-holo-stat' }, h('small', {}, label), b) : null; };
-  const el = h('div', { class: `si-holo ${d.side || ''}`.trim(), '--team': d.color, '--delay': `${d.delay || 0}s` },
-    h('div', { class: 'si-holo-in' },
-      h('div', { class: 'si-holo-foil' }), h('div', { class: 'si-holo-glare' }),
-      h('div', { class: 'si-holo-head' }, h('small', {}, d.title || ''), h('i', { class: 'si-holo-chip' })),
-      h('div', { class: 'si-holo-av' }, d.avatar),
-      d.kicker ? h('div', { class: 'si-holo-kick' }, d.kicker) : null,
-      h('b', { class: 'si-holo-name' }, d.name),
-      d.tag ? h('div', { class: 'si-holo-tag' }, d.tag) : null,
-      h('div', { class: 'si-holo-stats' }, stat(d.lNr, d.nr), stat(d.lTeams, d.n), stat(d.lGames, d.games)),
-      d.extra ? h('div', { class: 'si-holo-extra' }, d.extraLabel ? h('small', {}, d.extraLabel) : null, h('b', {}, d.extra)) : null));
-  // Zähler laufen hoch, sobald die Karte eingeflogen ist
-  setTimeout(() => {
-    const t0 = performance.now();
-    const step = () => {
-      const u = Math.min(1, (performance.now() - t0) / 1100);
-      const e = 1 - Math.pow(1 - u, 3);
-      for (const [b, to] of counts) b.textContent = String(Math.round(to * e));
-      if (u < 1 && el.isConnected) requestAnimationFrame(step);
-    };
-    step();
-  }, Math.max(0, ((d.delay || 0) + 0.5) * 1000));
-  return el;
 }
