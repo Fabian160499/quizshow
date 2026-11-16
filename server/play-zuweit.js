@@ -167,7 +167,7 @@ module.exports = {
       }
       book(db, ctx, game, st, r);
       log(db, ctx, 'ablauf', `Runde ${st.index + 1} ausgewertet`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
       return {};
     },
 
@@ -189,7 +189,7 @@ module.exports = {
       r.tie = null;
       book(db, ctx, game, st, r);
       log(db, ctx, 'ablauf', `Gleichstand entschieden: +2 ${r.best.map((id) => teamName(db, id)).join(', ')}; −1 ${r.worst.map((id) => teamName(db, id)).join(', ')}`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

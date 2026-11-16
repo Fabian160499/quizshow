@@ -76,7 +76,7 @@ module.exports = {
         bookTarget(db, ctx, `sortieren:${game.id}:${st.index}:${teamId}`, teamId, score(a.order, game), `${game.title}, Aufgabe ${st.index + 1}`);
       }
       log(db, ctx, 'ablauf', `Sortieren: Aufgabe ${st.index + 1} aufgelöst`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

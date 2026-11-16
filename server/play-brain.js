@@ -525,7 +525,7 @@ module.exports = {
         }
       }
       log(db, ctx, 'ablauf', `Runde ${st.round + 1} aufgelöst (richtig: ${q.correct})`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
 
     openWheel(db, ctx, game, st) {

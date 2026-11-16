@@ -164,7 +164,7 @@ module.exports = {
       r.results = score(db, r, game);
       for (const [id, x] of Object.entries(r.results)) bookTarget(db, ctx, `hostdu:${game.id}:${st.index}:${id}`, id, x.regular + x.deceive, `${game.title}, Frage ${st.index + 1}`);
       log(db, ctx, 'ablauf', `Host du: Frage ${st.index + 1} aufgelöst`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

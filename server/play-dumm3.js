@@ -77,7 +77,7 @@ module.exports = {
         bookTarget(db, ctx, ref(game, st.qIndex, teamId), teamId, ok ? e.stake : -e.stake, `${game.title}, Frage ${st.qIndex + 1} (Einsatz ${e.stake})`);
       }
       log(db, ctx, 'ablauf', `Frage ${st.qIndex + 1} ausgewertet (richtig: ${q.correct})`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
 
     // Korrektur durch die Moderation (z. B. fehlerhafte Lösung im Editor).

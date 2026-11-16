@@ -908,3 +908,30 @@ test('Das Cover ist besser als das Original: Elemente nach und nach, schnellster
   act(db, mod(), 'close');
   assert.equal(bv(db).solution, 'Thriller');
 });
+
+test('Töne erst bei der Auflösung: Telepa-Team 2.0 und stille Auflösung bei Spielen, die alle zugleich auflösen', () => {
+  const { db, ids } = setup(2);
+  const [A, B] = ids;
+  const fx = () => ({ ...db.live.effect });
+  use(db, 'telepa2', { tasks: [{ task: 'Nennt ein rotes Obst.', points: 2, hint: 'Apfel, Erdbeere, Kirsche' }] });
+  // Hilfe für die Regie steht im Inhalt, aber nie auf Beamer oder iPad
+  assert.equal(db.project.games[7].content.tasks[0].hint, 'Apfel, Erdbeere, Kirsche');
+  act(db, mod(), 'open', { index: 0 });
+  assert.ok(!JSON.stringify(bv(db)).includes('Erdbeere'));
+  assert.ok(!JSON.stringify(tv(db, A)).includes('Erdbeere'));
+  for (const id of ids) { act(db, team(id), 'submit', { ink: INK, player: 1 }); act(db, team(id), 'submit', { ink: INK, player: 2 }); }
+  let before = fx();
+  act(db, mod(), 'judge', { teamId: A, match: true });
+  act(db, mod(), 'judge', { teamId: B, match: false });
+  assert.deepEqual(fx(), before); // Bewerten: kein Ton
+  assert.equal(db.live.teamFx?.[A], undefined); // und kein Ergebnis aufs iPad
+  act(db, mod(), 'next');
+  assert.equal(fx().kind, 'correct'); // A wird aufgelöst: Ton jetzt
+  assert.equal(db.live.teamFx[A].ok, true);
+  assert.equal(db.live.teamFx?.[B], undefined);
+  act(db, mod(), 'next');
+  assert.equal(fx().kind, 'wrong');
+  // Korrektur nach der Auflösung ist öffentlich: Ton sofort
+  act(db, mod(), 'judge', { teamId: B, match: true });
+  assert.equal(fx().kind, 'correct');
+});

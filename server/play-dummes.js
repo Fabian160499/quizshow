@@ -108,7 +108,7 @@ module.exports = {
         bookTarget(db, ctx, `dummes:${game.id}:${st.qIndex}:${id}`, id, finals[id] === correct ? pv(game, 'correct') : 0, `${game.title}, Frage ${st.qIndex + 1}`);
       }
       log(db, ctx, 'ablauf', `Frage ${st.qIndex + 1} ausgewertet (richtig: ${correct})${r.buzz && !r.swap ? ', kein Tausch' : ''}`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
 
     // Kontrolle der finalen Bewertung durch die Moderation.

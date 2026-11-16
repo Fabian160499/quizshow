@@ -134,7 +134,7 @@ module.exports = {
         bookTarget(db, ctx, `weissnicht2:${game.id}:${st.index}:own:${id}`, id, pv(game, 'other'), `${game.title}, Runde ${st.index + 1}, richtige Antwort`);
       }
       log(db, ctx, 'ablauf', `Runde ${st.index + 1} ausgewertet${s.buzzer ? ` – ${teamName(db, s.buzzer)}: ${s.guessPoints + s.ownPoint} Punkte` : ''}`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

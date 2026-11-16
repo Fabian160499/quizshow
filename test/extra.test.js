@@ -712,6 +712,17 @@ test('Song Song Song 2.0: einmal abspielen, Bewertung 0–3 geheim, Auflösung v
   assert.throws(() => act(db, mod(), 'reveal'), /bewerten/);
   act(db, mod(), 'grade', { teamId: ids[2], n: 1 });
   act(db, mod(), 'grade', { teamId: ids[0], n: 0 }); // änderbar bis zur Auflösung
+  // Auflösung erst nach „Abgabe schließen“, und das erst nach den Songs (3 × 15 s)
+  assert.throws(() => act(db, mod(), 'reveal'), /Abgabe schließen/);
+  assert.throws(() => act(db, mod(), 'close'), /Songs laufen noch/);
+  clock += 46000;
+  act(db, mod(), 'close');
+  assert.equal(tv(db, ids[3]).closing, true);
+  assert.equal(tv(db, ids[3]).canSubmit, false);
+  act(db, team(ids[3]), 'submit', { ink }); // iPad schickt das Geschriebene automatisch ab (Nachfrist)
+  assert.equal(db.live.games[db.live.activeGame].rounds[0].subs.at(-1).auto, true);
+  assert.throws(() => act(db, mod(), 'reveal'), /bewerten/);
+  act(db, mod(), 'grade', { teamId: ids[3], n: 2 });
   assert.equal(totals(db)[ids[1]], 3);
   assert.equal(totals(db)[ids[0]], 0);
   assert.equal(totals(db)[ids[2]], 1);
@@ -720,14 +731,14 @@ test('Song Song Song 2.0: einmal abspielen, Bewertung 0–3 geheim, Auflösung v
   assert.equal(tv(db, ids[1]).found, null);
   // Auflösung: 0 Punkte (ids[0]) → 1 Punkt (ids[2]) → 3 Punkte (ids[1])
   act(db, mod(), 'reveal');
-  assert.throws(() => act(db, team(ids[3]), 'submit', { ink }), /Auflösung/);
+  assert.throws(() => act(db, team(ids[3]), 'submit', { ink }), /Auflösung|schon abgeschickt/);
   assert.throws(() => act(db, mod(), 'grade', { teamId: ids[0], n: 2 }), /Auflösung/);
   assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.hidden, b.found]), [[ids[0], true, null]]);
   act(db, mod(), 'reveal'); act(db, mod(), 'reveal');
   assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.hidden, b.found]), [[ids[0], false, 0]]);
   assert.equal(tv(db, ids[0]).found, 0);
-  for (let i = 0; i < 6; i++) act(db, mod(), 'reveal');
-  assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.found, b.points]), [[ids[0], 0, 0], [ids[2], 1, 1], [ids[1], 3, 3]]);
+  for (let i = 0; i < 9; i++) act(db, mod(), 'reveal');
+  assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.found, b.points]), [[ids[0], 0, 0], [ids[2], 1, 1], [ids[3], 2, 2], [ids[1], 3, 3]]);
   assert.equal(pv(db).solution, null);
   act(db, mod(), 'reveal');
   assert.deepEqual(pv(db).solution, ['Eins', 'Zwei', 'Drei']);
@@ -748,4 +759,8 @@ test('Song Song Song 2.0: Punkte je erkannte Songs im Editor änderbar, ohne all
   assert.equal(totals(db)[ids[0]], 5);
   act(db, mod(), 'grade', { teamId: ids[0], n: 2 });
   assert.equal(totals(db)[ids[0]], 2);
+  act(db, mod(), 'stop'); // Notstopp: Schließen sofort möglich
+  act(db, mod(), 'close');
+  clock += 5000; // Nachfrist vorbei
+  assert.throws(() => act(db, team(ids[1]), 'submit', { ink }), /geschlossen/);
 });

@@ -74,7 +74,7 @@ module.exports = {
       r.winner = win ? win.teamId : null;
       if (win) bookTarget(db, ctx, `star:${game.id}:${st.index}`, win.teamId, pv(game, 'correct'), `${game.title}, Rätsel ${st.index + 1}`);
       log(db, ctx, 'ablauf', `Star: Rätsel ${st.index + 1} aufgelöst${win ? ` – ${teamName(db, win.teamId)} +1` : ' – kein Team richtig'}`);
-      effect(db, win ? 'correct' : 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

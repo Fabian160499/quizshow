@@ -108,7 +108,7 @@ module.exports = {
         bookTarget(db, ctx, `allein:${game.id}:${st.index}:${teamId}`, teamId, x.points, `${game.title}, Kategorie ${st.index + 1}`);
       }
       log(db, ctx, 'ablauf', `Wir sind ein Telepa-Team: Kategorie ${st.index + 1} ausgewertet`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
     // Alle richtigen Antworten auf dem Beamer zeigen (genannte hervorgehoben).
     showList(db, ctx, game, st, p) {

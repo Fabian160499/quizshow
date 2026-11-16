@@ -1667,7 +1667,8 @@ function applyAction(db, ctx, name, payload, actionId) {
 // Sobald ein Ergebnis öffentlich wird (Ton „richtig“, „falsch“, Auflösung, Münze), sieht
 // jedes betroffene Team auf seinem iPad grün/rot mit den gewonnenen Punkten.
 // Punkte, die vorher still gebucht wurden, warten bis zur nächsten Auflösung.
-const FX_PUBLIC = new Set(['correct', 'wrong', 'reveal', 'coin']);
+// 'show': stille Auflösung (alle Teams zugleich) – gibt die iPad-Ergebnisse frei, aber ohne Ton.
+const FX_PUBLIC = new Set(['correct', 'wrong', 'reveal', 'coin', 'show']);
 function buzzTeamNow(db) {
   const g = db.live.activeGame && db.live.games[db.live.activeGame];
   if (!g) return null;

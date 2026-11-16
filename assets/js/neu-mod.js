@@ -165,6 +165,7 @@ function telepa2(ui, g, st) {
   const task = g.content.tasks[i];
   const points = Number.isFinite(Number(task.points)) && task.points !== null && task.points !== '' ? Number(task.points) : 1;
   out.push(h('p', {}, h('b', {}, task.task), h('span', { class: 'muted' }, ` · Übereinstimmung ${plus(points)}`)));
+  if (String(task.hint || '').trim()) out.push(h('p', { class: 'notice tp2-hint' }, h('b', {}, 'Richtige Antworten: '), String(task.hint).trim()));
   out.push(h('div', { class: 'tp2-list' }, teamIds(ui).map((id) => {
     const a = r.answers[id] || {};
     const j = r.judged[id];

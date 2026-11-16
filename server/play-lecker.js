@@ -75,7 +75,7 @@ module.exports = {
         bookTarget(db, ctx, `lecker:${game.id}:${st.index}:${teamId}`, teamId, score(game, rd, a.choice).points, `${game.title}, Runde ${st.index + 1}`);
       }
       log(db, ctx, 'ablauf', `Lecker Sortierchen: Runde ${st.index + 1} ausgewertet`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

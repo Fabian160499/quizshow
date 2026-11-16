@@ -98,7 +98,7 @@ module.exports = {
         bookTarget(db, ctx, `top100:${game.id}:${st.index}:${teamId}`, teamId, pointsFor(a.rank, game), `${game.title}, Runde ${st.index + 1}`);
       }
       log(db, ctx, 'ablauf', `Top 100: Runde ${st.index + 1} ausgewertet`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

@@ -17,6 +17,7 @@ const { pv } = require('./scoring');
 const SEGMENT = 1; // Standard: Sekunden je Song und Durchgang (im Editor je Runde änderbar)
 const PER_SONG = 15; // Sekunden je Song insgesamt
 const SONGS = [1, 2, 3];
+const CLOSE_GRACE = 4000; // ms: nach „Abgabe schließen“ schicken die iPads noch das Geschriebene ab
 
 function round(st, i) {
   if (!st.rounds[i]) st.rounds[i] = { started: false, playback: { state: 'stopped', seq: 0, at: 0 }, subs: [], grades: {}, rv: 0, revealed: false };
@@ -62,12 +63,14 @@ module.exports = {
       const r = current(st);
       if (!r.started) fail('Die Musik läuft noch nicht.');
       if (r.rv || r.revealed) fail('Die Auflösung läuft schon – keine Abgabe mehr.');
+      if (r.closeAt && ctx.now > r.closeAt + CLOSE_GRACE) fail('Die Abgabe ist geschlossen.');
       if (r.subs.some((s) => s.teamId === ctx.teamId)) fail('Ihr habt schon abgeschickt.');
       const ink = cleanInk(p.ink);
       if (!ink) fail('Bitte zuerst die Songs aufschreiben.');
-      r.subs.push({ teamId: ctx.teamId, ink, at: ctx.now });
-      log(db, ctx, 'buzzer', `${teamName(db, ctx.teamId)} schickt ab (Platz ${r.subs.length})`);
-      effect(db, 'buzz');
+      const auto = !!r.closeAt;
+      r.subs.push({ teamId: ctx.teamId, ink, at: ctx.now, auto });
+      log(db, ctx, 'buzzer', `${teamName(db, ctx.teamId)} ${auto ? 'Abgabe beim Schließen (automatisch)' : 'schickt ab'} (Platz ${r.subs.length})`);
+      if (!auto) effect(db, 'buzz');
     },
   },
 
@@ -99,6 +102,17 @@ module.exports = {
       r.playback = { state: 'stopped', seq: r.playback.seq + 1, at: 0 };
     },
 
+    // Abgabe schließen (nach den Songs): Teams ohne Abgabe schicken automatisch ab, was auf dem iPad steht.
+    close(db, ctx, game, st) {
+      const r = current(st);
+      if (!r.started) fail('Die Musik lief noch nicht.');
+      if (r.closeAt) fail('Die Abgabe ist schon geschlossen.');
+      const total = 3 * PER_SONG * 1000;
+      if (r.playback.state === 'playing' && ctx.now < r.playback.at + total) fail(`Die Songs laufen noch (noch ${Math.ceil((r.playback.at + total - ctx.now) / 1000)} s).`);
+      r.closeAt = ctx.now;
+      log(db, ctx, 'ablauf', `Runde ${st.index + 1}: Abgabe geschlossen – offene iPads schicken ihr Geschriebenes ab`);
+    },
+
     // Bewertung je Team: 0, 1, 2 oder 3 erkannte Songs. Bis zur Auflösung änderbar, nur in der Regie sichtbar.
     grade(db, ctx, game, st, p) {
       const r = current(st);
@@ -117,6 +131,7 @@ module.exports = {
       if (r.revealed) fail('Diese Runde ist schon aufgelöst.');
       if (!r.started) fail('Die Musik lief noch nicht.');
       if (!r.rv && r.subs.some((s) => r.grades[s.teamId] === undefined)) fail('Erst alle Abgaben bewerten.');
+      if (!r.closeAt) fail('Erst die Abgabe schließen.');
       r.rv = (r.rv || 0) + 1;
       const rs = revealState(game, r);
       if (rs.stage === 'verdict') {
@@ -141,7 +156,9 @@ module.exports = {
       index: st.index,
       count: game.content.rounds.length,
       started: r.started,
-      canSubmit: r.started && !r.rv && !r.revealed && !own,
+      canSubmit: r.started && !r.rv && !r.revealed && !own && !r.closeAt,
+      // Abgabe geschlossen: iPad schickt sofort ab, was dort steht (kurze Nachfrist auf dem Server).
+      closing: !!r.closeAt && !own && !r.rv && !r.revealed,
       submitted: !!own,
       place: own ? r.subs.indexOf(own) + 1 : null,
       found: shown ? r.grades[teamId] ?? null : null,
@@ -173,6 +190,7 @@ module.exports = {
       playback: r.playback,
       started: r.started,
       order: r.subs.map((s) => ({ teamId: s.teamId })),
+      closed: !!r.closeAt,
       revealing: !!rs,
       board,
       revealed: r.revealed,

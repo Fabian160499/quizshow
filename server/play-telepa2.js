@@ -11,7 +11,7 @@
 // dann nur dieses Team groß (beide Antworten, danach die Wertung). Ein Team sieht
 // sein Ergebnis auf dem iPad erst, wenn es auf dem Beamer aufgelöst wurde.
 
-const { fail, log, effect, teamName, teamIds, bookTarget, cleanInk } = require('./core');
+const { fail, log, effect, teamName, teamIds, bookTarget, cleanInk, fxRelease } = require('./core');
 
 function round(st, i) {
   if (!st.rounds[i]) st.rounds[i] = { open: true, answers: {}, judged: {} };
@@ -29,6 +29,7 @@ const revealOrder = (db, r) => teamIds(db).filter((id) => bothDone(r, id));
 const shownList = (r) => (r.shown ||= []);
 
 module.exports = {
+  fxManual: true, // Ergebnis (Ton, iPad) erst bei der Auflösung des Teams
   init: () => ({ index: -1, rounds: {} }),
 
   team: {
@@ -71,10 +72,15 @@ module.exports = {
       if (nxt) {
         shown.push(nxt);
         r.cur = nxt;
+        // Schon bewertet: Wertung erscheint jetzt mit Ton (und auf dem iPad des Teams).
+        if (r.judged[nxt] !== undefined) { effect(db, r.judged[nxt] ? 'correct' : 'wrong'); fxRelease(db, [nxt], r.judged[nxt], ctx.now); }
         log(db, ctx, 'ablauf', `Telepa-Team 2.0: Auflösung ${teamName(db, nxt)}`);
       } else {
         r.cur = null;
         r.overview = true;
+        // Übersicht: alle zugleich, ohne Richtig-/Falsch-Ton.
+        const rest = teamIds(db).filter((id) => r.judged[id] !== undefined);
+        if (rest.length) { effect(db, 'show'); fxRelease(db, rest, undefined, ctx.now); }
         log(db, ctx, 'ablauf', 'Telepa-Team 2.0: Übersicht aller Teams');
       }
     },
@@ -88,7 +94,8 @@ module.exports = {
       r.judged[p.teamId] = !!p.match;
       bookTarget(db, ctx, `telepa2:${game.id}:${st.index}:${p.teamId}`, p.teamId, pts, `${game.title}, Aufgabe ${st.index + 1}`);
       log(db, ctx, 'bewertung', `Telepa-Team 2.0: ${teamName(db, p.teamId)} ${p.match ? `passt (+${pts})` : 'passt nicht (0)'}`);
-      effect(db, p.match ? 'correct' : 'wrong');
+      // Ton und iPad-Anzeige erst, wenn das Team auf dem Beamer aufgelöst ist (vorher bleibt die Wertung geheim).
+      if (shownList(r).includes(p.teamId) || r.overview) { effect(db, p.match ? 'correct' : 'wrong'); fxRelease(db, [p.teamId], !!p.match, ctx.now); }
     },
   },
 

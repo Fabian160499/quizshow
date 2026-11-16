@@ -141,7 +141,7 @@ module.exports = {
       }
       bookTarget(db, ctx, `fragen:${game.id}:${st.catIndex}:asker`, r.accepted, res.askerPoints, `${game.title}, eigene Frage`);
       log(db, ctx, 'ablauf', res.right.length ? `${res.right.length} Team(s) richtig – ${teamName(db, r.accepted)} −1` : `Niemand richtig – ${teamName(db, r.accepted)} +2`);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 
@@ -193,7 +193,7 @@ module.exports = {
       question: r.published && acc ? acc.qInk : null,
       deadline: r.deadline,
       answeredCount: Object.keys(r.answers).length,
-      answers: r.showAnswers ? Object.entries(r.answers).map(([teamId, a]) => ({ teamId, ink: a.ink, correct: r.grades[teamId] ?? null })) : [],
+      answers: r.showAnswers ? Object.entries(r.answers).map(([teamId, a]) => ({ teamId, ink: a.ink, correct: r.evaluated ? r.grades[teamId] ?? null : null })) : [], // Wertung erst mit der Auswertung
       solution: r.showSolution && acc ? acc.aInk : null,
       evaluated: r.evaluated,
       result: res,

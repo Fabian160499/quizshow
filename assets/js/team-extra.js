@@ -235,6 +235,14 @@ function songsong2(g, ui) {
     return out;
   }
   if (g.solution || g.revealing) return [...out, stateBox('', '■', 'Abgabe geschlossen – die Auflösung läuft.')];
+  if (g.closing) {
+    // Regie hat die Abgabe geschlossen: was auf dem iPad steht, wird jetzt automatisch abgeschickt.
+    const items = inkBuzzer(ui, { draftKey: `ss2.${g.index}`, label: 'Alle Songtitel, die ihr erkennt', action: 'play.submit' });
+    const pad = items[0];
+    if (!pad.inkApi.hasInk()) return [...out, stateBox('', '■', 'Abgabe geschlossen – ihr hattet nichts aufgeschrieben.')];
+    setTimeout(() => pad.inkApi.autoSubmit(), 30);
+    return [...out, stateBox('', '⏳', 'Abgabe geschlossen – euer Geschriebenes wird jetzt abgeschickt …'), h('div', { style: { opacity: '.35', pointerEvents: 'none' }, 'aria-hidden': 'true' }, ...items)];
+  }
   if (!g.started) return [...out, ...wait('Gleich laufen drei Songs durcheinander …', 'Schreibt alle Songtitel auf, die ihr erkennt. Interpreten braucht ihr nicht.')];
   out.push(...inkBuzzer(ui, { draftKey: `ss2.${g.index}`, label: 'Alle Songtitel, die ihr erkennt', action: 'play.submit', hint: 'Der Buzzer schickt sofort verbindlich ab – danach nicht mehr änderbar. Die Musik läuft weiter.' }));
   return out;

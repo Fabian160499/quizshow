@@ -183,8 +183,7 @@ const mod = {
     const r = current(f);
     if (!r.team) fail('Das Team hat noch nicht geantwortet.');
     if (r.revealed) fail('Die Frage ist schon aufgelöst.');
-    r.teamGrade = !!p.correct;
-    effect(db, r.teamGrade ? 'correct' : 'wrong');
+    r.teamGrade = !!p.correct; // bleibt bis zur Auflösung geheim (kein Ton, keine Anzeige)
     log(db, ctx, 'finale', `${teamName(db, f.teamId)} Finalfrage ${f.qIndex + 1}: ${r.teamGrade ? 'richtig' : 'falsch'}`);
   },
 
@@ -209,7 +208,7 @@ const mod = {
     r.revealed = true;
     r.teamPoint = r.teamGrade ? 1 : 0;
     f.score.team += r.teamPoint;
-    effect(db, 'reveal');
+    effect(db, r.teamGrade ? 'correct' : 'wrong'); // Richtig-/Falsch-Ton erst jetzt
     log(db, ctx, 'finale', `Finalfrage ${f.qIndex + 1} aufgelöst: Team ${r.teamPoint ? '+1' : '±0'} – jetzt entscheidet das Team über die Münze`);
     if (coinsLeft(db, f) < 1) { r.decided = true; finish(db, ctx, f, r); }
   },
@@ -289,7 +288,7 @@ function roundPublic(r, question, solution) {
     question,
     teamAnswered: !!r.team,
     modAnswered: !!r.mod,
-    teamGrade: r.teamGrade,
+    teamGrade: r.revealed ? r.teamGrade : null, // Wertung erst mit der Auflösung öffentlich
     teamAnswer: r.teamGrade !== null || r.revealed ? r.team : null,
     revealed: r.revealed,
     decided: r.decided,
@@ -357,7 +356,7 @@ function moderatorView(db) {
   const qs = cfg.questions.filter((q) => q.question);
   const r = f.rounds[f.qIndex];
   out.state = { ...base(db, f), next: qs[f.qIndex + 1] ? qs[f.qIndex + 1].question : null, questionsLeft: qs.length - f.qIndex - 1 };
-  if (r) out.state.round = { ...out.state.round, team: r.team, mod: r.mod, answer: qs[f.qIndex]?.answer || '' };
+  if (r) out.state.round = { ...out.state.round, team: r.team, mod: r.mod, answer: qs[f.qIndex]?.answer || '', teamGrade: r.teamGrade };
   return out;
 }
 

@@ -206,7 +206,7 @@ module.exports = {
         bookWinners(db, ctx, game, st, r, Object.keys(awards), '', awards);
         log(db, ctx, 'ablauf', `Zielort enthüllt: ${r.winners.map((id) => `${teamName(db, id)} +${awards[id]}`).join(', ')}`);
       }
-      effect(db, 'correct');
+      effect(db, 'show'); // alle Teams zugleich: kein Richtig-/Falsch-Ton
     },
 
     // Nachvollziehbare manuelle Korrektur bei Karten- oder Geocodierungsfehlern.

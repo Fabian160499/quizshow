@@ -783,8 +783,15 @@ test('Finale: Team erreicht das Ziel allein und gewinnt das Ticket', () => {
   game.applyAction(db, mod(), 'finale.next', {});
   game.applyAction(db, team(ids[0]), 'finale.answer', { text: 'A' });
   game.applyAction(db, mod(), 'finale.modAnswer', { text: 'B' });
+  const fxBefore = { ...db.live.effect };
   game.applyAction(db, mod(), 'finale.gradeTeam', { correct: true });
+  // Bewertung bleibt bis zur Auflösung geheim: kein Ton, keine Anzeige auf Beamer und iPad
+  assert.deepEqual(db.live.effect, fxBefore);
+  assert.equal(require('../server/finale').beamerView(db).round.teamGrade, null);
+  assert.equal(game.teamView(db, ids[0]).finale.round.teamGrade, null);
   game.applyAction(db, mod(), 'finale.reveal', {});
+  assert.equal(db.live.effect.kind, 'correct');
+  assert.equal(require('../server/finale').beamerView(db).round.teamGrade, true);
   game.applyAction(db, team(ids[0]), 'finale.challenge', {});
   game.applyAction(db, mod(), 'finale.gradeMod', { correct: false });
   assert.equal(db.live.finale.result, 'team');

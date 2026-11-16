@@ -94,7 +94,7 @@ module.exports = {
       r.closed = true;
       r.awarded = true;
       award(db, ctx, game, st, r);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 

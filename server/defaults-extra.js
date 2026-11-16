@@ -431,7 +431,7 @@ const EXTRA_TYPES = {
     summary: 'Zwei Personen pro Team schreiben nacheinander auf demselben iPad mit dem Apple Pencil eine Antwort – ohne die andere zu sehen. Die Moderation entscheidet, ob beide übereinstimmen.',
     schema: [
       { key: 'tasks', label: 'Aufgaben', type: 'list', min: 1, max: 30, itemLabel: (i) => `Aufgabe ${i + 1}`, addLabel: 'Aufgabe hinzufügen',
-        fields: [area('task', 'Aufgabe / Frage', 300), num('points', 'Punkte bei Übereinstimmung', -100, 1000)] },
+        fields: [area('task', 'Aufgabe / Frage', 300), num('points', 'Punkte bei Übereinstimmung', -100, 1000), area('hint', 'Richtige / passende Antworten (nur für die Regie, als Hilfe beim Bewerten)', 600)] },
     ],
     example: { tasks: [{ task: 'Nennt ein rotes Obst.', points: 1 }, { task: 'Zeichnet ein Haustier.', points: 1 }, { task: 'Nennt ein Land in Südamerika.', points: 2 }, { task: 'Zeichnet etwas, das man am Strand findet.', points: 2 }, { task: 'Nennt einen berühmten Maler.', points: 3 }] },
   },

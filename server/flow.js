@@ -279,7 +279,7 @@ const FLOW = {
     return nextOf(ps, st.index, 'Rätsel', 'open');
   },
 
-  songsong2(db, game, st) {
+  songsong2(db, game, st, now = Date.now()) {
     const rs = game.content.rounds;
     if (st.index < 0) return first(rs, 'Runde', 'open');
     const r = st.rounds[st.index];
@@ -287,9 +287,14 @@ const FLOW = {
     if (!r.started) return step('Musik abspielen', 'play');
     if (!r.revealed) {
       if (!r.rv) {
+        if (!r.closeAt) {
+          const left = r.playback.state === 'playing' ? r.playback.at + 3 * SONG2.PER_SONG * 1000 - now : 0;
+          if (left > 0) return wait(`Die Songs laufen noch (${Math.ceil(left / 1000)} s) – danach Abgabe schließen`);
+          return step(`Abgabe schließen (${r.subs.length} von ${teamIds(db).length} abgegeben – die übrigen iPads schicken ihr Geschriebenes ab)`, 'close');
+        }
         const open = r.subs.filter((x) => r.grades[x.teamId] === undefined);
         if (open.length) return wait(`Erst alle Abgaben bewerten (${open.length} offen: ${names(db, open.map((x) => x.teamId))})`);
-        return step(`Auflösung starten (${r.subs.length} von ${teamIds(db).length} abgegeben – danach keine Abgabe mehr)`, 'reveal');
+        return step(`Auflösung starten (${r.subs.length} von ${teamIds(db).length} abgegeben)`, 'reveal');
       }
       const nx = SONG2.revealState(game, { ...r, rv: r.rv + 1 });
       const name = () => teamName(db, nx.list[nx.k].teamId);

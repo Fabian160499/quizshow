@@ -220,18 +220,20 @@ function songsong2(ui, g, st) {
   out.push(h('ol', { class: 'list ss2-subs' }, r.subs.length ? r.subs.map((s) => {
     const cur = r.grades[s.teamId];
     return h('li', { class: cur === undefined && !locked ? 'active' : '' }, ui.dot(ui.teamColor(s.teamId)),
-      h('span', { class: 'grow' }, h('b', {}, ui.teamName(s.teamId)), ' ', answerContent(s, 'mod')),
+      h('span', { class: 'grow' }, h('b', {}, ui.teamName(s.teamId)), s.auto ? h('span', { class: 'muted' }, ' (beim Schließen)') : null, ' ', answerContent(s, 'mod')),
       h('span', { class: 'ss2-grade', role: 'group', 'aria-label': 'Erkannte Songs' }, [0, 1, 2, 3].map((n) =>
         btn(`small ${cur === n ? (n ? 'ok' : 'bad') : 'ghost'}`, String(n), () => ui.act('play.grade', { teamId: s.teamId, n }), locked))),
       cur !== undefined ? badge(cur ? 'ok' : '', `${plus(pts1(cur))}`) : null);
   }) : h('li', { class: 'muted' }, 'Noch keine Abgabe.')));
   const open = r.subs.filter((s) => r.grades[s.teamId] === undefined).length;
-  if (r.started && !r.revealed) {
+  if (r.started && !r.closeAt && !r.revealed) {
+    out.push(row(btn('pink', '■ Abgabe schließen (nach den Songs)', () => ui.act('play.close')), h('span', { class: 'muted' }, 'Teams ohne Abgabe schicken automatisch ab, was auf ihrem iPad steht.')));
+  } else if (r.started && !r.revealed) {
     if (!r.rv && open) out.push(muted(`Noch ${open} Abgabe${open > 1 ? 'n' : ''} bewerten, dann auflösen.`));
     else {
       const total = r.subs.length * 3 + 1;
       const n = r.rv || 0;
-      const label = n === 0 ? '▶ Auflösung starten (danach keine Abgabe mehr)' : n >= total - 1 ? '▶ Die drei Songtitel zeigen' : '▶ Auflösung: nächster Schritt';
+      const label = n === 0 ? '▶ Auflösung starten' : n >= total - 1 ? '▶ Die drei Songtitel zeigen' : '▶ Auflösung: nächster Schritt';
       out.push(row(btn('pink', label, () => ui.act('play.reveal')), h('span', { class: 'muted' }, `Schritt ${n} von ${total} · Reihenfolge: wenigste Punkte zuerst`)));
     }
   }

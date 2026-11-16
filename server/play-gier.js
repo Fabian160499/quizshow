@@ -159,7 +159,7 @@ module.exports = {
       r.evaluated = true;
       log(db, ctx, 'ablauf', `Gier: Frage ${st.index + 1} ausgewertet (Lösung ${answer})`);
       bookPlaces(db, ctx, game, st);
-      effect(db, 'reveal');
+      effect(db, 'show'); // alle zugleich aufgelöst: kein Richtig-/Falsch-Ton
     },
   },
 
