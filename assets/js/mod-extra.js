@@ -44,7 +44,7 @@ const JOKER_NAMES = { doppel: 'Doppelpunkt', streak: 'Streak', fifty: '50-50', r
   rettung: 'Rettungsring', zweikreuze: 'Zwei Kreuze', wette: 'Wette', sauger: 'Punktesauger', vorfahrt: 'Vorfahrt', schild: 'Schutzschild', umleitung: 'Umleitung' };
 const jn = (k) => JOKER_NAMES[k] || k;
 
-export const MOD_EXTRA = { dumm3, filmab, weissnicht, weissnicht2, konsequenz, songsong, dgf, zocken, fragen, zuweit, brain, ...MOD_NEU };
+export const MOD_EXTRA = { dumm3, filmab, weissnicht, weissnicht2, konsequenz, songsong, songsong2, dgf, zocken, fragen, zuweit, brain, ...MOD_NEU };
 
 // ---------- Dumm, dumm, dumm ----------
 function dumm3(ui, g, st) {
@@ -194,6 +194,48 @@ function songsong(ui, g, st) {
   }
   if (r.done) out.push(row(badge('ok', r.winner ? `${ui.teamName(r.winner)} ${plus(pvc(g, 'correct'))}${r.revealed === false ? ' (noch geheim)' : ''}` : 'Kein Punkt'),
     r.playback.state === 'playing' ? btn('small ghost', '■ Musik stoppen', () => ui.act('play.stop')) : null));
+  return out;
+}
+
+// ---------- Song Song Song 2.0 ----------
+// Drei Songs reihum (je 1 s, weich ineinander), bis jeder 15 s lief – genau einmal.
+// Bewertung je Team mit einem Klick: 0, 1, 2 oder 3 erkannte Songs (bis zur Auflösung änderbar).
+function songsong2(ui, g, st) {
+  const i = st.index ?? -1;
+  const r = (st.rounds || {})[i];
+  const out = [tabs(g.content.rounds.map((_, k) => `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => !!st.rounds?.[k]?.revealed)];
+  if (i < 0 || !r) return [...out, help('Runde zeigen, Musik einmal abspielen. Teams schicken per Buzzer ab (stoppt die Musik nicht). Je Team 0–3 erkannte Songs anklicken, dann auflösen.')];
+  const p = g.content.rounds[i];
+  const songs = [1, 2, 3].map((n) => ({ n, audio: p[`audio${n}`], title: p[`title${n}`], start: Number(p[`start${n}`]) || 0 }));
+  out.push(h('ol', { class: 'list ss2-songs' }, songs.map((x) => h('li', {}, h('b', {}, x.title || `Song ${x.n}`), h('span', { class: 'muted' }, x.start ? ` · ab ${String(x.start).replace('.', ',')} s` : ''), x.audio ? null : badge('bad', 'Datei fehlt')))));
+  const missing = songs.filter((x) => !x.audio).length;
+  if (missing) out.push(h('p', { class: 'notice warn' }, `Für diese Runde fehlen noch ${missing} von 3 Dateien.`));
+  const playing = r.playback.state === 'playing';
+  const sec = 3 * 15;
+  out.push(row(
+    r.started ? (playing ? h('span', { class: 'badge ok' }, '▶ Läuft – noch ', h('b', { 'data-deadline': String((r.playback.at || 0) + sec * 1000) }, '')) : badge('', '■ Musik gestoppt')) : btn('pink', `▶ Musik abspielen (einmalig, ${sec} Sekunden)`, () => ui.act('play.play'), missing > 0),
+    playing ? btn('ghost small', '■ Notstopp', () => ui.confirmAct('Musik wirklich stoppen? Ein Neustart ist nicht möglich.', 'play.stop')) : null));
+  const locked = !!r.rv || r.revealed;
+  const pts1 = (n) => (n ? pvc(g, `n${n}`, n) : 0);
+  out.push(h('ol', { class: 'list ss2-subs' }, r.subs.length ? r.subs.map((s) => {
+    const cur = r.grades[s.teamId];
+    return h('li', { class: cur === undefined && !locked ? 'active' : '' }, ui.dot(ui.teamColor(s.teamId)),
+      h('span', { class: 'grow' }, h('b', {}, ui.teamName(s.teamId)), ' ', answerContent(s, 'mod')),
+      h('span', { class: 'ss2-grade', role: 'group', 'aria-label': 'Erkannte Songs' }, [0, 1, 2, 3].map((n) =>
+        btn(`small ${cur === n ? (n ? 'ok' : 'bad') : 'ghost'}`, String(n), () => ui.act('play.grade', { teamId: s.teamId, n }), locked))),
+      cur !== undefined ? badge(cur ? 'ok' : '', `${plus(pts1(cur))}`) : null);
+  }) : h('li', { class: 'muted' }, 'Noch keine Abgabe.')));
+  const open = r.subs.filter((s) => r.grades[s.teamId] === undefined).length;
+  if (r.started && !r.revealed) {
+    if (!r.rv && open) out.push(muted(`Noch ${open} Abgabe${open > 1 ? 'n' : ''} bewerten, dann auflösen.`));
+    else {
+      const total = r.subs.length * 3 + 1;
+      const n = r.rv || 0;
+      const label = n === 0 ? '▶ Auflösung starten (danach keine Abgabe mehr)' : n >= total - 1 ? '▶ Die drei Songtitel zeigen' : '▶ Auflösung: nächster Schritt';
+      out.push(row(btn('pink', label, () => ui.act('play.reveal')), h('span', { class: 'muted' }, `Schritt ${n} von ${total} · Reihenfolge: wenigste Punkte zuerst`)));
+    }
+  }
+  if (r.revealed) out.push(row(badge('ok', 'Aufgelöst')));
   return out;
 }
 

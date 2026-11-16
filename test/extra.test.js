@@ -689,3 +689,63 @@ test('Show als Vorlage kopieren mit neuen Teams', () => {
   assert.ok(!copy.teams.some((t) => t.name === 'Altes Team'));
   assert.equal(copy.games.length, db.project.games.length);
 });
+
+test('Song Song Song 2.0: einmal abspielen, Bewertung 0–3 geheim, Auflösung von wenig zu viel Punkten', () => {
+  const { db, ids } = setup(4);
+  const au = (n) => ({ id: `media_abcdefabcdef2${n}`, type: n === 3 ? 'video/mp4' : 'audio/mpeg', name: `s${n}` });
+  use(db, 'songsong2', { rounds: [{ audio1: au(1), title1: 'Eins', start1: 30, audio2: au(2), title2: 'Zwei', start2: 0, audio3: au(3), title3: 'Drei', start3: 12.5 }] });
+  act(db, mod(), 'open', { index: 0 });
+  assert.throws(() => act(db, team(ids[0]), 'submit', { ink }), /läuft noch nicht/);
+  act(db, mod(), 'play');
+  assert.deepEqual(pv(db).songs.map((s) => s.start), [30, 0, 12.5]);
+  assert.equal(pv(db).playback.state, 'playing');
+  assert.throws(() => act(db, mod(), 'play'), /einmal hören/);
+  act(db, team(ids[1]), 'submit', { ink }); // 1. Abgabe
+  act(db, team(ids[0]), 'submit', { ink }); // 2. Abgabe
+  act(db, team(ids[2]), 'submit', { ink }); // 3. Abgabe
+  assert.throws(() => act(db, team(ids[0]), 'submit', { ink }), /schon abgeschickt/);
+  assert.equal(pv(db).playback.state, 'playing'); // Abgabe stoppt die Musik nicht
+  assert.throws(() => act(db, mod(), 'grade', { teamId: ids[3], n: 1 }), /noch nicht abgegeben/);
+  assert.throws(() => act(db, mod(), 'grade', { teamId: ids[0], n: 4 }), /0, 1, 2 oder 3/);
+  act(db, mod(), 'grade', { teamId: ids[1], n: 3 });
+  act(db, mod(), 'grade', { teamId: ids[0], n: 1 });
+  assert.throws(() => act(db, mod(), 'reveal'), /bewerten/);
+  act(db, mod(), 'grade', { teamId: ids[2], n: 1 });
+  act(db, mod(), 'grade', { teamId: ids[0], n: 0 }); // änderbar bis zur Auflösung
+  assert.equal(totals(db)[ids[1]], 3);
+  assert.equal(totals(db)[ids[0]], 0);
+  assert.equal(totals(db)[ids[2]], 1);
+  // geheim: Beamer ohne Board, iPad ohne Ergebnis
+  assert.equal(pv(db).board, null);
+  assert.equal(tv(db, ids[1]).found, null);
+  // Auflösung: 0 Punkte (ids[0]) → 1 Punkt (ids[2]) → 3 Punkte (ids[1])
+  act(db, mod(), 'reveal');
+  assert.throws(() => act(db, team(ids[3]), 'submit', { ink }), /Auflösung/);
+  assert.throws(() => act(db, mod(), 'grade', { teamId: ids[0], n: 2 }), /Auflösung/);
+  assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.hidden, b.found]), [[ids[0], true, null]]);
+  act(db, mod(), 'reveal'); act(db, mod(), 'reveal');
+  assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.hidden, b.found]), [[ids[0], false, 0]]);
+  assert.equal(tv(db, ids[0]).found, 0);
+  for (let i = 0; i < 6; i++) act(db, mod(), 'reveal');
+  assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.found, b.points]), [[ids[0], 0, 0], [ids[2], 1, 1], [ids[1], 3, 3]]);
+  assert.equal(pv(db).solution, null);
+  act(db, mod(), 'reveal');
+  assert.deepEqual(pv(db).solution, ['Eins', 'Zwei', 'Drei']);
+  assert.deepEqual(tv(db, ids[3]).solution, ['Eins', 'Zwei', 'Drei']);
+  assert.throws(() => act(db, mod(), 'reveal'), /schon aufgelöst/);
+});
+
+test('Song Song Song 2.0: Punkte je erkannte Songs im Editor änderbar, ohne alle drei Dateien kein Start', () => {
+  const { db, ids } = setup(2);
+  const au = (n) => ({ id: `media_abcdefabcdef3${n}`, type: 'audio/mpeg', name: `s${n}` });
+  use(db, 'songsong2', { scoring: { n3: 5 }, rounds: [{ audio1: au(1), audio2: au(2), audio3: null, title1: '', title2: '', title3: '', start1: 0, start2: 0, start3: 0 }, { audio1: au(1), audio2: au(2), audio3: au(3), title1: '', title2: '', title3: '', start1: 0, start2: 0, start3: 0 }] });
+  act(db, mod(), 'open', { index: 0 });
+  assert.throws(() => act(db, mod(), 'play'), /drei Dateien/);
+  act(db, mod(), 'open', { index: 1 });
+  act(db, mod(), 'play');
+  act(db, team(ids[0]), 'submit', { ink });
+  act(db, mod(), 'grade', { teamId: ids[0], n: 3 });
+  assert.equal(totals(db)[ids[0]], 5);
+  act(db, mod(), 'grade', { teamId: ids[0], n: 2 });
+  assert.equal(totals(db)[ids[0]], 2);
+});

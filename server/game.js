@@ -47,6 +47,7 @@ const PLAY = {
   hostdu: require('./play-hostdu'),
   konsequenz: require('./play-konsequenz'),
   songsong: require('./play-songsong'),
+  songsong2: require('./play-songsong2'),
   dgf: require('./play-dgf'),
   zocken: require('./play-zocken'),
   fragen: require('./play-fragen'),
@@ -146,7 +147,7 @@ function newProject(library, name = 'Wer stiehlt uns die Show') {
 // (alle Varianten einer Spielart gehören dazu). Die Ordner sind frei benennbar.
 const DEFAULT_FOLDERS = [
   ['Startspiele', ['leichte5', 'dummes', 'dumm3']],
-  ['Musik', ['musik', 'songsong', 'konsequenz', 'cover']],
+  ['Musik', ['musik', 'songsong', 'songsong2', 'konsequenz', 'cover']],
   ['Film & Promis', ['kassenschlager', 'filmab', 'lippen', 'star', 'chat']],
   ['Wissen & Schätzen', ['jauch', 'land', 'zuweit', 'gier', 'top100', 'timeline', 'sortieren', 'nerd', 'trumpf5', 'sekunden', 'weissnicht', 'weissnicht2']],
   ['Brett & Risiko', ['brain', 'zocken', 'jeopardy', 'dgf']],
@@ -240,6 +241,9 @@ function migrate(db) {
     // Neue Spielart „Das Cover …“ einmalig in den Musik-Ordner (wenn es ihn noch gibt).
     if (!db.libraryFolderOf.cover && !db.coverFoldered && db.libraryFolders.some((f) => f.id === 'folder_std2')) db.libraryFolderOf.cover = 'folder_std2';
     db.coverFoldered = true;
+    // Neue Spielart „Song Song Song 2.0“ einmalig in den Musik-Ordner.
+    if (!db.libraryFolderOf.songsong2 && !db.songsong2Foldered && db.libraryFolders.some((f) => f.id === 'folder_std2')) db.libraryFolderOf.songsong2 = 'folder_std2';
+    db.songsong2Foldered = true;
     // Neue Folie „Moderation am Pult“ nach den Gewinnstufen 2 und 3 – einmalig auch in eigene Abläufe.
     for (const pr of [db.project, ...db.shows.map((x) => x.project)]) addHostsSteps(pr);
     for (const sh of db.shows) {

@@ -16,6 +16,7 @@
 
 const { teamName, teamIds, currentBuzz } = require('./core');
 const SONG = require('./play-songsong');
+const SONG2 = require('./play-songsong2');
 
 const step = (label, action, payload = {}) => ({ label, action, payload });
 const wait = (text) => ({ wait: text });
@@ -276,6 +277,28 @@ const FLOW = {
       return step(game.content.puzzles[st.index].reveal ? 'Lösung zeigen + Song starten' : 'Lösung zeigen', 'reveal');
     }
     return nextOf(ps, st.index, 'Rätsel', 'open');
+  },
+
+  songsong2(db, game, st) {
+    const rs = game.content.rounds;
+    if (st.index < 0) return first(rs, 'Runde', 'open');
+    const r = st.rounds[st.index];
+    if (!r) return step(`Runde ${st.index + 1} zeigen`, 'open', { index: st.index });
+    if (!r.started) return step('Musik abspielen', 'play');
+    if (!r.revealed) {
+      if (!r.rv) {
+        const open = r.subs.filter((x) => r.grades[x.teamId] === undefined);
+        if (open.length) return wait(`Erst alle Abgaben bewerten (${open.length} offen: ${names(db, open.map((x) => x.teamId))})`);
+        return step(`Auflösung starten (${r.subs.length} von ${teamIds(db).length} abgegeben – danach keine Abgabe mehr)`, 'reveal');
+      }
+      const nx = SONG2.revealState(game, { ...r, rv: r.rv + 1 });
+      const name = () => teamName(db, nx.list[nx.k].teamId);
+      if (nx.stage === 'name') return step(`${name()} zeigen`, 'reveal');
+      if (nx.stage === 'answer') return step(`Antwort von ${name()} zeigen`, 'reveal');
+      if (nx.stage === 'verdict') return step(`Punkte von ${name()} zeigen`, 'reveal');
+      return step('Die drei Songtitel zeigen', 'reveal');
+    }
+    return nextOf(rs, st.index, 'Runde', 'open');
   },
 
   filmab(db, game, st) {

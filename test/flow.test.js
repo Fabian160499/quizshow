@@ -24,6 +24,7 @@ function setup(type) {
   if (type === 'lippen') c.items.forEach((it) => { it.image = MEDIA('image/png'); });
   if (type === 'filmab') c.films.forEach((f) => { f.clip = MEDIA('video/mp4'); });
   if (type === 'songsong') c.puzzles.forEach((p) => { p.audio = MEDIA('audio/mpeg'); });
+  if (type === 'songsong2') c.rounds.forEach((r) => { r.audio1 = MEDIA('audio/mpeg'); r.audio2 = MEDIA('audio/mpeg'); r.audio3 = MEDIA('video/mp4'); });
   if (type === 'konsequenz') c.songs.forEach((s) => { s.audio = MEDIA('audio/mpeg'); });
   if (type === 'top100') c.rounds.forEach((r) => { r.entries = Array.from({ length: 100 }, (_, i) => `Eintrag ${i + 1}`).join('\n'); });
   game.applyAction(db, mod(), 'library.update', { libraryId: entry.id, content: c });
@@ -71,6 +72,8 @@ function teamMoves(db, st) {
 function modMoves(db, ids) {
   const out = [['judge', { correct: true }], ['coinDone', {}]];
   for (const id of ids) out.push(['accept', { teamId: id }]);
+  const ag = db.project.games.find((x) => x.id === db.live.activeGame);
+  if (ag && ag.type === 'songsong2') for (const id of ids) out.push(['grade', { teamId: id, n: 2 }]);
   for (const id of ids) out.push(['grade', { teamId: id, correct: true }], ['setRank', { teamId: id, rank: 5 }], ['setEntry', { teamId: id, entry: 1 }], ['judge', { teamId: id, match: true }]);
   out.push(['mark', { text: 'falsch' }], ['resolveTie', { best: ids, worst: ids }], ['decideFor', { choice: 'secure' }]);
   for (let c = 0; c < 5; c++) for (let f = 0; f < 3; f++) out.push(['pick', { cat: c, field: f }]);

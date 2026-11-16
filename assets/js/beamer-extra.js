@@ -89,6 +89,71 @@ function konPlay(ctx, buf, from, len) {
   src.onended = () => { if (konSrc && konSrc.src === src) konSrc = null; };
 }
 
+// „Song Song Song 2.0“: drei Songs reihum je 1 Sekunde, weich ineinander (Überblendung),
+// jeder Song läuft dabei weiter, bis von jedem 15 Sekunden liefen. Alle Abschnitte werden
+// beim Start sample-genau über Web Audio eingeplant; wer später einschaltet (Neuladen),
+// hört ab der richtigen Stelle (Serverzeit).
+const SS2_FADE = 0.3; // Sekunden Überblendung zwischen zwei Songs
+const ss2 = { key: null, nodes: [] };
+function ss2Stop(soft = true) {
+  const nodes = ss2.nodes;
+  ss2.nodes = [];
+  ss2.key = null;
+  for (const { src, gain, ctx } of nodes) {
+    try {
+      const t = ctx.currentTime;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(gain.gain.value, t);
+      gain.gain.linearRampToValueAtTime(0, t + (soft ? 0.4 : 0.03));
+      src.stop(t + (soft ? 0.45 : 0.05));
+    } catch { /* schon beendet oder noch nicht gestartet */ }
+  }
+}
+export function ss2Schedule(ctx, bufs, v, elapsed) {
+  if (ctx.state === 'suspended' && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext)) ctx.resume();
+  const seg = v.segment || 1;
+  const per = v.perSong || 15;
+  // Abschnitte: Song 1, 2, 3 je seg Sekunden, bis jeder per Sekunden lief (letzter Durchgang ggf. kürzer).
+  const segs = [];
+  let at = 0;
+  for (let c = 0; c * seg < per - 1e-6; c++) {
+    const len = Math.min(seg, per - c * seg);
+    for (let j = 0; j < 3; j++) { segs.push({ j, at, len, songOff: c * seg }); at += len; }
+  }
+  const total = at;
+  const now = ctx.currentTime;
+  const t0 = now + 0.06 - elapsed; // Zeitpunkt „Sekunde 0“ im Audio-Takt
+  const X = Math.min(SS2_FADE, seg * 0.4);
+  segs.forEach((sg, k) => {
+    const buf = bufs[sg.j];
+    if (!buf) return;
+    const first = k === 0;
+    const lastSeg = k === segs.length - 1;
+    const s = t0 + sg.at - (first ? 0 : X / 2); // mit Vorlauf für die Überblendung
+    const e = t0 + sg.at + sg.len + (lastSeg ? 0.8 : X / 2);
+    if (e <= now + 0.02) return;
+    const off0 = (v.songs[sg.j].start || 0) + sg.songOff - (first ? 0 : X / 2);
+    const startAt = Math.max(s, now + 0.02);
+    const off = off0 + (startAt - s);
+    if (off >= buf.duration - 0.05) return; // Song zu kurz: an dieser Stelle Stille
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    const g = gain.gain;
+    const fin = first ? 0.05 : X;
+    const fout = lastSeg ? 0.8 : X;
+    // Ein- und Ausblenden (gleich lang wie die Überlappung → kein harter Schnitt)
+    g.setValueAtTime(0, startAt);
+    g.linearRampToValueAtTime(1, Math.max(startAt + 0.01, s + fin));
+    g.setValueAtTime(1, Math.max(startAt + 0.01, e - fout));
+    g.linearRampToValueAtTime(0, e);
+    src.connect(gain).connect(ctx.destination);
+    src.start(startAt, Math.max(0, off), Math.max(0.02, e - startAt));
+    ss2.nodes.push({ src, gain, ctx });
+  });
+  return total;
+}
+
 function audioEl() {
   if (!media.audio) {
     media.audio = pooled('audio');
@@ -144,6 +209,24 @@ export function syncMedia(s) {
     }
   }
   const song = v && v.type === 'songsong' && !v.waiting ? v : null;
+  const ss = v && v.type === 'songsong2' && !v.waiting ? v : null;
+  if (!ss || ss.playback.state !== 'playing' || !env.soundOn()) { if (ss2.key) ss2Stop(); }
+  else if (env.audioCtx && env.audioCtx()) {
+    const key = `${ss.index}:${ss.playback.seq}`;
+    const ctx = env.audioCtx();
+    const bufsP = Promise.all(ss.songs.map((x) => (x ? konBuffer(ctx, x.id) : Promise.resolve(null)))); // schon beim Anzeigen laden
+    if (ss2.key !== key) {
+      ss2Stop(false);
+      ss2.key = key;
+      bufsP.then((bufs) => {
+        if (ss2.key !== key) return;
+        const now = env.now ? env.now() : Date.now();
+        const elapsed = Math.max(0, (now - (ss.playback.at || now)) / 1000);
+        ss2Schedule(ctx, bufs, ss, elapsed);
+      });
+    }
+  }
+  if (ss && ss.songs && env.audioCtx && env.audioCtx() && ss.playback.state !== 'playing') ss.songs.forEach((x) => x && konBuffer(env.audioCtx(), x.id)); // vorladen
   const kon = v && v.type === 'konsequenz' && !v.waiting ? v : null;
   const mus = v && v.type === 'musik' && v.current && v.current.clip ? v.current : null;
   // Song Song Song: Auflösung mit Ton (einmal pro Rätsel), läuft wie beim Musikquiz 12 Sekunden.
@@ -259,7 +342,7 @@ export function syncMedia(s) {
   }
 }
 
-export const BEAMER_EXTRA = { dumm3, filmab, weissnicht, weissnicht2, konsequenz, songsong, dgf, zocken, fragen, zuweit, brain, ...BEAMER_NEU };
+export const BEAMER_EXTRA = { dumm3, filmab, weissnicht, weissnicht2, konsequenz, songsong, songsong2, dgf, zocken, fragen, zuweit, brain, ...BEAMER_NEU };
 
 const waitTitle = (t, small) => [h('div', { class: 'mega', style: { fontSize: 'clamp(2rem,5.5vw,5.5rem)' } }, t), small ? sub(small, { marginTop: '2vh' }) : null];
 
@@ -414,6 +497,41 @@ function songsong(v, teamOf) {
     // Live: nur die Reihenfolge der Abgaben, ohne Wertung.
     out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.order.map((o, i) => chip(teamOf(o.teamId), '', h('b', {}, ` ${i + 1}.`)))));
   }
+  return out;
+}
+
+// ---------- Song Song Song 2.0 ----------
+// Während der Musik: drei Platten, die im Takt reihum aufleuchten, und ein Fortschrittsbalken
+// (CSS-Animation, über die Serverzeit auf die laufende Wiedergabe gesetzt).
+function songsong2(v, teamOf) {
+  if (v.waiting) return waitTitle('Song Song Song 2.0', 'Drei Songs, immer im Wechsel – schreibt jeden Titel auf, den ihr erkennt!');
+  const out = [];
+  const seg = v.segment || 1;
+  const total = 3 * (v.perSong || 15);
+  const now = env.now ? env.now() : Date.now();
+  const el = v.playback.state === 'playing' ? Math.max(0, (now - (v.playback.at || now)) / 1000) : null;
+  const live = el !== null && el < total;
+  if (!v.revealing) {
+    out.push(h('div', { class: `ss2-decks${live ? ' live' : ''}`, '--seg': `${seg}s`, '--cycles': String((v.perSong || 15) / seg), '--el': `${el || 0}s` },
+      [0, 1, 2].map((j) => h('div', { class: 'ss2-deck', '--j': String(j) }, h('div', { class: 'vinyl spin' }, h('div', { class: 'vinyl-label' }, String(j + 1)))))),
+      h('div', { class: `ss2-bar${live ? ' live' : ''}`, '--total': `${total}s`, '--el': `${el || 0}s` }, h('i')));
+    if (!v.started) out.push(sub('Gleich geht’s los …', { marginTop: '2vh' }));
+    else if (!live) out.push(sub('Das war’s – jetzt nur noch aufschreiben!', { marginTop: '2vh' }));
+    if (v.order.length) out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.order.map((o, i) => chip(teamOf(o.teamId), '', h('b', {}, ` ${i + 1}.`)))));
+    return out;
+  }
+  if (v.revealed) out.push(h('div', { class: 'solution ss2-solution' }, v.solution.map((t, i) => h('span', {}, h('small', {}, `Song ${i + 1}`), h('b', {}, t || '–')))));
+  if (v.board && v.board.length) {
+    const solo = !v.revealed;
+    const cards = solo ? v.board.filter((a) => a.current) : v.board;
+    out.push(h('div', { class: `answers l5-answers n${Math.min(cards.length, 6)}${solo ? ' l5-solo' : ''}` }, cards.map((a) => {
+      const t = teamOf(a.teamId);
+      const mark = a.found !== null && a.found !== undefined ? h('span', { class: `l5-stamp ss2-stamp ${a.found ? 'ok' : 'bad'}`, 'aria-label': `${a.found} von 3` }, h('b', {}, `${a.found}/3`), h('small', {}, plus(a.points))) : null;
+      return h('div', { class: `answer fx-card l5-card has-ink${a.current ? ' current' : ''}${a.found ? ' ok' : a.found === 0 ? ' bad' : ''}`, '--team': t.color },
+        h('div', { class: 'ans-name l5-name' }, t.name),
+        a.hidden ? h('div', { class: 'ans-body l5-hidden' }, h('span', { class: 'l5-q' }, '?')) : h('div', { class: 'ans-body' }, answerContent(a, 'beamer'), mark));
+    })));
+  } else if (!v.revealed) out.push(sub('Keine Abgabe in dieser Runde.'));
   return out;
 }
 

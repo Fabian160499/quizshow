@@ -21,6 +21,7 @@ const SCORING = {
   weissnicht: [S('winner', 'Gewinner der Runde', 1)],
   weissnicht2: [S('guess', 'Buzzer-Team: je richtige Einschätzung', 1), S('own', 'Buzzer-Team: eigene richtige Antwort', 1), S('other', 'Alle anderen Teams: richtige Antwort', 1)],
   songsong: [S('correct', 'Beide Songs erkannt', 1)],
+  songsong2: [1, 2, 3].map((n) => S(`n${n}`, n === 3 ? 'Alle 3 Songs erkannt' : `${n} Song${n > 1 ? 's' : ''} erkannt`, n)),
   dgf: [S('term', 'Je richtig ausgewählter Begriff', 1)],
   fragen: [S('correct', 'Richtige Antwort auf die Frage', 1), S('askerNobody', 'Fragesteller, wenn niemand richtig liegt', 2), S('askerSomeone', 'Fragesteller, wenn jemand richtig liegt', -1)],
   nerd: [S('maxPenalty', 'Höchststrafe beim gescheiterten zweiten Versuch', 3)],

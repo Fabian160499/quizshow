@@ -154,6 +154,21 @@ const EXTRA_TYPES = {
     example: { puzzles: Array.from({ length: 8 }, () => ({ audio: null, melody: '', lyrics: '' })) },
   },
 
+  songsong2: {
+    title: 'Song Song Song 2.0',
+    playable: true,
+    summary: 'Drei Songs pro Runde, reihum je 1 Sekunde ineinander übergehend, bis jeder 15 Sekunden lief. Teams schreiben auf, die Regie gibt 0–3 erkannte Songs.',
+    schema: [
+      { key: 'rounds', label: 'Runden', type: 'list', min: 1, max: 10, itemLabel: (i) => `Runde ${i + 1}`, addLabel: 'Runde hinzufügen',
+        fields: [num('segment', 'Sekunden je Song, bevor gewechselt wird (Standard 1; jeder Song läuft insgesamt 15 Sekunden)', 0.5, 10, 0.1), ...[1, 2, 3].flatMap((n) => [
+          media(`audio${n}`, `Song ${n} (MP3 oder MP4; MP4 läuft nur als Ton)`, 'audio'),
+          text(`title${n}`, `Song ${n}: Titel (für die Auflösung)`, 160),
+          num(`start${n}`, `Song ${n}: Start im Lied (Sekunden, z. B. Refrain)`, 0, 600, 0.1),
+        ])] },
+    ],
+    example: { rounds: Array.from({ length: 3 }, () => ({ segment: 1, audio1: null, title1: '', start1: 0, audio2: null, title2: '', start2: 0, audio3: null, title3: '', start3: 0 })) },
+  },
+
   konsequenz: {
     title: 'Hits me baby, one more time',
     playable: true,
@@ -619,6 +634,6 @@ const EXTRA_TYPES = {
 };
 
 // Reihenfolge in der Spiele-Datenbank.
-const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'lippen', 'telepa2', 'jeopardy', 'lecker', 'cover'];
+const EXTRA_ORDER = ['dumm3', 'filmab', 'weissnicht', 'weissnicht2', 'konsequenz', 'songsong', 'songsong2', 'dgf', 'zocken', 'fragen', 'zuweit', 'brain', 'sortieren', 'gier', 'top100', 'star', 'timeline', 'chat', 'hostdu', 'allein', 'sekunden', 'lippen', 'telepa2', 'jeopardy', 'lecker', 'cover'];
 
 module.exports = { EXTRA_TYPES, EXTRA_ORDER, WHEEL, WHEEL_SLOTS, migrateBrainContent };

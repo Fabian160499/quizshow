@@ -2598,3 +2598,31 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .si-clips .ok { color: var(--ok, #3c6); }
 .run-cue { margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 210, 80, .12); border: 1px solid rgba(255, 210, 80, .4); font-size: 1rem; line-height: 1.4; }
 .run-cue small { display: block; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: .72rem; opacity: .8; }
+
+/* ---------- Song Song Song 2.0 ---------- */
+.beamer .ss2-decks { display: flex; justify-content: center; gap: 4vw; margin: 2vh auto 3vh; }
+.beamer .ss2-deck { position: relative; opacity: .35; filter: grayscale(.6); transform: scale(.88); transition: opacity .25s, transform .25s, filter .25s; }
+.beamer .ss2-deck .vinyl { width: 26vh; height: 26vh; margin: 0; }
+.beamer .ss2-deck .vinyl-label { width: 10vh; height: 10vh; font-size: 5vh; font-weight: 900; }
+.beamer .ss2-decks.live .ss2-deck { animation: ss2Active calc(var(--seg) * 3) linear calc(var(--j) * var(--seg) - var(--el)) var(--cycles) both; }
+.beamer .ss2-decks:not(.live) .ss2-deck .vinyl.spin { animation-play-state: paused; }
+@keyframes ss2Active {
+  0% { opacity: 1; filter: none; transform: scale(1.06); box-shadow: none; }
+  30% { opacity: 1; filter: none; transform: scale(1.06); }
+  36%, 94% { opacity: .35; filter: grayscale(.6); transform: scale(.88); }
+  100% { opacity: 1; filter: none; transform: scale(1.06); }
+}
+.beamer .ss2-bar { width: min(70vw, 900px); height: 1.4vh; margin: 0 auto; border-radius: 1vh; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.beamer .ss2-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; }
+.beamer .ss2-bar.live i { animation: ss2Bar var(--total) linear calc(0s - var(--el)) both; }
+.beamer .ss2-bar:not(.live) i { width: 100%; opacity: .5; }
+@keyframes ss2Bar { from { width: 0; } to { width: 100%; } }
+.beamer .ss2-solution { display: flex; justify-content: center; gap: 3vw; flex-wrap: wrap; }
+.beamer .ss2-solution span { display: grid; gap: .6vh; text-align: center; }
+.beamer .ss2-solution small { font-size: .45em; opacity: .7; text-transform: uppercase; letter-spacing: .15em; }
+.beamer .l5-stamp.ss2-stamp { width: 13vh; height: 13vh; font-size: 4.6vh; line-height: 1; gap: .4vh; align-content: center; }
+.beamer .l5-stamp.ss2-stamp small { font-size: 2.6vh; font-weight: 800; }
+.beamer .answers.l5-answers.l5-solo.n1 .l5-stamp.ss2-stamp { width: 19vh; height: 19vh; font-size: 7vh; }
+.beamer .answers.l5-answers.l5-solo.n1 .l5-stamp.ss2-stamp small { font-size: 3.8vh; }
+.ss2-grade { display: inline-flex; gap: 4px; }
+.ss2-grade .btn { min-width: 2.6em; font-weight: 800; }

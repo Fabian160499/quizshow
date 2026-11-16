@@ -63,7 +63,7 @@ function inkBuzzer(ui, { draftKey, label, action, payloadKey = 'ink', hint = 'Bu
   return [pad, muted(hint), btn];
 }
 
-export const TEAM_EXTRA = { dumm3, filmab, weissnicht, weissnicht2, konsequenz, songsong, dgf, zocken, fragen, zuweit, brain, ...TEAM_NEU };
+export const TEAM_EXTRA = { dumm3, filmab, weissnicht, weissnicht2, konsequenz, songsong, songsong2, dgf, zocken, fragen, zuweit, brain, ...TEAM_NEU };
 
 // ---------- Dumm, dumm, dumm ----------
 const dummDraft = {};
@@ -221,6 +221,22 @@ function songsong(g, ui) {
   }
   if (!g.started) return [...out, ...wait('Gleich läuft das Mash-up …', 'Schreibt BEIDE Songtitel. Interpreten braucht ihr nicht.')];
   out.push(...inkBuzzer(ui, { draftKey: `ss.${g.index}`, label: 'Beide Songtitel', action: 'play.submit', hint: 'Der Buzzer wird nach dem ersten Strich aktiv und schickt sofort verbindlich ab. Die anderen Teams bleiben frei.' }));
+  return out;
+}
+
+// ---------- Song Song Song 2.0 ----------
+function songsong2(g, ui) {
+  const out = [muted(`Runde ${g.index + 1} von ${g.count}`)];
+  if (g.solution) out.push(question(`🎵 ${g.solution.filter(Boolean).join('  ·  ') || 'Aufgelöst'}`));
+  if (g.submitted) {
+    if (g.found !== null && g.found !== undefined) {
+      out.push(g.found > 0 ? stateBox('ok', '✓', `${g.found} von 3 Songs erkannt! ${plus(g.points)}`) : stateBox('bad', '✗', 'Leider keinen Song erkannt'));
+    } else out.push(stateBox('', '🔒', `Abgeschickt als ${g.place}. – nicht mehr änderbar. Die Punkte gibt’s bei der Auflösung.`));
+    return out;
+  }
+  if (g.solution || g.revealing) return [...out, stateBox('', '■', 'Abgabe geschlossen – die Auflösung läuft.')];
+  if (!g.started) return [...out, ...wait('Gleich laufen drei Songs durcheinander …', 'Schreibt alle Songtitel auf, die ihr erkennt. Interpreten braucht ihr nicht.')];
+  out.push(...inkBuzzer(ui, { draftKey: `ss2.${g.index}`, label: 'Alle Songtitel, die ihr erkennt', action: 'play.submit', hint: 'Der Buzzer schickt sofort verbindlich ab – danach nicht mehr änderbar. Die Musik läuft weiter.' }));
   return out;
 }
 
