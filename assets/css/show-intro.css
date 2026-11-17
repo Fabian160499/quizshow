@@ -443,7 +443,7 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-mini { display: flex; flex-direction: column; align-items: center; gap: 1vh; animation: siHero .8s cubic-bezier(.2, 1.3, .35, 1) both; }
 .si-mini .si-avatar { height: 26vh; max-width: 14vw; }
 .si-mini .si-avatar.si-initials { width: 16vh; height: 16vh; font-size: 6vh; }
-.si-mini b { font-family: var(--ui); font-weight: 800; font-size: 2.3vh; letter-spacing: .08em; text-transform: uppercase; padding: .6vh 1vw; background: rgba(10, 10, 16, .9); border-top: .3vh solid var(--team); white-space: nowrap; max-width: 15vw; overflow: hidden; text-overflow: ellipsis; }
+.si-mini b { font-family: var(--ui); font-weight: 800; font-size: 2.3vh; letter-spacing: .08em; text-transform: uppercase; padding: .6vh 1vw; background: rgba(10, 10, 16, .9); border-top: .3vh solid var(--team); max-width: 15vw; text-align: center; line-height: 1.2; overflow-wrap: break-word; }
 .si-all .si-hosts { align-self: end; margin-bottom: 17vh; font-family: var(--ui); font-size: 2.8vh; font-weight: 700; color: var(--b); letter-spacing: .5em; text-transform: uppercase; }
 .si-all .si-tagline { align-self: end; margin-bottom: 6vh; font-family: var(--f); font-size: min(6.5vh, 4.4vw); font-weight: 900; animation: siLineLast 1.1s cubic-bezier(.2, 1.4, .4, 1) .9s both; }
 .si-media { display: none; }

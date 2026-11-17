@@ -41,7 +41,11 @@ export function logoEl(name, L, cls = '') {
     splitLogo(name).map((line, i) => h('div', { class: 'si-logo-line', style: { animationDelay: `${0.05 + i * 0.12}s` } },
       line.split(' ').map((w) => h('span', { class: /^uns$/i.test(w) ? 'hot' : '', 'data-t': w }, w)))));
 }
-export function initials(name) { return String(name || '?').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(); }
+// Anfangsbuchstaben der Wörter; Zeichen wie „&“ oder „+“ zählen nicht als Wort („Lennart & Henrik“ → „LH“)
+export function initials(name) {
+  const words = String(name || '').split(/\s+/).map((w) => w.replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean);
+  return (words.map((w) => w[0]).join('').slice(0, 2) || '?').toUpperCase();
+}
 export function avatarOf(t, fallbackSrc, cls = '') {
   const src = t.avatar || fallbackSrc;
   if (src) return h('img', { class: `si-avatar ${cls}`.trim(), src, alt: '' });
