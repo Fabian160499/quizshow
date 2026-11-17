@@ -409,6 +409,7 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-type-bg .si-avatar { height: 90vh; max-width: 70vw; }
 @keyframes siTypeBg { from { transform: scale(1.3); opacity: 0; } to { transform: scale(1); opacity: .45; } }
 .si-type-name { font-family: var(--f); font-size: min(22vh, 12vw); line-height: .9; text-transform: uppercase; z-index: 3; max-width: 94vw; }
+.si-type-word { font-style: normal; white-space: nowrap; }
 .si-type-name span { display: inline-block; color: #fff; text-shadow: 0 0 4vh var(--team), .05em .05em 0 color-mix(in srgb, var(--team) 70%, #000); animation: siSlam .45s cubic-bezier(.2, 1.6, .4, 1) both; }
 @keyframes siSlam { from { transform: scale(4) translateY(-.4em); opacity: 0; filter: blur(8px); } to { transform: none; opacity: 1; filter: none; } }
 .si-type-sub { align-self: end; margin-bottom: 10vh; display: flex; align-items: center; gap: 2vw; font-family: var(--ui); font-weight: 700; font-size: 3vh; letter-spacing: .3em; text-transform: uppercase; z-index: 3; animation: siFadeSlow .8s ease-out calc(var(--hit) + .7s) both; }
@@ -508,9 +509,9 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .si-dcard header { display: flex; justify-content: space-between; align-items: center; font-family: "SI Orbit", sans-serif; font-size: 1.45vh; letter-spacing: .04em; color: #fff; margin-bottom: 1.4vh; }
 .si-dcard .arr { font-style: normal; width: 3.4vh; height: 3.4vh; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .08); font-size: 1.6vh; }
 .si-dcard.crews { left: 3vw; bottom: 4vh; width: 22vw; }
-.si-dcard.plan { left: 27vw; bottom: 4vh; width: 26vw; }
-.si-dcard.tel { left: 55vw; bottom: 4vh; width: 19vw; }
-.si-dcard.poll { right: 3vw; top: 12vh; width: 20vw; background: linear-gradient(170deg, rgba(40, 110, 140, .45), rgba(10, 30, 40, .7)); }
+.si-dcard.plan { left: 3vw; top: 12vh; width: 23vw; }
+.si-dcard.tel { left: 27vw; bottom: 4vh; width: 19vw; }
+.si-dcard.poll { right: 3vw; top: 12vh; width: 22vw; background: linear-gradient(170deg, rgba(40, 110, 140, .45), rgba(10, 30, 40, .7)); }
 .si-dash.boot .si-dcard { animation: siCardUp .9s cubic-bezier(.2, 1, .3, 1) both; }
 .si-dash.boot .si-dcard.plan { animation-delay: .15s; } .si-dash.boot .si-dcard.tel { animation-delay: .3s; } .si-dash.boot .si-dcard.poll { animation-delay: .45s; animation-name: siCardIn2; }
 .si-dash.boot .si-dtop { animation: siDrop .8s ease-out both; }
@@ -525,12 +526,13 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .si-dbar i::after { content: ''; position: absolute; left: 50%; top: -.6vh; width: 1.2vh; height: 1.2vh; margin-left: -.6vh; border-radius: 50%; background: var(--col); box-shadow: 0 0 1.2vh var(--col); opacity: .4; }
 .si-dbar.on i { height: 82%; background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--col) 60%, transparent) 0 .35vh, transparent .35vh .7vh); border-color: var(--col); }
 .si-dbar.on i::after { opacity: 1; }
-.si-dbar small { font-size: 1vh; color: rgba(220, 240, 255, .6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.si-dchips { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: .9vh 1vw; }
-.si-dchips li { display: flex; align-items: center; gap: .6vw; font-size: 1.5vh; opacity: .25; transition: opacity .4s, transform .4s; transform: translateX(-1vw); }
+.si-dbar small { font-size: 1vh; line-height: 1.15; color: rgba(220, 240, 255, .6); text-align: center; -webkit-hyphens: auto; hyphens: auto; overflow-wrap: break-word; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.si-dchips { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 1vh; }
+.si-dchips li { display: flex; align-items: flex-start; line-height: 1.25; gap: .6vw; font-size: 1.5vh; opacity: .25; transition: opacity .4s, transform .4s; transform: translateX(-1vw); }
 .si-dchips li.on { opacity: 1; transform: none; }
 .si-dchips em { font-style: normal; font-family: "SI Orbit", sans-serif; font-size: 1.1vh; padding: .4vh .6vw; border-radius: .8vh; background: rgba(76, 201, 255, .15); color: #8fe0ff; }
-.si-dchips span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.si-dchips span { overflow-wrap: anywhere; }
+.si-dchips em { flex: none; }
 .si-dtel { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.1vh; }
 .si-dtel li { display: grid; grid-template-columns: 6vw 1fr 4vw; align-items: center; gap: .6vw; font-size: 1.35vh; }
 .si-dtel i { height: .4vh; border-radius: 1vh; background: rgba(255, 255, 255, .1); overflow: hidden; }
@@ -538,7 +540,8 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .si-dtel em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; color: #fff; }
 .si-dpoll { list-style: none; margin: 0; padding: 0; display: grid; gap: 1vh; }
 .si-dpoll li { display: flex; justify-content: space-between; align-items: center; gap: .6vw; font-size: 1.55vh; color: rgba(220, 240, 255, .5); }
-.si-dpoll li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.si-dpoll li span { overflow-wrap: anywhere; line-height: 1.25; }
+.si-dpoll li b { flex: none; }
 .si-dpoll li b { font-family: "SI Orbit", sans-serif; font-weight: 400; font-size: 1.2vh; padding: .5vh .9vw; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .15); color: transparent; }
 .si-dpoll li.go { color: #fff; }
 .si-dpoll li.go b { color: #031207; background: #3ef08f; border-color: #3ef08f; box-shadow: 0 0 1.4vh #3ef08f; animation: siGo .3s steps(2) 2; }
@@ -558,8 +561,9 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .si-liftoff .si-globe { opacity: 0; }
 .si-weltraum .si-liftoff .si-bigword, .si-liftoff .si-bigword { font-family: "SI Orbit", sans-serif; font-weight: 400; letter-spacing: .3em; font-size: min(10vh, 7vw); }
 .si-orbitview .si-dcard { opacity: .0; transform: translateY(20vh); }
-.si-weltraum .si-line { font-family: "SI Orbit", sans-serif; font-weight: 400; font-size: min(6.4vh, 4vw); letter-spacing: .04em; padding: 2vh 3vw; border-radius: 999px; background: rgba(8, 20, 30, .5); border: 2px solid rgba(76, 201, 255, .6); box-shadow: 0 0 3vh rgba(76, 201, 255, .45); -webkit-backdrop-filter: blur(1vh); backdrop-filter: blur(1vh); }
+.si-weltraum .si-line { font-family: "SI Orbit", sans-serif; font-weight: 400; font-size: min(6.4vh, 4vw); letter-spacing: .04em; padding: 2vh 3vw; border-radius: 999px; background: rgba(8, 20, 30, .5); -webkit-background-clip: padding-box; background-clip: padding-box; color: #fff; -webkit-text-fill-color: #fff; text-shadow: 0 0 1.6vh rgba(76, 201, 255, .9); filter: none; max-width: 80vw; border: 2px solid rgba(76, 201, 255, .6); box-shadow: 0 0 3vh rgba(76, 201, 255, .45); -webkit-backdrop-filter: blur(1vh); backdrop-filter: blur(1vh); }
 .si-weltraum .si-line::before, .si-weltraum .si-line::after { content: none; }
+.si-weltraum .si-logo-wrap.small { margin-top: 13vh; }
 .si-weltraum .si-hold { font-family: "SI Orbit", sans-serif; font-weight: 400; letter-spacing: .2em; font-size: 2.2vh; }
 /* Team-Auftritte im Glas-Look */
 .si-weltraum .si-ret-data { padding: 3vh 2vw; border-radius: 2.4vh; background: linear-gradient(160deg, rgba(40, 48, 60, .6), rgba(12, 16, 22, .75)); border: 1px solid rgba(255, 255, 255, .1); -webkit-backdrop-filter: blur(1.2vh); backdrop-filter: blur(1.2vh); font-family: "SI Exo", sans-serif; min-width: 28vw; }

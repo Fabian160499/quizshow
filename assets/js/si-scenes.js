@@ -293,7 +293,10 @@ function rocketEl() {
 function linesAndHold(c, stage, extra = () => []) {
   const { si, L, el, sound } = c;
   const tl = si.tl;
-  c.voice(si.clips.lines, si.lines.join(' … '), tl.lines);
+  // Mit Aufnahme: ein Clip für alle Zeilen. Ohne: Browser-Stimme Zeile für Zeile, im Takt der Anzeige
+  // (lange Browser-Ansagen brechen in Chrome mittendrin ab).
+  if (si.clips.lines) c.voice(si.clips.lines, si.lines.join(' … '), tl.lines);
+  else si.lines.forEach((line, i) => c.voice(null, line, tl.lines + i * tl.line));
   si.lines.forEach((line, i) => {
     const t0 = tl.lines + i * tl.line;
     const last = i === si.lines.length - 1;
@@ -870,7 +873,15 @@ export function personScene(c, kind) {
   }
   P.extraLabel = String(si.extraLabel || '').replace(/\s*\(.*\)\s*/g, '');
   // Schriftgröße nach dem längsten Wort, damit kein Name mitten im Wort umbricht
-  P.fit = (vw, maxVh) => `min(${maxVh}vh, ${(vw / (Math.max(5, ...String(P.name).split(/\s+/).map((w) => w.length)) * 0.6)).toFixed(2)}vw)`;
+  // Breite Schriften (Weltraum: Orbit) brauchen je Buchstabe fast eine ganze Schrifthöhe.
+  const wide = L.font === 'si-orbit' ? 1.05 : 0.6;
+  // lines: höchstens so viele Zeilen für den ganzen Namen (lange Namen werden kleiner statt höher)
+  P.fit = (vw, maxVh, lines = 0) => {
+    const longest = Math.max(5, ...String(P.name).split(/\s+/).map((w) => w.length));
+    let size = vw / (longest * wide);
+    if (lines) size = Math.min(size, (vw * lines) / (Math.max(5, String(P.name).length) * wide));
+    return `min(${maxVh}vh, ${size.toFixed(2)}vw)`;
+  };
   c.person = P;
   c.voice(P.clip, P.call, 0.08);
   c.jingle(P.jingle, P.song, HIT);
@@ -911,8 +922,10 @@ const LAYOUTS = {
   },
   // 3) Kinetische Typo: Buchstaben knallen einzeln rein
   type(c, P) {
-    const letters = [...String(P.name)].map((ch, i) => h('span', { style: { animationDelay: `calc(var(--hit) + ${i * 0.045}s)` } }, ch === ' ' ? ' ' : ch));
-    return h('div', {}, h('div', { class: 'si-type-bg' }, P.avatar()), h('b', { class: `si-type-name ${c.L.font}`, style: { fontSize: P.fit(92, 22) } }, letters), h('div', { class: 'si-type-sub' }, h('span', {}, P.kicker), h('i'), h('span', {}, P.tag)), extraEl(P));
+    // Buchstaben je Wort gebündelt: Umbruch nur zwischen Wörtern, nie mitten im Wort
+    let n = 0;
+    const letters = String(P.name).split(/\s+/).filter(Boolean).flatMap((w, wi) => [wi ? ' ' : null, h('em', { class: 'si-type-word' }, [...w].map((ch) => h('span', { style: { animationDelay: `calc(var(--hit) + ${(n++) * 0.045}s)` } }, ch)))]).filter((x) => x !== null);
+    return h('div', {}, h('div', { class: 'si-type-bg' }, P.avatar()), h('b', { class: `si-type-name ${c.L.font}`, style: { fontSize: P.fit(92, 22, 2) } }, letters), h('div', { class: 'si-type-sub' }, h('span', {}, P.kicker), h('i'), h('span', {}, P.tag)), extraEl(P));
   },
   // 4) Anflug aus der Tiefe mit Speed-Lines
   zoom(c, P) {
