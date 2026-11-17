@@ -2390,7 +2390,7 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .team-main .ink.ink-small .ink-frame, .team-main .ink.notes-pad .ink-frame { height: auto; min-height: 0; }
 /* Karte (Ich sehe ein Land …): nie höher als der Bildschirm, damit man die Seite nicht scrollen muss */
 .team-main .map-box { display: flex; justify-content: center; background: #0e2a4d; }
-.team-main .map-box .map { width: auto; max-width: 100%; max-height: max(260px, calc(100dvh - 330px)); }
+.team-main .map-box .map { width: auto; max-width: 100%; max-height: max(240px, calc(100dvh - 330px - var(--pults-h, 0px))); }
 /* Kassenschlager: Paywall oben, Aufgabe und Schreibfeld darunter (Wunsch von Fabian) */
 .ks-split { display: grid; gap: 14px; }
 .paywall .hint { min-height: 0; }
@@ -2642,3 +2642,64 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 .beamer .answers.wn-focus.done .answer { width: min(24vw, 40vh); min-height: 0; }
 .beamer .answers.wn-focus.done .ink-answer { max-height: 10vh; }
 .beamer .answers.wn-rest .ink-answer { max-height: 11vh; }
+
+/* ===== Pult-Leiste auf den Team-iPads (Punktestand + Teamauswahl) =====
+   Kompakt und oben fest, damit Buzzer und Schreibfeld nie verdeckt werden:
+   quer sehr flach (nur Bogenansatz + Pult), hochkant etwas höher mit ganzem Bogen. */
+:root { --pults-h: 0px; }
+body:has(#pults:not([hidden])) { --pults-h: clamp(64px, 10dvh, 88px); }
+@media (orientation: portrait) { body:has(#pults:not([hidden])) { --pults-h: clamp(92px, 10.5dvh, 132px); } }
+.pults { position: sticky; top: 0; z-index: 20; height: var(--pults-h); padding: 4px clamp(6px, 1.5vw, 16px) 0; overflow: hidden;
+  background: linear-gradient(180deg, #120f22, #0a0816); border-bottom: 1px solid rgba(255, 255, 255, .08);
+  -webkit-box-reflect: below 0 linear-gradient(transparent 70%, rgba(255, 255, 255, .06)); }
+.pults[hidden] { display: none; }
+.pult-row { position: relative; height: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: clamp(4px, 1vw, 10px); align-items: end; max-width: 1100px; margin: 0 auto; }
+.pult { position: relative; height: 100%; display: grid; grid-template-rows: 1fr auto; --tint: color-mix(in srgb, var(--team) 32%, #e9b7ae); transition: transform .3s, filter .3s, opacity .3s; }
+/* Bogen mit Neonringen in Teamfarbe */
+.pult-arch { position: relative; margin: 0 8%; min-height: 0; border-radius: 999px 999px 0 0; background: var(--tint); overflow: hidden; box-shadow: inset 0 -6px 10px rgba(0, 0, 0, .25); }
+.pult-rings { position: absolute; inset: 10% 8% -40% 8%; border-radius: 999px 999px 0 0;
+  background: repeating-radial-gradient(circle at 50% 100%, transparent 0 calc(var(--r, 7px) - 2px), color-mix(in srgb, var(--team) 90%, #fff) calc(var(--r, 7px) - 2px) var(--r, 7px));
+  -webkit-mask: radial-gradient(circle at 50% 100%, transparent 38%, #000 40%); mask: radial-gradient(circle at 50% 100%, transparent 38%, #000 40%);
+  filter: drop-shadow(0 0 4px var(--team)); opacity: .95; }
+/* Pult mit dunkler Schräg-Anzeige: Punktzahl groß, Name als Muster dahinter */
+.pult-desk { position: relative; height: clamp(30px, 5.2dvh, 46px); background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 90%, #fff), var(--tint)); border-radius: 4px 4px 2px 2px; box-shadow: 0 4px 10px rgba(0, 0, 0, .45); }
+.pult-panel { position: absolute; inset: 14% 10% 10% 10%; clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%); background: #0b0a10; overflow: hidden; display: grid; place-items: center; }
+.pult-names { position: absolute; inset: -20% -10%; font: 800 7px/1.05 var(--font-display, sans-serif); color: rgba(255, 255, 255, .22); word-break: break-all; letter-spacing: .02em; pointer-events: none; }
+.pult-score { position: relative; font: 900 clamp(15px, 2.6dvh, 24px)/1 var(--font-display, sans-serif); color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 0 6px var(--team); }
+.pult.no-score .pult-score { display: none; }
+.pult-name { position: absolute; left: 0; right: 0; top: 2px; text-align: center; font: 800 clamp(9px, 1.25dvh, 12px)/1.1 var(--font-display, sans-serif); color: #fff; text-shadow: 0 1px 3px #000, 0 0 6px #000; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px; z-index: 2; }
+/* Eigenes Team: angehoben, heller, weiße Kante */
+.pult.me { transform: translateY(-3px); filter: brightness(1.12) saturate(1.15); }
+.pult.me .pult-arch { box-shadow: 0 0 0 2px #fff, 0 0 14px var(--team); }
+.pult.me .pult-desk { box-shadow: 0 0 0 2px #fff, 0 0 16px var(--team); }
+.pult:not(.me) { opacity: .88; }
+/* Punkte-Änderung: kurzer Stoß und schwebende Zahl */
+.pult-delta { position: absolute; left: 50%; top: 30%; transform: translate(-50%, 0); font: 900 clamp(14px, 2.4dvh, 22px)/1 var(--font-display, sans-serif); opacity: 0; pointer-events: none; z-index: 3; }
+.pult-delta.up { color: #4ef08f; text-shadow: 0 0 8px #0a7a3c; } .pult-delta.down { color: #ff6b6b; text-shadow: 0 0 8px #7a0a0a; }
+.pult-delta.go { animation: pultDelta 1.6s ease-out forwards; }
+@keyframes pultDelta { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.7); } 15% { opacity: 1; transform: translate(-50%, -4px) scale(1.15); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -18px) scale(1); } }
+.pult.bump-up .pult-desk { animation: pultFlash .9s ease-out; --flash: #4ef08f; } .pult.bump-down .pult-desk { animation: pultFlash .9s ease-out; --flash: #ff6b6b; }
+@keyframes pultFlash { 0% { box-shadow: 0 0 0 3px var(--flash), 0 0 22px var(--flash); } 100% { box-shadow: 0 4px 10px rgba(0, 0, 0, .45); } }
+/* Teamauswahl über die Pulte */
+.pults.picking { background: linear-gradient(180deg, #2a0f2a, #0a0816); }
+.pult.pick { cursor: pointer; opacity: 1; animation: pultPick 1.4s ease-in-out infinite; }
+.pult.pick:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.pult.pick:active { transform: scale(.96); }
+@keyframes pultPick { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35) drop-shadow(0 0 8px var(--team)); } }
+.pult.pick-off { opacity: .28; filter: grayscale(.8); }
+.pult-mark { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -40%); width: 1.7em; height: 1.7em; border-radius: 50%; display: none; place-items: center; font: 900 clamp(13px, 2.2dvh, 20px)/1 sans-serif; color: #fff; }
+.pult-mark.on { display: grid; background: #333; box-shadow: 0 0 0 2px #fff; } .pult-mark.on.ok { background: #1f9d55; } .pult-mark.on.bad { background: #d93a3a; }
+.pult-hint { text-align: center; font-weight: 800; font-size: 1.15rem; margin: 10px 0; color: #ffd6ec; }
+.pult-pickbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; display: flex; gap: 12px; align-items: center; padding: 12px 18px; border-radius: 16px; background: rgba(20, 16, 36, .96); box-shadow: 0 10px 30px rgba(0, 0, 0, .6), 0 0 0 2px var(--accent); max-width: calc(100vw - 24px); }
+/* Quer: flach – nur oberer Bogenansatz */
+@media (orientation: landscape) { .pult-arch { margin: 0 14%; } .pult-rings { --r: 5px; } }
+/* Platz für die Leiste: Schreibfeld etwas niedriger, Buzzer passt immer */
+.team-main .ink-canvas { height: clamp(170px, calc(38dvh - var(--pults-h) * .5), 520px); }
+@media (orientation: portrait) { .team-main .ink-canvas { height: clamp(180px, calc(28dvh - var(--pults-h) * .3), 420px); } }
+.team-main .buzzer { width: min(70vw, 320px, calc(100dvh - var(--pults-h) - 330px)); min-width: 170px; }
+html.reduced-motion .pult.pick { animation: none; }
+/* Quer mit Pult-Leiste: Paywall-Kacheln und Karte etwas niedriger, damit die Knöpfe ohne Scrollen sichtbar bleiben */
+@media (orientation: landscape) {
+  .ksw.ipad-wall { grid-template-rows: repeat(4, minmax(max(62px, calc(92px - var(--pults-h) / 3)), auto)); }
+  .team-main .map-box .map { max-height: max(220px, calc(100dvh - 440px - var(--pults-h, 0px))); }
+}

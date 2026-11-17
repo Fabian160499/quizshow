@@ -12,6 +12,7 @@
     <span class="name" id="team-name">Team</span>
     <span class="muted" id="game-name"></span>
   </header>
+  <section class="pults" id="pults" hidden aria-label="Punktestand der Teams"></section>
   <main class="team-main" id="main">
     <div class="wait"><p class="big">Verbinde …</p></div>
   </main>
@@ -24,6 +25,7 @@
     import { clearAllInkDrafts } from './assets/js/ink.js';
     import { renderPlay, renderFinale } from './assets/js/team-play.js';
     import { siTeam, siTeamStop } from './assets/js/show-intro.js';
+    import { updatePults, resetPultPick } from './assets/js/pults.js';
 
     const params = new URLSearchParams(location.search);
     const urlCode = params.get('code');
@@ -136,6 +138,7 @@
       else setShowTitle(gameName, s.show.name);
 
       const parts = [];
+      resetPultPick(); // Spiele mit Teamauswahl melden sich beim Aufbau wieder an
       if (expect && expect !== s.team.id) {
         parts.push(h('p', { class: 'notice warn', role: 'alert' }, `Achtung: Dieser Code gehört zu „${s.team.name}“.`));
       }
@@ -161,10 +164,8 @@
       else parts.push(h('div', { class: 'wait' },
         h('p', { class: 'big' }, 'Gleich geht’s los!'),
         h('p', { class: 'muted' }, 'Wartet auf die Moderation. Dieses Gerät bleibt mit eurem Team verbunden.')));
-      if (s.ranking) {
-        parts.push(h('section', { class: 'card', style: { marginTop: '24px' } }, h('h3', {}, 'Punktestand'),
-          h('ul', { class: 'list' }, s.ranking.map((r) => h('li', {}, h('span', { class: 'dot', style: { background: r.color } }), h('span', { class: 'grow' }, r.name), h('b', {}, r.points))))));
-      }
+      // Pult-Leiste: Punktestand (öffentlich) und Teamauswahl; nicht im Show-Intro und auf der Abschlussseite.
+      updatePults(document.getElementById('pults'), { teams: s.teams, pults: s.pults || null, me: s.team.id, hidden: !!s.showIntro || !!s.end });
 
       // 10-Sekunden-Timer: Anzeige oben; bei Ablauf wird jedes beschriebene Feld automatisch abgeschickt.
       syncTimer(s.play ? s.timer || null : null, 'team', {

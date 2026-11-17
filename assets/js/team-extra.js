@@ -5,18 +5,13 @@
 import { h, run, ask, toast, shield } from './client.js';
 import { inkPad, clearInkDraft } from './ink.js';
 import { TEAM_NEU } from './neu-team.js';
-import { podiumRow } from './studio.js';
+import { setPultPick, clearStickyPick } from './pults.js';
 
-// Teamauswahl über die Pulte (wie beim Tausch in Spiel 2), mit Avataren.
+// Teamauswahl direkt über die Pult-Leiste oben (statt eigener Pult-Anzeige).
 // Nicht wählbare Teams sind ausgegraut; Antippen löst sofort aus.
 function teamPodiums(ui, ids, onPick, label, marks) {
-  const all = (ui.teams || []).length ? ui.teams : ids.map((id) => ({ id, name: ui.teamName(id), color: ui.teamColor(id) }));
-  const allowed = new Set(ids);
-  return h('div', { class: 'swap-podiums' }, podiumRow(all, {
-    onPick, marks,
-    pickLabel: (t) => `${t.name}${label ? ` – ${label}` : ''}`,
-    disabledIds: all.filter((t) => !allowed.has(t.id)).map((t) => t.id),
-  }));
+  setPultPick({ ids, onPick, label, marks });
+  return h('p', { class: 'pult-hint' }, '☝️ Tippt oben auf das Pult', label ? ` (${label})` : '', '.');
 }
 
 // Punktwerte aus dem Editor (über den Server), sonst Standard.
@@ -537,14 +532,14 @@ function pickNumber(nums, title) {
   });
 }
 
-// Team auswählen (für Joker mit Ziel): einfache Auswahl im Dialog.
+// Team auswählen (für Joker mit Ziel): über die Pult-Leiste oben, mit Hinweisleiste unten.
 function pickTeam(ui, ids, title) {
   return new Promise((resolve) => {
-    const close = (v) => { overlay.remove(); resolve(v); };
-    const overlay = h('div', { class: 'modal-backdrop', role: 'dialog', 'aria-modal': 'true' },
-      h('div', { class: 'modal card modal-podiums' }, h('h3', {}, title),
-        teamPodiums(ui, ids, (id) => close(id), 'auswählen'),
-        h('p', {}, h('button', { class: 'btn ghost', onclick: () => close(null) }, 'Abbrechen'))));
-    document.body.append(overlay);
+    const close = (v) => { bar.remove(); clearStickyPick(); resolve(v); };
+    const bar = h('div', { class: 'pult-pickbar', role: 'dialog', 'aria-label': title },
+      h('b', {}, title), h('span', {}, '☝️ Tippt oben auf ein Pult.'),
+      h('button', { class: 'btn ghost', onclick: () => close(null) }, 'Abbrechen'));
+    document.body.append(bar);
+    setPultPick({ ids, onPick: (id) => close(id), label: 'auswählen' }, { sticky: true });
   });
 }

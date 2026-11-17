@@ -1571,3 +1571,35 @@ test('Show-Intro: Schritt nach dem Startbild, Phasen per Klick, iPads als Lichte
   game.applyAction(db, mod(), 'showIntro.text', { key: 'host.call', value: 'Bühne frei für {name}!' });
   assert.equal(game.moderatorView(db).showIntro.voice.ready, 0);
 });
+
+test('Pult-Leiste auf den iPads: öffentlicher Punktestand ohne geheime Bewertungen, Korrekturen sofort, Folie gibt alles frei', () => {
+  const { db, ids } = setup();
+  const [A, B] = ids;
+  const pults = (id = A) => Object.fromEntries(game.teamView(db, id).pults.map((p) => [p.id, p.points]));
+  assert.equal(db.project.settings.publicScores, true);
+  assert.equal(game.teamView(db, A).pults.length, db.project.teams.length);
+  // Manuelle Korrektur: sofort sichtbar
+  game.applyAction(db, mod(), 'points.adjust', { teamId: B, points: 2, reason: 'Bonus' });
+  assert.equal(pults()[B], 2);
+  // Geheime Bewertung (Song Song Song 2.0): erst mit der Auflösung
+  const pos = 8;
+  const lib = db.library.find((e) => e.type === 'songsong2');
+  game.applyAction(db, mod(), 'game.replace', { gameId: db.project.games[pos - 1].id, libraryId: lib.id });
+  const g = db.project.games[pos - 1];
+  const au = (n) => ({ id: `media_abcdefabcdef4${n}`, type: 'audio/mpeg', name: 'x', size: 1 });
+  g.content.rounds = [{ segment: 1, audio1: au(1), audio2: au(2), audio3: au(3), title1: 'a', title2: 'b', title3: 'c', start1: 0, start2: 0, start3: 0 }];
+  game.applyAction(db, mod(), 'show.activate', { gameId: g.id });
+  game.applyAction(db, mod(), 'play.open', { index: 0 });
+  game.applyAction(db, mod(), 'play.play', {});
+  game.applyAction(db, team(A), 'play.submit', { ink: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' });
+  game.applyAction(db, mod(), 'play.grade', { teamId: A, n: 3 });
+  assert.equal(require('../server/core').totals(db)[A], 3);
+  assert.equal(pults(B)[A], 0); // noch geheim
+  game.applyAction(db, mod(), 'play.stop', {});
+  game.applyAction(db, mod(), 'play.close', {});
+  for (let k = 0; k < 3; k++) game.applyAction(db, mod(), 'play.reveal', {});
+  assert.equal(pults(B)[A], 3); // aufgelöst
+  // Einstellung aus: Leiste ohne Punkte
+  game.applyAction(db, mod(), 'project.update', { settings: { publicScores: false } });
+  assert.equal(game.teamView(db, A).pults, undefined);
+});

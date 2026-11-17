@@ -979,7 +979,7 @@ function buildEditor() {
     card('Darstellung',
       check('Animationen reduzieren', 'reducedMotion'),
       check('Soundeffekte auf dem Beamer', 'sound'),
-      check('Teams dürfen den Punktestand sehen (Standard: aus)', 'publicScores'),
+      check('Punktestand auf den iPads (Pult-Leiste) anzeigen', 'publicScores'),
       h('label', { for: 'show-title-dur' }, 'Dauer der Spieltitel-Animation (Sekunden)'),
       h('input', { id: 'show-title-dur', type: 'number', min: '3', max: '20', value: p.settings.titleDurationSec, onchange: (ev) => act('project.update', { settings: { titleDurationSec: Number(ev.target.value) } }) })));
 

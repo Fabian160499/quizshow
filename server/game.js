@@ -135,7 +135,7 @@ function newProject(library, name = 'Wer stiehlt uns die Show') {
     host: 'Fabian',
     coHost: 'Alexia',
     // Teams sehen standardmäßig keine fremden Punktestände (Abschnitt 4.1).
-    settings: { publicScores: false, reducedMotion: false, sound: true, titleDurationSec: 7 },
+    settings: { publicScores: true, reducedMotion: false, sound: true, titleDurationSec: 7 },
     // Standardmäßig sechs Teams; im Editor lassen sich Teams hinzufügen und löschen.
     teams: defaultTeams(),
     games,
@@ -244,6 +244,9 @@ function migrate(db) {
     // Neue Spielart „Song Song Song 2.0“ einmalig in den Musik-Ordner.
     if (!db.libraryFolderOf.songsong2 && !db.songsong2Foldered && db.libraryFolders.some((f) => f.id === 'folder_std2')) db.libraryFolderOf.songsong2 = 'folder_std2';
     db.songsong2Foldered = true;
+    // Pult-Leiste mit Punktestand auf den iPads (Fabian, 17.11.2026): einmalig einschalten.
+    if (!db.pultsOn && db.project && db.project.settings) db.project.settings.publicScores = true;
+    db.pultsOn = true;
     // Neue Folie „Moderation am Pult“ nach den Gewinnstufen 2 und 3 – einmalig auch in eigene Abläufe.
     for (const pr of [db.project, ...db.shows.map((x) => x.project)]) addHostsSteps(pr);
     for (const sh of db.shows) {
@@ -834,6 +837,12 @@ function runStep(db, ctx, index) {
   const game = st.pos ? db.project.games[st.pos - 1] : null;
   if (st.pos && !game) fail(`Auf Position ${st.pos} steht kein Spiel.`);
   db.live.run = index;
+  // Außerhalb des laufenden Spiels (Punkte-Folie, Rangliste, nächstes Spiel …) sind alle Punkte öffentlich.
+  if ((st.kind !== 'game' && st.kind !== 'title') || (game && db.live.activeGame !== game.id)) {
+    const pend = db.live.fxPending || {};
+    const ids = Object.keys(pend).filter((id) => pend[id]);
+    if (ids.length) fxRelease(db, ids, undefined, ctx.now);
+  }
   if (game && db.live.activeGame !== game.id) moderatorActions['show.activate'](db, ctx, { gameId: game.id });
   const view = { start: 'start', end: 'start', video: 'video', intro: 'intro', pyramid: 'pyramid', title: 'title', game: 'game', pause: 'pause', ranking: 'ranking', coin: 'coin', finale: 'finale' }[st.kind];
   if (st.kind === 'finaleTitle' || st.kind === 'finale') syncFinaleTeam(db, ctx);
@@ -1697,7 +1706,8 @@ function teamReaction(db, ctx, name, payload, before) {
   // Neustart, Rückgängig usw. ersetzen Spielstand/Punkte – dann keine Reaktion.
   if (db.ledger !== before.ledger || db.live !== before.live || db.ledger.length < before.len) return;
   const pend = (db.live.fxPending ||= {});
-  for (const e of db.ledger.slice(before.len)) if (e.points) pend[e.teamId] = (pend[e.teamId] || 0) + e.points;
+  // Manuelle Korrekturen und Gegenbuchungen der Regie sind sofort öffentlich.
+  for (const e of db.ledger.slice(before.len)) if (e.points && !String(e.ref || '').startsWith('manual:') && !e.reverses) pend[e.teamId] = (pend[e.teamId] || 0) + e.points;
   const fired = db.live.effect.seq !== before.seq ? db.live.effect.kind : null;
   const g = activeGame(db);
   if (!fired || !FX_PUBLIC.has(fired) || (g && PLAY[g.type].fxManual)) return;
@@ -1778,7 +1788,8 @@ function teamView(db, teamId, now = Date.now()) {
     // Letzte Reaktion für dieses Team (grün/rot mit Punkten); das iPad zeigt sie, sobald die id neu ist.
     fx: (db.live.teamFx && db.live.teamFx[teamId]) || null,
   };
-  if (db.project.settings.publicScores) view.ranking = rankingSnapshot(db).map(({ name, color, points }) => ({ name, color, points }));
+  // Pult-Leiste: immer da (auch zum Auswählen anderer Teams); Punkte nur, wenn in den Einstellungen erlaubt.
+  if (db.project.settings.publicScores) { const pp = publicPoints(db); view.pults = db.project.teams.map((t) => ({ id: t.id, points: pp[t.id] || 0 })); }
   // Abschluss der Show: jedes Team sieht seinen Platz und ein Dankeschön.
   const step = rundown(db)[db.live.run ?? -1];
   if (step && step.kind === 'end') {
@@ -1831,6 +1842,15 @@ function picksTeam(play) {
   if (play.redirect && Array.isArray(play.targets)) return true;
   if (play.canUseJoker && Array.isArray(play.jokers) && play.jokers.some((j) => j.needsTarget && j.usable)) return true;
   return false;
+}
+
+// Öffentlicher Punktestand: Punkte, deren Auflösung noch aussteht (fxPending), zählen noch nicht –
+// so verrät die Pult-Leiste auf den iPads keine geheime Bewertung.
+function publicPoints(db) {
+  const sums = totals(db);
+  const pend = db.live.fxPending || {};
+  for (const id of Object.keys(sums)) sums[id] -= pend[id] || 0;
+  return sums;
 }
 
 function publicTeams(db) {
