@@ -344,6 +344,16 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/media') return uploadMedia(req, res);
     if (url.pathname.startsWith('/api/voice')) return voiceApi(req, res, url);
     if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname.startsWith('/media/') && serveMedia(req, res, url.pathname.slice(7))) return;
+    // Team-Avatare für die Pult-Leiste: einmal laden, dann aus dem Cache (Version im Link).
+    if (req.method === 'GET' && url.pathname.startsWith('/avatar/')) {
+      const team = store.data.project.teams.find((t) => t.id === url.pathname.slice(8));
+      const m = team && team.avatar && /^data:(image\/(?:png|webp|jpeg));base64,(.+)$/.exec(team.avatar);
+      if (!m) { res.writeHead(404); res.end(); return; }
+      const buf = Buffer.from(m[2], 'base64');
+      res.writeHead(200, { 'Content-Type': m[1], 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=31536000, immutable' });
+      res.end(buf);
+      return;
+    }
 
     if (req.method === 'GET' && serveStatic(req, res, url.pathname)) return;
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });

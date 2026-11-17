@@ -626,10 +626,13 @@ test('Showablauf: Standardfolge, Weiter/Zurück lösen Spiel, Beamer und Münze 
     assert.deepEqual(steps.slice(gi + 1, gi + 3).map((s) => [s.kind, s.pos]), [['gameScore', pos], ['hosts', undefined]]);
   }
   // Nach Spiel 4, 6 und 8: danach erst Pause, dann Münzvergabe
-  for (const pos of [4, 6, 8]) {
+  for (const pos of [4, 6]) {
     const gi = steps.findIndex((s) => s.kind === 'game' && s.pos === pos);
     assert.deepEqual(steps.slice(gi + 3, gi + 5).map((s) => s.kind), ['pause', 'coin']);
   }
+  // Nach Spiel 8: Pause, dann Gesamtstand (Rangliste), dann Münze, dann Finale
+  const g8 = steps.findIndex((s) => s.kind === 'game' && s.pos === 8);
+  assert.deepEqual(steps.slice(g8 + 3, g8 + 7).map((s) => s.kind), ['pause', 'ranking', 'coin', 'finaleTitle']);
   assert.equal(steps.filter((s) => s.kind === 'pause').length, 3);
   assert.equal(steps.at(-1).kind, 'end');
   assert.throws(() => game.applyAction(db, mod(), 'run.prev', {}), /erste Schritt/);
@@ -1448,7 +1451,11 @@ test('Rangliste vor dem Finale: Rückblick, dann von hinten aufdecken, Platz 2 u
   assert.deepEqual(reveals, ['Platz 4 aufdecken', 'Platz 3 aufdecken', '🏆 Platz 2 und Platz 1 gleichzeitig aufdecken']);
   assert.equal(bv().all, true);
   assert.equal(bv().board[0].teamId, ids[3]);
-  // Danach geht „Weiter“ zur nächsten Folie (Finale-Titel).
+  // Danach geht „Weiter“ zur Münze – ohne zweiten Gesamtstand.
+  game.applyAction(db, mod(), 'run.next', {});
+  assert.equal(game.beamerView(db).view, 'coin');
+  assert.equal(game.beamerView(db).coin.noBoard, true);
+  assert.equal(game.moderatorView(db).rundown[db.live.run].kind, 'coin');
   game.applyAction(db, mod(), 'run.next', {});
   assert.equal(game.moderatorView(db).rundown[db.live.run].kind, 'finaleTitle');
 });
@@ -1602,4 +1609,19 @@ test('Pult-Leiste auf den iPads: öffentlicher Punktestand ohne geheime Bewertun
   // Einstellung aus: Leiste ohne Punkte
   game.applyAction(db, mod(), 'project.update', { settings: { publicScores: false } });
   assert.equal(game.teamView(db, A).pults, undefined);
+});
+
+test('Gespeicherter Ablauf: Rangliste vor dem Finale wandert einmalig vor die letzte Münze', () => {
+  const db = game.createState();
+  const rd = db.project.rundown || game.moderatorView(db).rundown.map((x) => ({ ...x }));
+  // alte Reihenfolge nachbauen: … pause, coin@8, ranking, finaleTitle …
+  const old = rd.filter((x) => x.kind !== 'ranking');
+  const fin = old.findIndex((x) => x.kind === 'finaleTitle');
+  old.splice(fin, 0, { id: 'stepR', kind: 'ranking' });
+  db.project.rundown = old;
+  delete db.project.rankingBeforeCoin;
+  const m = game.migrate(db);
+  const kinds = m.project.rundown.map((x) => x.kind);
+  const c = kinds.lastIndexOf('coin');
+  assert.deepEqual(kinds.slice(c - 2, c + 2), ['pause', 'ranking', 'coin', 'finaleTitle']);
 });

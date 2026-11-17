@@ -5,7 +5,7 @@
 // Spiele, in denen ein anderes Team gewählt wird, nutzen direkt diese Pulte (Antippen).
 // Die Punkte sind der öffentliche Stand: geheime Bewertungen zählen erst nach der Auflösung.
 
-import { h } from './client.js';
+import { h, avatarSrc } from './client.js';
 
 let mounted = null;
 let data = { teams: [], pults: null, me: null, hidden: true };
@@ -52,7 +52,7 @@ function draw() {
     let n = nodes[t.id];
     if (!n) {
       n = h('div', { class: 'pult', 'data-id': t.id },
-        h('div', { class: 'pult-arch' }, h('i', { class: 'pult-rings' }), h('span', { class: 'pult-mark' })),
+        h('div', { class: 'pult-arch' }, h('i', { class: 'pult-rings' }), h('img', { class: 'pult-avatar', alt: '', hidden: true }), h('span', { class: 'pult-mark' })),
         h('div', { class: 'pult-desk' }, h('div', { class: 'pult-panel' }, h('span', { class: 'pult-names', 'aria-hidden': 'true' }), h('b', { class: 'pult-score' }))),
         h('span', { class: 'pult-name' }),
         h('span', { class: 'pult-delta', 'aria-hidden': 'true' }));
@@ -60,6 +60,13 @@ function draw() {
       n.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && n._pick) { ev.preventDefault(); n._pick(); } });
     }
     n.style.setProperty('--team', t.color);
+    // Avatar im Bogen (steht hinter dem Pult); nur neu laden, wenn sich das Bild geändert hat
+    const img = n.querySelector('.pult-avatar');
+    if ((img.dataset.v || '') !== (t.av || '')) {
+      img.dataset.v = t.av || '';
+      img.hidden = true;
+      if (t.av) avatarSrc(t.id, t.av).then((src) => { if (src && img.dataset.v === t.av) { img.src = src; img.hidden = false; } });
+    }
     n.classList.toggle('me', t.id === me);
     n.querySelector('.pult-name').textContent = t.id === me ? `${t.name} · ihr` : t.name;
     n.querySelector('.pult-names').textContent = Array.from({ length: 8 }, () => t.name.toUpperCase()).join(' ');

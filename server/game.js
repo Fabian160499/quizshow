@@ -128,6 +128,7 @@ function newProject(library, name = 'Wer stiehlt uns die Show') {
     id: newId('proj'),
     hostsStepAdded: true,
     gameScoreSteps: true,
+    rankingBeforeCoin: true,
     hostsStage1Added: true,
     name,
     date: '',
@@ -194,7 +195,7 @@ function migrate(db) {
     if (!db.project.coHostDefaulted) { if (!db.project.coHost) db.project.coHost = 'Alexia'; db.project.coHostDefaulted = true; }
     if (!db.project.finale) db.project.finale = clone(FINALE.EXAMPLE);
     // Nach jedem Spiel: Punkte dieses Spiels, dann Moderation am Pult (Wunsch von Fabian, einmalig ergänzt).
-    for (const pr of [db.project, ...db.shows.map((x) => x.project)]) { addGameScoreSteps(pr); addShowIntroStep(pr); }
+    for (const pr of [db.project, ...db.shows.map((x) => x.project)]) { addGameScoreSteps(pr); addShowIntroStep(pr); moveFinalRanking(pr); }
     // Spielname korrigiert: „DankeGleichFalsch“ → „Danke, gleichfalsch!“ (nur unveränderte Namen).
     for (const e of [...db.library, ...db.project.games, ...db.shows.flatMap((x) => x.project.games)]) {
       if (e.type === 'dgf' && e.title === 'DankeGleichFalsch') e.title = 'Danke, gleichfalsch!';
@@ -337,7 +338,8 @@ function gameFlow(db, now = Date.now()) {
 // Gilt für die Rangliste, nach der kein Spiel und keine Münze mehr kommt, aber das Finale.
 function isFinalRanking(steps, index) {
   const rest = steps.slice(index + 1);
-  return !rest.some((x) => x.kind === 'game' || x.kind === 'coin') && rest.some((x) => x.kind === 'finale' || x.kind === 'finaleTitle');
+  // Letzte Rangliste vor dem Finale (die letzte Münze darf noch danach kommen).
+  return !rest.some((x) => x.kind === 'game' || x.kind === 'ranking') && rest.some((x) => x.kind === 'finale' || x.kind === 'finaleTitle');
 }
 // Platz mit Gleichstand: gleiche Punkte = gleicher Platz.
 function placesOf(list) {
@@ -714,9 +716,11 @@ function defaultRundown(project) {
     // Nach jedem Spiel: Punkte nur dieses Spiels, dann die Moderation am Pult.
     steps.push({ kind: 'gameScore', pos }, { kind: 'hosts' });
     // Nach Spiel 4, 6 und 8 erst eine Pause, dann die Münzvergabe (mehr Spannung).
-    if (COIN_POSITIONS.includes(pos)) steps.push({ kind: 'pause' }, { kind: 'coin', pos });
+    // Nach dem letzten Spiel: nach der Pause erst der Gesamtstand (Rangliste), dann die Münze (Fabian, 17.11.2026).
+    if (COIN_POSITIONS.includes(pos)) steps.push({ kind: 'pause' }, ...(pos === project.games.length ? [{ kind: 'ranking' }] : []), { kind: 'coin', pos });
   });
-  steps.push({ kind: 'ranking' }, { kind: 'finaleTitle' }, { kind: 'finale' }, { kind: 'end' });
+  if (!steps.some((x) => x.kind === 'ranking')) steps.push({ kind: 'ranking' });
+  steps.push({ kind: 'finaleTitle' }, { kind: 'finale' }, { kind: 'end' });
   return steps.map((st, i) => ({ id: `std${i}`, ...st }));
 }
 
@@ -734,6 +738,22 @@ function addGameScoreSteps(project) {
     }
   });
   project.rundown = out.slice(0, RUN_MAX);
+}
+
+// Gespeicherte Abläufe einmalig anpassen: die Rangliste vor dem Finale kommt jetzt nach der Pause
+// und VOR der letzten Münze (Gesamtstand → Münze → Finale), Wunsch von Fabian (17.11.2026).
+function moveFinalRanking(project) {
+  if (project.rankingBeforeCoin) return;
+  project.rankingBeforeCoin = true;
+  const rd = project.rundown;
+  if (!Array.isArray(rd) || !rd.length) return;
+  const lastCoin = rd.map((x) => x.kind).lastIndexOf('coin');
+  const fin = rd.findIndex((x, i) => i > lastCoin && (x.kind === 'finaleTitle' || x.kind === 'finale'));
+  if (lastCoin < 0 || fin < 0) return;
+  const k = rd.findIndex((x, i) => x.kind === 'ranking' && i > lastCoin && i < fin);
+  if (k < 0) return;
+  const [rank] = rd.splice(k, 1);
+  rd.splice(lastCoin, 0, rank);
 }
 
 // Gespeicherte Abläufe einmalig ergänzen: Show-Intro direkt nach dem Startbild (Wunsch: in jeder Show).
@@ -871,9 +891,9 @@ function runStep(db, ctx, index) {
       return { notice: 'Gleichstand: Bitte zuerst die Schätzfrage entscheiden, dann den Schritt erneut auslösen.' };
     }
     // Münze der richtigen Position zeigen (auch beim Zurückblättern).
-    // Letzte Münze, direkt danach kommt die große Rangliste: dort keinen zweiten Gesamtstand zeigen.
-    const rest = steps.slice(index + 1);
-    const beforeFinal = !rest.some((x) => x.kind === 'coin' || x.kind === 'game') && rest.some((x) => x.kind === 'ranking');
+    // Kam seit dem letzten Spiel schon eine Rangliste (Gesamtstand), zeigt die Münze keinen zweiten Gesamtstand.
+    const lastGame = steps.slice(0, index).map((x) => x.kind).lastIndexOf('game');
+    const beforeFinal = steps.slice(lastGame + 1, index).some((x) => x.kind === 'ranking');
     db.live.beamer = { view: 'coin', data: { position: coin.position, teamId: coin.teamId, ...(beforeFinal ? { noBoard: true } : {}) } };
     effect(db, 'coin');
   } else if (st.kind === 'gameScore') {
@@ -1830,7 +1850,7 @@ function teamView(db, teamId, now = Date.now()) {
     if (play) view.play = { type: g.type, ...play, scoring: scoringOf(g) };
     if (play) view.timer = timerInfo(db, now);
     // Teamauswahl über die Pulte: dann die Avatare mitschicken (sonst nicht, die Bilder sind groß).
-    if (play && picksTeam(play)) view.teams = db.project.teams.map((t) => (t.avatar ? { id: t.id, name: t.name, color: t.color, avatar: t.avatar } : { id: t.id, name: t.name, color: t.color }));
+    // Avatare kommen über die Pult-Leiste (einmal geladen, Version in teams[].av) – nicht mehr in jedem Update.
   } else if (db.live.finale) {
     view.finale = FINALE.teamView(db, teamId);
   }
@@ -1838,14 +1858,6 @@ function teamView(db, teamId, now = Date.now()) {
 }
 
 // Darf das Team gerade ein oder mehrere Teams auswählen (Tausch, Ziel, Umleitung, Joker)?
-function picksTeam(play) {
-  if (Array.isArray(play.swapTargets) && play.swapTargets.length) return true;
-  if (Array.isArray(play.choose) && play.choose.length) return true;
-  if (Array.isArray(play.guessTeams) && play.guessTeams.length) return true;
-  if (play.redirect && Array.isArray(play.targets)) return true;
-  if (play.canUseJoker && Array.isArray(play.jokers) && play.jokers.some((j) => j.needsTarget && j.usable)) return true;
-  return false;
-}
 
 // Öffentlicher Punktestand: Punkte, deren Auflösung noch aussteht (fxPending), zählen noch nicht –
 // so verrät die Pult-Leiste auf den iPads keine geheime Bewertung.
@@ -1856,8 +1868,17 @@ function publicPoints(db) {
   return sums;
 }
 
+// Kurze Kennung eines Avatars (ändert sich mit dem Bild); das Bild selbst holen die Geräte einmal.
+function avatarVersion(img) {
+  if (!img) return null;
+  let x = 2166136261;
+  const tail = img.slice(-256);
+  for (let i = 0; i < tail.length; i++) x = Math.imul(x ^ tail.charCodeAt(i), 16777619);
+  return `${img.length.toString(36)}${(x >>> 0).toString(36)}`;
+}
+
 function publicTeams(db) {
-  return db.project.teams.map((t) => ({ id: t.id, name: t.name, color: t.color }));
+  return db.project.teams.map((t) => (t.avatar ? { id: t.id, name: t.name, color: t.color, av: avatarVersion(t.avatar) } : { id: t.id, name: t.name, color: t.color }));
 }
 
 // Nächster Zeitpunkt, an dem die Server alle Sichten neu senden sollen.

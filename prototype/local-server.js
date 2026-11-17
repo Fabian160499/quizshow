@@ -326,6 +326,7 @@ export function createLocalServer() {
 
     api(name, body) {
       if (name === 'teams') return [200, data.project.teams.map((t) => ({ id: t.id, name: t.name, color: t.color }))];
+      if (name === 'avatar') { const t = data.project.teams.find((x) => x.id === (body && body.teamId)); return [200, { src: t && t.avatar ? t.avatar : null }]; }
       if (name === 'probe') return [200, probe ? { active: true, title: probe.title } : { active: false }];
       if (name === 'login') {
         return body.password === PASSWORD ? [200, { token: DEMO_TOKEN }] : [401, { error: 'Passwort ist falsch. Es lautet „fabian“.' }];

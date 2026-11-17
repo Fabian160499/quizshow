@@ -170,6 +170,16 @@ export async function mediaUrl(id) {
   return url;
 }
 
+// Team-Avatar als Bildadresse – je Version nur einmal geladen (Pult-Leiste, Punkte-Folie).
+const avatarSrcs = new Map();
+export function avatarSrc(teamId, v) {
+  if (!teamId || !v) return Promise.resolve(null);
+  if (!localServer) return Promise.resolve(`avatar/${encodeURIComponent(teamId)}?v=${v}`);
+  const key = `${teamId}:${v}`;
+  if (!avatarSrcs.has(key)) avatarSrcs.set(key, Promise.resolve(localServer.api('avatar', { teamId })).then((r) => { const b = Array.isArray(r) ? r[1] : (r && r.body) || r; return (b && b.src) || null; }).catch(() => null));
+  return avatarSrcs.get(key);
+}
+
 // Show-Titel in der Logo-Schrift; das Wort „uns“ wird hervorgehoben.
 export function showTitle(name, tag = 'span', cls = '') {
   const words = String(name || '').trim().split(/(\s+)/);

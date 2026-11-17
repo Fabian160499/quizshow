@@ -2724,3 +2724,8 @@ html.reduced-motion .pult.pick { animation: none; }
 .beamer .tv-panel:has(.pult-stage) { width: min(92vw, 170vh); max-width: none; margin-left: auto; margin-right: auto; padding-bottom: 7.5vh; align-self: center; }
 .tv-panel .pult-stage { width: 100%; }
 .pult-stage .pult-rings { --r: 2vh; }
+/* Avatar im Bogen: steht hinter dem Pult, unten von der Pultkante abgeschnitten */
+.pult-avatar { position: absolute; left: 50%; bottom: -8%; transform: translateX(-50%); width: 78%; height: 112%; object-fit: contain; object-position: 50% 100%; z-index: 1; filter: drop-shadow(0 0 .4em rgba(0, 0, 0, .5)); }
+.pult-avatar[hidden] { display: none; }
+.pult-mark { z-index: 3; }
+.pult-stage .pult-avatar { width: 96%; height: 96%; bottom: -4%; }

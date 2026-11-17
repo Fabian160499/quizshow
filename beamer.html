@@ -21,7 +21,7 @@
   </div>
 
   <script type="module">
-    import { h, connect, mediaUrl, coinImg } from './assets/js/client.js';
+    import { h, connect, mediaUrl, coinImg, avatarSrc } from './assets/js/client.js';
     import { syncTimer } from './assets/js/timer-ui.js';
     import { renderGame } from './assets/js/beamer-play.js';
     import { setMediaEnv, syncMedia, soundEnabled } from './assets/js/beamer-extra.js';
@@ -654,7 +654,13 @@
       const nodes = new Map();
       start.forEach((r, i) => {
         const n = h('div', { class: 'pult in', '--team': r.color, style: { animationDelay: `${i * 0.15}s` } },
-          h('div', { class: 'pult-arch' }, h('i', { class: 'pult-rings' })),
+          h('div', { class: 'pult-arch' }, h('i', { class: 'pult-rings' }), (() => {
+            const t = (s.teams || []).find((x) => x.id === r.teamId);
+            if (!t || !t.av) return null;
+            const img = h('img', { class: 'pult-avatar', alt: '' });
+            avatarSrc(t.id, t.av).then((src) => { if (src) img.src = src; });
+            return img;
+          })()),
           h('div', { class: 'pult-desk' }, h('div', { class: 'pult-panel' },
             h('span', { class: 'pult-names', 'aria-hidden': 'true' }, Array.from({ length: 10 }, () => r.name.toUpperCase()).join(' ')),
             h('b', { class: 'pult-score' }, '0'))),
