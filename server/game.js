@@ -871,7 +871,10 @@ function runStep(db, ctx, index) {
       return { notice: 'Gleichstand: Bitte zuerst die Schätzfrage entscheiden, dann den Schritt erneut auslösen.' };
     }
     // Münze der richtigen Position zeigen (auch beim Zurückblättern).
-    db.live.beamer = { view: 'coin', data: { position: coin.position, teamId: coin.teamId } };
+    // Letzte Münze, direkt danach kommt die große Rangliste: dort keinen zweiten Gesamtstand zeigen.
+    const rest = steps.slice(index + 1);
+    const beforeFinal = !rest.some((x) => x.kind === 'coin' || x.kind === 'game') && rest.some((x) => x.kind === 'ranking');
+    db.live.beamer = { view: 'coin', data: { position: coin.position, teamId: coin.teamId, ...(beforeFinal ? { noBoard: true } : {}) } };
     effect(db, 'coin');
   } else if (st.kind === 'gameScore') {
     // Nur die Punkte dieses Spiels (nicht der Gesamtstand).

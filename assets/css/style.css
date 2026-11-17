@@ -2703,3 +2703,24 @@ html.reduced-motion .pult.pick { animation: none; }
   .ksw.ipad-wall { grid-template-rows: repeat(4, minmax(max(62px, calc(92px - var(--pults-h) / 3)), auto)); }
   .team-main .map-box .map { max-height: max(220px, calc(100dvh - 440px - var(--pults-h, 0px))); }
 }
+
+/* ===== Beamer: Punkte des Spiels im Pult-Layout ===== */
+.pult-stage { width: min(94vw, 175vh); height: 46vh; margin: 3vh auto 0; padding-top: 1vh; -webkit-box-reflect: below 1vh linear-gradient(transparent 55%, rgba(255, 255, 255, .16)); }
+.pult-stage .pult-row { max-width: none; gap: 1.6vw; }
+.pult-stage .pult { opacity: 1; }
+.pult-stage .pult.in { animation: pultIn .7s cubic-bezier(.2, .8, .2, 1.2) both; }
+@keyframes pultIn { from { opacity: 0; transform: translateY(6vh) scale(.92); } }
+.pult-stage .pult-arch { margin: 0 9%; }
+.pult-stage .pult-rings { --r: 1.4vh; filter: drop-shadow(0 0 .8vh var(--team)); }
+.pult-stage .pult-desk { height: 15vh; border-radius: .8vh .8vh .3vh .3vh; }
+.pult-stage .pult-names { font-size: 1.3vh; }
+.pult-stage .pult-score { font-size: 8vh; text-shadow: 0 0 1.4vh var(--team); }
+.pult-stage .pult-name { top: auto; bottom: -5.2vh; font-size: 2.6vh; letter-spacing: .04em; }
+.pult-stage.done .pult:not(.lead) { filter: brightness(.82); }
+.pult-stage .pult.lead { filter: brightness(1.15) saturate(1.2); transform: translateY(-1.5vh); transition: transform .6s cubic-bezier(.2, .8, .2, 1.4); }
+.pult-stage .pult.lead .pult-desk { box-shadow: 0 0 0 .4vh #fff, 0 0 4vh var(--team); }
+.pult-stage .pult.lead::before { content: '★'; position: absolute; left: 50%; top: -5.5vh; transform: translateX(-50%); font-size: 4.5vh; color: #ffd166; text-shadow: 0 0 2vh #ffb000; animation: pultStar .6s cubic-bezier(.2, .8, .2, 1.5) both; }
+@keyframes pultStar { from { opacity: 0; transform: translate(-50%, 2vh) scale(.3); } }
+.beamer .tv-panel:has(.pult-stage) { width: min(92vw, 170vh); max-width: none; margin-left: auto; margin-right: auto; padding-bottom: 7.5vh; align-self: center; }
+.tv-panel .pult-stage { width: 100%; }
+.pult-stage .pult-rings { --r: 2vh; }

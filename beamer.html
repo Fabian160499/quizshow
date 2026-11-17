@@ -644,8 +644,60 @@
       return out;
     }
 
+    // Punkte des Spiels im Pult-Layout (wie auf den iPads): Pulte erscheinen, Punkte zählen hoch,
+    // dann gleiten die Pulte in die Reihenfolge – links die meisten, rechts die wenigsten Punkte.
+    function gamePults(s) {
+      const list = s.ranking || [];
+      const start = (s.teams || []).map((t) => list.find((r) => r.teamId === t.id)).filter(Boolean);
+      for (const r of list) if (!start.includes(r)) start.push(r);
+      const row = h('div', { class: 'pult-row' });
+      const nodes = new Map();
+      start.forEach((r, i) => {
+        const n = h('div', { class: 'pult in', '--team': r.color, style: { animationDelay: `${i * 0.15}s` } },
+          h('div', { class: 'pult-arch' }, h('i', { class: 'pult-rings' })),
+          h('div', { class: 'pult-desk' }, h('div', { class: 'pult-panel' },
+            h('span', { class: 'pult-names', 'aria-hidden': 'true' }, Array.from({ length: 10 }, () => r.name.toUpperCase()).join(' ')),
+            h('b', { class: 'pult-score' }, '0'))),
+          h('span', { class: 'pult-name' }, r.name));
+        nodes.set(r.teamId, n);
+        row.append(n);
+      });
+      const stage = h('div', { class: 'pult-stage' }, row);
+      const places = list.map((r, i) => (i > 0 && r.points === list[i - 1].points ? null : i + 1));
+      for (let i = 1; i < places.length; i++) if (places[i] === null) places[i] = places[i - 1];
+      const reduced = document.documentElement.classList.contains('reduced-motion');
+      const speed = Number(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
+      const grow = () => {
+        for (const r of list) {
+          const el = nodes.get(r.teamId).querySelector('.pult-score');
+          if (reduced) { el.textContent = String(r.points); continue; }
+          const t0 = performance.now(), dur = 2200 * speed;
+          const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(r.points * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
+          requestAnimationFrame(step);
+        }
+      };
+      const finish = () => { list.forEach((r, i) => nodes.get(r.teamId).classList.toggle('lead', places[i] === 1 && r.points > 0)); stage.classList.add('done'); };
+      const reorder = () => {
+        const before = new Map([...nodes].map(([id, n]) => [id, n.getBoundingClientRect().left]));
+        for (const n of nodes.values()) { n.classList.remove('in'); n.style.animationDelay = ''; } // sonst startet das Einblenden beim Umsortieren neu
+        for (const r of list) row.append(nodes.get(r.teamId));
+        for (const [id, n] of nodes) {
+          const dx = before.get(id) - n.getBoundingClientRect().left;
+          if (dx) n.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 1500 * speed, easing: 'cubic-bezier(.45,0,.2,1)' });
+        }
+        setTimeout(finish, 1500 * speed);
+      };
+      if (reduced) { grow(); for (const r of list) row.append(nodes.get(r.teamId)); finish(); }
+      else {
+        setTimeout(grow, (0.8 + start.length * 0.15) * 1000 * speed);
+        setTimeout(reorder, (3.6 + start.length * 0.15) * 1000 * speed);
+      }
+      return [tvPanel(`Kategorie ${s.rankGame.pos} von 8`, s.rankGame.title, stage)];
+    }
+
     function ranking(s) {
       if (s.rankFinal) return finalRanking(s);
+      if (s.rankGame) return gamePults(s);
       finalShown = 0;
       const list = s.ranking || [];
       const max = Math.max(1, ...list.map((r) => r.points));
@@ -921,7 +973,7 @@
         wrap.replaceChildren(
           h('div', { class: 'kicker' }, stage ? `Gewinnstufe ${stage}` : `Münze nach Spiel ${s.coin.position}`),
           h('div', { class: 'coin-teams' },
-            teamsScene(s, { points: true, winnerId: t.id, flyPosition: s.coin.position, banner: h('div', { class: 'scene-banner', '--team': t.color }, coinImg('banner-coin'), ` Münze an ${t.name}`) })));
+            teamsScene(s, { points: !s.coin.noBoard, winnerId: t.id, flyPosition: s.coin.position, banner: h('div', { class: 'scene-banner', '--team': t.color }, coinImg('banner-coin'), ` Münze an ${t.name}`) })));
       };
       // Zwischenschritt: Gesamtpunkte im TV-Stil, bevor die Münze zum Gewinner fliegt.
       const showBoard = () => {
@@ -938,7 +990,10 @@
       };
       const speed = Number(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
       if (s.settings.reducedMotion) showTeams();
-      else {
+      else if (s.coin.noBoard) {
+        // Letzte Münze vor der großen Rangliste: kein eigener Gesamtstand (sonst doppelt).
+        titleTimer = setTimeout(showTeams, 7600 * speed);
+      } else {
         titleTimer = setTimeout(() => {
           showBoard();
           titleTimer = setTimeout(showTeams, (8000 + s.teams.length * 350) * speed);
