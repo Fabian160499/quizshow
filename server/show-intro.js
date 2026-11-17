@@ -135,14 +135,18 @@ function texts(project) {
 }
 
 // Alle Sprachclips, die die KI-Stimme erzeugen kann: Schlüssel → Text.
+// So wird gesprochen: „&“ und „+“ auf Deutsch (sonst sagt die KI „and“). Auf dem Bildschirm bleibt das Zeichen.
+function spoken(s) {
+  return String(s || '').replace(/\s*&\s*/g, ' und ').replace(/(\S)\s*\+\s*(\S)/g, '$1 plus $2').replace(/ {2,}/g, ' ').trim();
+}
 function clipTexts(project) {
   const t = texts(project);
   const out = {};
-  const put = (k, s) => { if (String(s || '').trim()) out[k] = s; };
+  const put = (k, s) => { if (String(s || '').trim()) out[k] = spoken(s); };
   put('cold', t.tx['voice.cold']);
   put('count', t.tx['voice.count']);
   put('drop', t.tx['voice.drop']);
-  put('lines', t.lines.join(' … '));
+  t.lines.forEach((l, i) => put(`line:${i}`, l)); // eine Ansage je Zeile: Text erscheint, wenn er gesprochen wird
   for (const x of t.teams) put(`team:${x.teamId}`, x.call);
   if (t.coHost) put('coHost', t.coHost.call);
   put('host', t.host.call);
@@ -160,6 +164,8 @@ function validClips(project) {
     const clip = c.clips[k];
     if (clip && clip.id && (clip.own || clip.hash === hashOf(text))) out[k] = { id: clip.id, type: clip.type };
   }
+  // Ältere eigene Aufnahme für die ganze Off-Ansage gilt weiter
+  if (c.clips.lines && c.clips.lines.own && c.clips.lines.id) out.lines = { id: c.clips.lines.id, type: c.clips.lines.type };
   return out;
 }
 // KI-Soundeffekte, die zum aktuellen Thema passen.
@@ -224,10 +230,10 @@ function flow(db) {
   if (next.startsWith('team:')) {
     const k = Number(next.slice(5));
     const team = db.project.teams[k];
-    return { label: `🎤 Team ${k + 1} von ${db.project.teams.length} vorstellen: ${team ? team.name : ''}`, action: 'showIntro.next', mod: true, cue: `${t.teams[k] ? t.teams[k].call : ''}${team ? warn(`team:${team.id}`) : ''}` };
+    return { label: `🎤 Team ${k + 1} von ${db.project.teams.length} vorstellen: ${team ? team.name : ''} (läuft von allein – Klick springt sofort)`, action: 'showIntro.next', mod: true, cue: `${t.teams[k] ? t.teams[k].call : ''}${team ? warn(`team:${team.id}`) : ''}` };
   }
-  if (next === 'coHost') return { label: `🎤 Co-Moderation vorstellen: ${db.project.coHost}`, action: 'showIntro.next', mod: true, cue: `${t.coHost ? t.coHost.call : ''}${warn('coHost')}` };
-  if (next === 'host') return { label: `🌟 Moderation vorstellen: ${db.project.host || 'Moderation'}`, action: 'showIntro.next', mod: true, cue: `${t.host.call}${warn('host')}` };
+  if (next === 'coHost') return { label: `🎤 Co-Moderation vorstellen: ${db.project.coHost} (läuft von allein – Klick springt sofort)`, action: 'showIntro.next', mod: true, cue: `${t.coHost ? t.coHost.call : ''}${warn('coHost')}` };
+  if (next === 'host') return { label: `🌟 Moderation vorstellen: ${db.project.host || 'Moderation'} (läuft von allein – Klick springt sofort)`, action: 'showIntro.next', mod: true, cue: `${t.host.call}${warn('host')}` };
   return { label: '🎉 Alle zusammen – Intro abschließen', action: 'showIntro.next', mod: true, cue: `Begrüßung: ${t.greeting}` };
 }
 
@@ -258,7 +264,7 @@ const actions = {
     // Eigene Aufnahme eines gesprochenen Textes (gilt unabhängig vom Text).
     if ('voiceUpload' in p) {
       const key = String(p.voiceKey || 'lines');
-      if (!(key in clipTexts(pr)) && !/^team:/.test(key)) fail('Unbekannter Sprechtext.');
+      if (!(key in clipTexts(pr)) && !/^team:/.test(key) && key !== 'lines') fail('Unbekannter Sprechtext.');
       const m = cleanMedia(p.voiceUpload, 'audio|video');
       c.clips = { ...(c.clips || {}) };
       if (m) c.clips[key] = { ...m, own: true };
@@ -320,14 +326,41 @@ const actions = {
   'showIntro.next'(db, ctx) {
     const d = current(db);
     if (!d) fail('Das Show-Intro läuft gerade nicht.');
-    const list = phases(db.project);
-    const i = list.indexOf(d.phase);
-    if (i < 0 || i + 1 >= list.length) fail('Das Show-Intro ist schon fertig.');
-    db.live.beamer = { view: 'showIntro', data: { phase: list[i + 1], at: ctx.now, seq: (d.seq || 0) + 1 } };
-    effect(db, 'reveal');
-    log(db, ctx, 'ablauf', `Show-Intro: ${list[i + 1]}`);
+    if (!advance(db, ctx)) fail('Das Show-Intro ist schon fertig.');
   },
 };
+
+// Nächster Auftritt im Intro. Läuft von allein durch: der Beamer meldet das Ende jedes Teils
+// (beamer.introStep), zur Sicherheit geht es nach STEP_MAX auch ohne Beamer weiter.
+function advance(db, ctx) {
+  const d = current(db);
+  const list = phases(db.project);
+  const i = list.indexOf(d.phase);
+  if (i < 0 || i + 1 >= list.length) return false;
+  db.live.beamer = { view: 'showIntro', data: { phase: list[i + 1], at: ctx.now, seq: (d.seq || 0) + 1 } };
+  effect(db, 'reveal');
+  log(db, ctx, 'ablauf', `Show-Intro: ${list[i + 1]}`);
+  return true;
+}
+const STEP_MAX = (phase) => (phase === 'auto' ? 120000 : 30000);
+// Beamer meldet: dieser Teil ist zu Ende (nur, wenn es noch der aktuelle Teil ist).
+function stepDone(db, ctx, p) {
+  const d = current(db);
+  if (!d || d.seq !== Number(p.seq) || d.phase !== String(p.phase)) return false;
+  return advance(db, ctx);
+}
+// Sicherheitsnetz ohne Beamer: Zeitpunkt des nächsten automatischen Schritts bzw. Schritt ausführen.
+function wakeAt(db) {
+  const d = current(db);
+  if (!d) return null;
+  const list = phases(db.project);
+  if (list.indexOf(d.phase) + 1 >= list.length) return null;
+  return d.at + STEP_MAX(d.phase);
+}
+function tick(db, now) {
+  const at = wakeAt(db);
+  return !!(at && now >= at && advance(db, { role: 'system', actor: 'system', now }));
+}
 
 // Daten für den Beamer.
 function beamerData(db) {
@@ -412,4 +445,4 @@ function referencedMedia(project, ids) {
   for (const m of Object.values(c.songs || {})) if (m && m.id) ids.add(m.id);
 }
 
-module.exports = { sfxPrompts, validSfx, musicPlan, THEMES, THEME_IDS, DEFAULT_THEME, CATALOG, actions, start, flow, phases, beamerData, teamData, moderatorData, clipTexts, validClips, hashOf, texts, referencedMedia, current };
+module.exports = { stepDone, wakeAt, tick, spoken, sfxPrompts, validSfx, musicPlan, THEMES, THEME_IDS, DEFAULT_THEME, CATALOG, actions, start, flow, phases, beamerData, teamData, moderatorData, clipTexts, validClips, hashOf, texts, referencedMedia, current };

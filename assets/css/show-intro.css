@@ -133,6 +133,10 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-line { z-index: 3; max-width: 86vw; font-family: var(--f); font-size: min(10vh, 6.4vw); font-weight: 900; line-height: 1.04; animation: siLine 2.8s cubic-bezier(.2, .9, .3, 1) both; }
 .si-line.last { --m2: var(--c); font-size: min(12.5vh, 7.6vw); animation: siLineLast 1.1s cubic-bezier(.2, 1.4, .4, 1) both; }
 @keyframes siLine { 0% { opacity: 0; transform: scale(1.18); letter-spacing: .25em; filter: blur(8px); } 16% { opacity: 1; transform: none; letter-spacing: .01em; filter: none; } 84% { opacity: 1; transform: scale(.985); } 100% { opacity: 0; transform: scale(.96); filter: blur(4px); } }
+/* Zeilen im Takt der KI-Stimme: reinkommen und stehen bleiben, bis die nächste Zeile kommt */
+.si-line.chain { animation: siLineIn .45s cubic-bezier(.2, .9, .3, 1) both; }
+.si-line.chain.last { animation: siLineLast 1.1s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes siLineIn { 0% { opacity: 0; transform: scale(1.18); letter-spacing: .25em; filter: blur(8px); } 100% { opacity: 1; transform: none; letter-spacing: .01em; filter: none; } }
 @keyframes siLineLast { from { opacity: 0; transform: scale(2.2); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
 .si-hold { align-self: end; margin-bottom: 13vh; z-index: 3; font-family: var(--ui); font-size: 3.4vh; font-weight: 800; letter-spacing: .4em; text-transform: uppercase; color: var(--b); text-shadow: 0 0 2vh var(--b); animation: siBlink 1.8s ease-in-out infinite alternate; }
 @keyframes siBlink { from { opacity: .4; } to { opacity: 1; } }
@@ -365,7 +369,7 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-ret .x { width: 100%; height: 100%; background: linear-gradient(#4cc9ff, #4cc9ff) center/ .3vh 100% no-repeat, linear-gradient(#4cc9ff, #4cc9ff) center/100% .3vh no-repeat; opacity: .5; animation: siRetIn .8s ease-out both; }
 @keyframes siLock { 0% { filter: brightness(3) blur(10px); opacity: 0; transform: scale(1.3); } 100% { filter: none; opacity: 1; transform: none; } }
 @keyframes siRetIn { from { transform: scale(2); opacity: 0; } }
-.si-ret-data { justify-self: end; margin-right: 8vw; text-align: left; display: flex; flex-direction: column; gap: 1.2vh; font-family: "SI Mono", monospace; color: #9fe3ff; animation: siItem .6s ease-out calc(var(--hit) + .3s) both; }
+.si-ret-data { justify-self: start; margin-left: calc(10vw + 68vh); max-width: calc(100vw - 10vw - 68vh - 5vw); text-align: left; display: flex; flex-direction: column; gap: 1.2vh; font-family: "SI Mono", monospace; color: #9fe3ff; animation: siItem .6s ease-out calc(var(--hit) + .3s) both; }
 .si-ret-data small { font-size: 2.2vh; letter-spacing: .3em; text-transform: uppercase; }
 .si-ret-data b { font-size: 10vh; color: #fff; line-height: 1; text-transform: uppercase; }
 .si-ret-data span { font-size: 2.8vh; }
@@ -566,7 +570,7 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .si-weltraum .si-logo-wrap.small { margin-top: 13vh; }
 .si-weltraum .si-hold { font-family: "SI Orbit", sans-serif; font-weight: 400; letter-spacing: .2em; font-size: 2.2vh; }
 /* Team-Auftritte im Glas-Look */
-.si-weltraum .si-ret-data { padding: 3vh 2vw; border-radius: 2.4vh; background: linear-gradient(160deg, rgba(40, 48, 60, .6), rgba(12, 16, 22, .75)); border: 1px solid rgba(255, 255, 255, .1); -webkit-backdrop-filter: blur(1.2vh); backdrop-filter: blur(1.2vh); font-family: "SI Exo", sans-serif; min-width: 28vw; }
+.si-weltraum .si-ret-data { padding: 3vh 2vw; border-radius: 2.4vh; background: linear-gradient(160deg, rgba(40, 48, 60, .6), rgba(12, 16, 22, .75)); border: 1px solid rgba(255, 255, 255, .1); -webkit-backdrop-filter: blur(1.2vh); backdrop-filter: blur(1.2vh); font-family: "SI Exo", sans-serif; min-width: min(28vw, 100%); box-sizing: border-box; }
 .si-weltraum .si-ret-data b { font-family: "SI Orbit", sans-serif; font-weight: 400; color: #fff; }
 .si-weltraum .si-ret-data small { color: #8fe0ff; font-family: "SI Orbit", sans-serif; font-size: 1.5vh; }
 .si-weltraum .si-ret-data em { display: inline-block; align-self: flex-start; font-family: "SI Orbit", sans-serif; font-size: 1.5vh; padding: .8vh 1.4vw; border-radius: 999px; background: #3ef08f; color: #031207; box-shadow: 0 0 1.4vh #3ef08f; }

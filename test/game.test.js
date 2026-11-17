@@ -1656,3 +1656,24 @@ test('Show-Intro: Regie warnt, wenn für einen Auftritt keine passende KI-Ansage
   game.applyAction(db, mod(), 'run.next', {});
   assert.match(game.moderatorView(db).flow.cue, /keine KI-Ansage/);
 });
+
+test('Show-Intro läuft ohne Klick durch: Beamer meldet Ende, Sicherheitsnetz ohne Beamer', () => {
+  const { db } = setup(3);
+  db.project.host = 'Fabian'; db.project.coHost = 'Lena';
+  const steps = game.moderatorView(db).rundown;
+  game.applyAction(db, { role: 'moderator', actor: 'mod', now: 1000 }, 'run.goto', { index: steps.findIndex((s) => s.kind === 'showIntro') });
+  const d = () => db.live.beamer.data;
+  const beamer = (now, p) => game.applyAction(db, { role: 'beamer', actor: 'beamer', now }, 'beamer.introStep', p);
+  const seq = d().seq;
+  beamer(5000, { phase: 'auto', seq: seq + 7 }); // falscher Teil: nichts passiert
+  assert.equal(d().phase, 'auto');
+  beamer(52000, { phase: 'auto', seq });
+  assert.equal(d().phase, 'team:0');
+  beamer(53000, { phase: 'auto', seq }); // doppelt gemeldet: kein Sprung
+  assert.equal(d().phase, 'team:0');
+  // ohne Beamer: nach spätestens 30 s geht es weiter
+  assert.equal(game.tick(db, d().at + 29000), false);
+  assert.equal(game.tick(db, d().at + 30000), true);
+  assert.equal(d().phase, 'team:1');
+  assert.ok(game.nextWake(db, d().at) <= d().at + 30000);
+});

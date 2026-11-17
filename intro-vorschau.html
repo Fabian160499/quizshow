@@ -113,7 +113,7 @@
       // Chrome verschluckt eine Ansage, wenn sie direkt nach cancel() startet – kurz warten.
       const busy = speechSynthesis.speaking || speechSynthesis.pending;
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text.replace(/…/g, ', '));
+      const u = new SpeechSynthesisUtterance(text.replace(/…/g, ', ').replace(/\s*&\s*/g, ' und '));
       u.lang = 'de-DE'; u.rate = 0.95; u.pitch = 0.8; u.volume = 1;
       const v = voices.find((x) => /male|männ|stefan|markus|yannick|conrad|google deutsch/i.test(x.name)) || voices[0];
       if (v) u.voice = v;

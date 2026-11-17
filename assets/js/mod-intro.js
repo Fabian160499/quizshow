@@ -131,10 +131,11 @@ function voiceCard(x, si) {
 }
 function clipList(x, si) {
   const names = { cold: 'Ganz am Anfang', count: 'Vor dem Höhepunkt', drop: 'Beim Höhepunkt', lines: 'Off-Ansage', all: 'Zum Schluss', host: 'Moderation', coHost: 'Co-Moderation' };
+  const lineName = (k) => (/^line:\d+$/.test(k) ? `Off-Ansage, Zeile ${Number(k.slice(5)) + 1}` : null);
   const teamName = (k) => { const t = x.S.project.teams.find((tt) => `team:${tt.id}` === k); return t ? `Team ${t.name}` : k; };
   return h('details', { class: 'si-clips' }, h('summary', {}, 'Alle gesprochenen Texte – Status und eigene Aufnahmen'),
     h('ul', {}, Object.entries(si.clips).map(([k, c]) => h('li', {},
-      h('span', { class: c.ready ? 'ok' : 'muted' }, c.ready ? (c.own ? '🎤' : '✓') : '○'), ' ', h('b', {}, names[k] || teamName(k)), ': ', h('span', { class: 'muted' }, c.text),
+      h('span', { class: c.ready ? 'ok' : 'muted' }, c.ready ? (c.own ? '🎤' : '✓') : '○'), ' ', h('b', {}, names[k] || lineName(k) || teamName(k)), ': ', h('span', { class: 'muted' }, c.text),
       h('div', { class: 'row', style: { marginTop: '4px' } },
         uploadButton(x, c.own ? 'Andere Aufnahme' : 'Eigene Aufnahme', 'audio/*,.mp3,.m4a,.wav', (m) => x.act('showIntro.set', { voiceKey: k, voiceUpload: m }), `clip-${k}`),
         c.own ? h('button', { class: 'btn ghost small', onclick: () => x.act('showIntro.set', { voiceKey: k, voiceUpload: null }) }, 'Aufnahme entfernen') : null)))));

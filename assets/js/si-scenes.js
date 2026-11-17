@@ -1,7 +1,7 @@
 // Show-Intro – Regie je Thema: Eröffnung (automatisch), Personen-Auftritte, Finale.
 // Alle sichtbaren Texte kommen aus si.tx / si.teams / si.host (im Editor änderbar).
 
-import { h, later, atTime, esc, frag, logoEl, avatarOf, nowEl } from './si-core.js';
+import { h, later, atTime, esc, frag, logoEl, avatarOf, nowEl, run } from './si-core.js';
 import { mediaUrl } from './client.js';
 import { MAPS } from './map-data.js';
 const nowElSafe = () => nowEl(0);
@@ -293,8 +293,22 @@ function rocketEl() {
 function linesAndHold(c, stage, extra = () => []) {
   const { si, L, el, sound } = c;
   const tl = si.tl;
-  // Mit Aufnahme: ein Clip für alle Zeilen. Ohne: Browser-Stimme Zeile für Zeile, im Takt der Anzeige
-  // (lange Browser-Ansagen brechen in Chrome mittendrin ab).
+  const showLine = (i, chain) => {
+    const last = i === si.lines.length - 1;
+    stage.replaceChildren(...extra(), h('div', { class: `si-line ${L.font} si-metal-${L.metal}${last ? ' last' : ''}${chain ? ' chain' : ''}`, 'data-i': i }, si.lines[i]));
+    if (last) c.fx((fx) => { fx.burst(90, 'spark', fx.w / 2, fx.h / 2, 0.9); fx.flare(fx.w / 2, fx.h / 2); });
+  };
+  const showHold = () => {
+    stage.replaceChildren(...extra(true), h('div', { class: 'si-logo-wrap small' }, logoEl(c.s.show.name, L)), h('div', { class: 'si-hold' }, si.tx.hold));
+    c.fx((fx) => { fx.beams = 0.55; });
+    if (c.held) c.held();
+  };
+  // KI-Stimme mit einer Ansage je Zeile: jede Zeile erscheint genau, wenn sie gesprochen wird,
+  // die nächste erst, wenn die vorige zu Ende ist (die Stimme gibt das Tempo vor).
+  const lineClips = si.lines.map((_, i) => si.clips[`line:${i}`]);
+  if (c.env.sound && !si.clips.lines && si.lines.length && lineClips.some(Boolean)) { chainLines(c, lineClips, showLine, showHold); return; }
+  // Sonst fester Takt. Eine eigene Aufnahme für alle Zeilen läuft durch; ohne Aufnahme spricht die
+  // Browser-Stimme Zeile für Zeile im Takt der Anzeige (lange Browser-Ansagen brechen in Chrome ab).
   if (si.clips.lines) c.voice(si.clips.lines, si.lines.join(' … '), tl.lines);
   else si.lines.forEach((line, i) => c.voice(null, line, tl.lines + i * tl.line));
   si.lines.forEach((line, i) => {
@@ -303,14 +317,37 @@ function linesAndHold(c, stage, extra = () => []) {
     if (last) { sound('hit', t0, el, 0.8); c.shake(t0, false); } else sound('whoosh', t0 - 0.15, el, 0.5, 0.3);
     atTime(el, t0, () => {
       if (el > t0 + tl.line + 0.5 && !last) return;
-      stage.replaceChildren(...extra(), h('div', { class: `si-line ${L.font} si-metal-${L.metal}${last ? ' last' : ''}`, 'data-i': i }, line));
-      if (last) c.fx((fx) => { fx.burst(90, 'spark', fx.w / 2, fx.h / 2, 0.9); fx.flare(fx.w / 2, fx.h / 2); });
+      showLine(i, false);
     });
   });
-  atTime(el, tl.lines + si.lines.length * tl.line + 0.6, () => {
-    stage.replaceChildren(...extra(true), h('div', { class: 'si-logo-wrap small' }, logoEl(c.s.show.name, L)), h('div', { class: 'si-hold' }, si.tx.hold));
-    c.fx((fx) => { fx.beams = 0.55; });
-  });
+  atTime(el, tl.lines + si.lines.length * tl.line + 0.6, showHold);
+}
+// Ablauf der Zeilen im Takt der Ansagen. Der Fortschritt steht in run.chain, damit ein erneutes
+// Zeichnen des Beamers (neuer Stand) weder Zeilen doppelt abspielt noch die Kette abreißt.
+function chainLines(c, clips, showLine, showHold) {
+  const { si, el, sound } = c;
+  const tl = si.tl;
+  const n = si.lines.length;
+  if (!run.chain || run.chain.seq !== si.seq) run.chain = { seq: si.seq, starts: [tl.lines], played: -1 };
+  const ch = run.chain;
+  const elNow = () => nowEl(el);
+  const step = (i) => {
+    const last = i === n - 1;
+    if (ch.played < i) {
+      ch.played = i;
+      if (last) { sound('hit', elNow(), el, 0.8); c.shake(elNow(), false); } else sound('whoosh', elNow(), el, 0.5, 0.3);
+      let done = false;
+      const next = () => { if (done || run.chain !== ch) return; done = true; ch.starts[i + 1] = elNow() + (i + 1 < n ? 0.25 : 0.6); ch.go(i + 1); };
+      if (clips[i]) {
+        c.say(clips[i], next, 0.15);
+        setTimeout(next, 20000); // Sicherheitsnetz, falls eine Ansage nicht abspielt
+      } else setTimeout(next, tl.line * 1000);
+    }
+    showLine(i, true);
+  };
+  ch.go = (i) => atTime(el, ch.starts[i], () => (i >= n ? showHold() : step(i)));
+  // Bisherigen Stand nachzeichnen (die letzte begonnene Zeile bleibt stehen), dann weiter
+  for (let i = 0; i < ch.starts.length; i++) ch.go(i);
 }
 function presents(c, kicker, word) {
   return h('div', { class: 'si-present' }, h('small', {}, kicker), h('b', {}, word));

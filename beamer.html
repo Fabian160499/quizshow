@@ -266,7 +266,7 @@
       if (!['title', 'finaleTitle', 'stageTitle'].includes(s.view)) stopGameIntro();
       if (s.view !== 'showIntro' && document.body.classList.contains('si-active')) siStop();
       // Show-Intro: eigene Inszenierung über die ganze Leinwand (siehe assets/js/show-intro.js).
-      const showIntro = (st) => [siBeamer(st, { now: () => Date.now() + clockOffset, ctx: () => audio, audible: () => !!audio, sound: !!st.settings.sound && !embedded })];
+      const showIntro = (st) => [siBeamer(st, { now: () => Date.now() + clockOffset, ctx: () => audio, audible: () => !!audio, sound: !!st.settings.sound && !embedded, done: embedded ? null : (phase, seq) => conn.action('beamer.introStep', { phase, seq }).catch(() => {}) })];
       const views = { start, showIntro, video, intro, pyramid, title, game, ranking, coin, pause, stageTitle, hosts, finaleTitle, finale, blank: () => [] };
       if (s.view !== 'finale') prevFin = null;
       stage.replaceChildren(...(views[s.view] || start)(s, replayTitle));

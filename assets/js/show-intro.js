@@ -81,6 +81,17 @@ export function siBeamer(s, env) {
       });
     } else if (env.speak) later(Math.max(0, dt), () => env.speak(text));
   };
+  // Eine Ansage sofort (nach delay Sekunden) sprechen, onEnd wenn sie zu Ende ist (Zeilen im Takt der Stimme).
+  const say = (clip, onEnd, delay = 0) => {
+    run.voice = audioEl('si-voice', env);
+    const v = run.voice;
+    setTimeout(() => { // bewusst ohne later(): ein neues Zeichnen des Beamers darf die Ansage nicht verschlucken
+      duck(0.3); setVol(run.song, 0.35); setVol(run.jingle, 0.45);
+      v.onended = () => { duck(run.jingle && !run.jingle.paused ? 0.2 : 1, 900); setVol(run.song, 1); setVol(run.jingle, 1); onEnd(); };
+      v.onerror = () => onEnd();
+      playMedia(v, clip, 0, env, 1);
+    }, delay * 1000);
+  };
   // Jingle zum Auftritt: eigener Einlaufsong (ab dem Einschlag) oder Standard-Jingle (Einschlag bei 1,7 s)
   const jingle = (name, song, hitAt) => {
     if (!env.sound || !fresh || el > 0.6) return;
@@ -106,7 +117,7 @@ export function siBeamer(s, env) {
   const root = h('div', { class: `si si-${si.theme} ${L.font} ph-${si.phase.replace(':', '-')}`, '--a': L.a, '--b': L.b, '--c': L.c, '--d': L.d, '--bg': L.bg },
     h('div', { class: 'si-bg' }), h('div', { class: 'si-haze', 'aria-hidden': 'true' }), fxCanvas,
     h('div', { class: 'si-grain', 'aria-hidden': 'true' }), h('div', { class: 'si-vignette', 'aria-hidden': 'true' }));
-  const c = { root, si: { ...si, tl, tx: si.tx || {}, games: si.games || [], teams: si.teams || [], clips: si.clips || {}, lines: si.lines || [] }, s, L, el, sound, voice, jingle, env, ready: [] };
+  const c = { root, si: { ...si, tl, tx: si.tx || {}, games: si.games || [], teams: si.teams || [], clips: si.clips || {}, lines: si.lines || [] }, s, L, el, sound, voice, say, jingle, env, ready: [] };
   c.sound = sound;
   c.fx = (f) => (run.fx && !run.fx.stopped && run.fx.c === fxCanvas ? f(run.fx) : c.ready.push(f));
   c.shake = (at, strong) => atTime(el, at, () => { root.classList.remove('si-shake', 'si-shake-big'); void root.offsetWidth; root.classList.add(strong ? 'si-shake-big' : 'si-shake'); });
@@ -118,9 +129,22 @@ export function siBeamer(s, env) {
     c.ready = [];
   });
 
+  // Durchlaufen ohne Klick: Ende eines Teils melden (Eröffnung: kurz nach „Halten“; Auftritt: wenn die
+  // Ansage zu Ende ist, frühestens nach der Mindestzeit). Der Server geht dann zum nächsten Teil.
+  const report = () => { if (env.done && si.phase !== 'all') env.done(si.phase, si.seq); };
+  c.held = () => later(2, report);
   if (si.phase === 'auto') autoScene(c);
   else if (si.phase.startsWith('team:')) personScene(c, 'team');
   else if (si.phase === 'coHost' || si.phase === 'host') personScene(c, si.phase);
   else allScene(c);
+  if (si.phase !== 'auto' && si.phase !== 'all') {
+    const min = si.phase === 'host' ? 9 : si.phase === 'coHost' ? 8 : 7;
+    const check = () => {
+      const v = run.voice;
+      if (v && !v.paused && !v.ended) { later(0.5, check); return; } // Ansage läuft noch
+      later(1.5, report);
+    };
+    atTime(el, min - 1.5, check);
+  }
   return root;
 }

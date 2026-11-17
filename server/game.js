@@ -1592,6 +1592,7 @@ const moderatorActions = {
 // Zeitabläufe (z. B. abgelaufene Countdowns) in den Spielzustand übernehmen.
 // Gibt true zurück, wenn sich etwas geändert hat.
 function tick(db, now = Date.now()) {
+  if (SI.tick(db, now)) return true;
   const g = activeGame(db);
   const fn = g && PLAY[g.type].tick;
   if (!fn) return false;
@@ -1657,8 +1658,10 @@ function applyAction(db, ctx, name, payload, actionId) {
   const fxBefore = { ledger: db.ledger, len: db.ledger.length, seq: db.live.effect.seq, live: db.live, buzz: buzzTeamNow(db) };
   if (ctx.role === 'beamer') {
     // Der Beamer darf nur melden, dass das Intro-Lied eines Spieltitels zu Ende ist.
-    if (name !== 'beamer.introEnded') fail('Diese Aktion ist für diese Rolle nicht erlaubt.');
-    result = introEnded(db, ctx, payload || {}) || {};
+    // Außerdem: ein Teil des Show-Intros ist zu Ende (das Intro läuft von allein durch).
+    if (name === 'beamer.introStep') result = { ok: SI.stepDone(db, ctx, payload || {}) };
+    else if (name !== 'beamer.introEnded') fail('Diese Aktion ist für diese Rolle nicht erlaubt.');
+    else result = introEnded(db, ctx, payload || {}) || {};
   } else if (typeof name === 'string' && name.startsWith('play.') && (ctx.role === 'moderator' || ctx.role === 'team')) {
     if (ctx.role === 'team' && name !== 'play.options') {
       const ti = timerInfo(db, ctx.now);
@@ -1900,7 +1903,7 @@ function nextWake(db, now = Date.now()) {
   const fn = g && PLAY[g.type].wakeAt;
   const own = fn ? fn(db, g, gameState(db, g), now) : null;
   const tw = timerWake(db, now);
-  return [own, tw].filter(Boolean).sort((x, y) => x - y)[0] || null;
+  return [own, tw, SI.wakeAt(db)].filter(Boolean).sort((x, y) => x - y)[0] || null;
 }
 
 function beamerGameView(db) {
