@@ -88,6 +88,8 @@ const STATIC = {
   '/moderator.html': 'moderator.html',
   '/beamer.html': 'beamer.html',
   '/host.html': 'host.html',
+  '/intro-vorschau.html': 'intro-vorschau.html',
+  '/intro-frame.html': 'intro-frame.html',
 };
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.woff': 'font/woff', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg', '.json': 'application/json; charset=utf-8', '.webp': 'image/webp', '.png': 'image/png' };
 
