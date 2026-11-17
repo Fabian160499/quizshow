@@ -2729,3 +2729,6 @@ html.reduced-motion .pult.pick { animation: none; }
 .pult-avatar[hidden] { display: none; }
 .pult-mark { z-index: 3; }
 .pult-stage .pult-avatar { width: 96%; height: 96%; bottom: -4%; }
+.fin-qlist li.drop-here { box-shadow: inset 0 3px 0 var(--accent); }
+.fin-qlist li.dragging-item { opacity: .4; }
+.fin-qlist .item-move { display: inline-flex; align-items: center; gap: 2px; }

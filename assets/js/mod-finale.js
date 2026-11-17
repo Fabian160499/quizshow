@@ -94,7 +94,33 @@ export function buildFinaleEditor(ui) {
   const cfg = S.finale?.config || { target: 5, questions: [] };
   if (!draft || ui.reset) draft = JSON.parse(JSON.stringify(cfg));
   const save = () => autosave('finale.config', () => act('finale.config', draft));
-  const list = h('ol', { class: 'list fin-qlist' }, draft.questions.map((q, i) => h('li', {},
+  // Umsortieren per Drag & Drop (Griff ⠿) oder mit ↑/↓ – wie bei den Spiel-Listen.
+  const move = (from, to) => {
+    if (from === to || to < 0 || to >= draft.questions.length) return;
+    const [q] = draft.questions.splice(from, 1);
+    draft.questions.splice(to, 0, q);
+    save();
+    ui.rerender();
+  };
+  const DT = 'text/x-finale-q';
+  const list = h('ol', { class: 'list fin-qlist' }, draft.questions.map((q, i, arr) => h('li', {
+    ondragover: (ev) => { if (ev.dataTransfer.types.includes(DT)) { ev.preventDefault(); ev.dataTransfer.dropEffect = 'move'; ev.currentTarget.classList.add('drop-here'); } },
+    ondragleave: (ev) => ev.currentTarget.classList.remove('drop-here'),
+    ondrop: (ev) => {
+      ev.currentTarget.classList.remove('drop-here');
+      const from = ev.dataTransfer.getData(DT);
+      if (from === '') return;
+      ev.preventDefault();
+      move(Number(from), i);
+    },
+  },
+    h('span', { class: 'item-move' },
+      // Nur der Griff ist ziehbar – so bleibt Text in den Feldern normal markierbar.
+      h('span', { class: 'drag-handle', title: 'Ziehen zum Umsortieren', draggable: 'true',
+        ondragstart: (ev) => { ev.dataTransfer.setData(DT, String(i)); ev.dataTransfer.effectAllowed = 'move'; ev.currentTarget.closest('li')?.classList.add('dragging-item'); },
+        ondragend: (ev) => ev.currentTarget.closest('li')?.classList.remove('dragging-item') }, '⠿'),
+      h('button', { type: 'button', class: 'btn small ghost', title: 'Nach oben', 'aria-label': `Frage ${i + 1} nach oben`, disabled: i === 0, onclick: () => move(i, i - 1) }, '↑'),
+      h('button', { type: 'button', class: 'btn small ghost', title: 'Nach unten', 'aria-label': `Frage ${i + 1} nach unten`, disabled: i === arr.length - 1, onclick: () => move(i, i + 1) }, '↓')),
     h('b', {}, `${i + 1}.`),
     h('input', { value: q.question, maxlength: '300', placeholder: 'Frage', 'aria-label': `Frage ${i + 1}`, class: 'grow', oninput: (ev) => { q.question = ev.target.value; save(); } }),
     h('input', { value: q.answer, maxlength: '160', placeholder: 'Lösung', 'aria-label': `Lösung ${i + 1}`, style: { maxWidth: '220px' }, oninput: (ev) => { q.answer = ev.target.value; save(); } }),
