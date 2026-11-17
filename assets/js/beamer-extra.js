@@ -384,20 +384,43 @@ function bigImage(m, cls = 'big-image') {
 
 // ---------- Ich weiß nicht, dass du weißt es doch ----------
 function weissnicht(v, teamOf) {
-  if (v.waiting) return waitTitle('Ich weiß nicht, dass du weißt es doch', 'Wer zuerst buzzert, wählt ein Team, das es angeblich nicht weiß.');
-  const out = [v.question ? banner(v.question, 'compact slim') : null, bigImage(v.image)];
-  const foot = [];
-  if (v.result) {
-    const winner = v.result === 'right' ? v.target : v.buzzer;
-    foot.push(h('div', { class: 'solution' }, `${v.solution ? `${v.solution} – ` : ''}${plus(pv(v, 'winner'))} für ${teamOf(winner).name}`));
-  } else if (v.target) {
-    foot.push(chip(teamOf(v.buzzer), '', ' wählt '), chip(teamOf(v.target), 'answering', ' antwortet'), h('span', { class: 'big-count' }, countdown(v.deadline)));
-  } else if (v.buzzer) {
-    foot.push(chip(teamOf(v.buzzer), 'answering', ' 🔔 war am schnellsten und wählt …'));
-  } else if (v.closed) {
-    foot.push(h('div', { class: 'solution' }, v.solution ? `Lösung: ${v.solution}` : 'Frage beendet'));
+  if (v.waiting) return waitTitle('Ich weiß nicht, dass du weißt es doch', 'Alle schreiben – der schnellste Buzzer wählt ein Team, das es angeblich nicht weiß.');
+  // Antwortkarte: Name, Handschrift (oder verdeckt), Wertung und Punkte
+  const card = (teamId, { ink, hidden, correct, points, note, cls = '' }) => {
+    const t = teamOf(teamId);
+    const body = hidden ? h('div', { class: 'ans-body l5-hidden' }, h('span', { class: 'l5-q' }, '?'))
+      : h('div', { class: 'ans-body' }, ink ? h('img', { class: 'ink-answer beamer', src: ink, alt: '' }) : h('span', { class: 'muted' }, 'keine Abgabe'),
+        correct === true || correct === false ? h('span', { class: `mark ${correct ? 'ok' : 'bad'}` }, correct ? '✓' : '✗') : null,
+        points !== null && points !== undefined ? h('span', { class: `pts-tag${points > 0 ? ' plus' : ''}` }, points > 0 ? `+${points}` : '0') : null);
+    return h('div', { class: `answer fx-card has-ink ${cls}`.trim(), '--team': t.color }, body, h('div', { class: 'ans-name' }, t.name, note ? h('small', { class: 'wn-note' }, note) : null));
+  };
+  const head = v.question ? banner(v.question, 'compact slim') : null;
+  if (!v.stage) {
+    const out = [head, bigImage(v.image)];
+    const foot = [sub(`${v.submittedCount} von ${v.teamCount} Teams haben abgegeben`)];
+    if (v.buzzer && v.target) foot.push(chip(teamOf(v.buzzer), '', ' 🔔 wählt '), chip(teamOf(v.target), 'answering', ' 🎯'));
+    else if (v.buzzer) foot.push(chip(teamOf(v.buzzer), 'answering', v.choosing ? ' 🔔 war am schnellsten und wählt …' : ' 🔔 hat gewählt – geheim, bis alle abgegeben haben'));
+    out.push(h('div', { class: 'row img-foot' }, foot));
+    return out;
   }
-  if (foot.length) out.push(h('div', { class: 'row img-foot' }, foot));
+  const out = [head];
+  const f = v.focus;
+  if (f) {
+    const cards = [card(f.target, { ink: f.targetInk, hidden: !f.targetShown, correct: f.targetCorrect, points: f.targetPoints, note: '🎯 gewählt', cls: 'wn-target' })];
+    if (f.buzzerInk !== null || f.buzzerCorrect !== undefined) cards.push(card(f.buzzer, { ink: f.buzzerInk, correct: f.buzzerCorrect, points: f.buzzerPoints, note: '🔔 Buzzer', cls: 'wn-buzzer' }));
+    if (!v.revealed) out.push(h('div', { class: 'wn-claim' }, chip(teamOf(f.buzzer), '', ' 🔔 glaubt: '), chip(teamOf(f.target), 'answering', ' weiß es nicht!')));
+    if (f.guessRight !== null) {
+      out.push(h('div', { class: `wn-verdict ${f.guessRight ? 'win' : 'lose'}${v.revealed ? ' done' : ''}` }, f.guessRight
+        ? `🎯 Gut gewählt! ${plus(pv(v, 'guess'))} für ${teamOf(f.buzzer).name}`
+        : `${teamOf(f.target).name} wusste es doch! ${teamOf(f.buzzer).name} geht leer aus.`));
+    }
+    out.push(h('div', { class: `answers wn-focus n${cards.length}${v.revealed ? ' done' : ''}` }, cards));
+  }
+  if (v.revealed) {
+    if (v.solution) out.push(h('div', { class: 'solution', style: { marginTop: '1vh' } }, `Lösung: ${v.solution}`));
+    const rest = v.rest.map((a) => card(a.teamId, { ink: a.ink, correct: a.correct, points: a.points, note: a.lost ? '🔔 falsch gewählt – 0' : '' }));
+    if (rest.length) out.push(h('div', { class: `answers small wn-rest n${Math.min(rest.length, 6)}` }, rest));
+  }
   return out;
 }
 

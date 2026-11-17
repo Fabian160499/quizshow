@@ -98,18 +98,47 @@ function filmab(ui, g, st) {
 function weissnicht(ui, g, st) {
   const i = st.index ?? -1;
   const r = (st.rounds || {})[i];
-  const out = [tabs(g.content.rounds.map((_, k) => `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.closed)];
-  if (i < 0 || !r) return [...out, help('Runde öffnen: Bild erscheint, Buzzer sind frei. Wer zuerst buzzert, wählt ein Team, das es angeblich nicht weiß.')];
+  const out = [tabs(g.content.rounds.map((_, k) => `Runde ${k + 1}`), i, (k) => ui.act('play.open', { index: k }), (k) => st.rounds?.[k]?.revealed)];
+  if (i < 0 || !r) return [...out, help('Runde öffnen: alle schreiben ihre Antwort. Wer abgegeben hat, darf buzzern. Das schnellste Team wählt auf dem iPad ein Team, das es angeblich nicht weiß. Antworten mit ✓/✗ bewerten, dann Schritt für Schritt auflösen.')];
   const item = g.content.rounds[i];
   out.push(h('p', {}, item.question || '', ' · Lösung: ', h('b', {}, item.solution || '–')));
   if (!item.image) out.push(h('p', { class: 'notice warn' }, 'Für diese Runde ist noch kein Bild hochgeladen.'));
-  if (!r.buzz) out.push(muted(r.closed ? 'Runde beendet.' : 'Warten auf den ersten Buzzer …'));
-  else out.push(h('p', {}, '🔔 ', h('b', {}, ui.teamName(r.buzz.teamId)), ' war am schnellsten', r.target ? [' und wählt ', h('b', {}, ui.teamName(r.target)), r.deadline && !r.result ? [' · ', h('b', { 'data-deadline': r.deadline }, '')] : ''] : ' – wählt gerade …'));
-  if (r.buzz && !r.target) out.push(row(h('span', { class: 'muted' }, 'Für das Team wählen:'), ui.S.project.teams.filter((t) => t.id !== r.buzz.teamId).map((t) => btn('small ghost', t.name, () => ui.act('play.pick', { teamId: t.id })))));
-  if (r.target && !r.result) out.push(row(h('span', {}, `Antwort von ${ui.teamName(r.target)}:`), ...gradeBtns(ui, (c) => ui.act('play.judge', { correct: c }))));
-  if (r.result) out.push(row(badge('ok', r.result === 'right' ? `${ui.teamName(r.target)} wusste es: ${plus(pvc(g, 'winner'))}` : `${ui.teamName(r.buzz.teamId)} lag richtig: ${plus(pvc(g, 'winner'))}`),
-    btn('small ghost', 'Bewertung umdrehen', () => ui.confirmAct('Bewertung umdrehen?', 'play.regrade', { correct: r.result !== 'right' }))));
-  if (!r.closed) out.push(row(btn('ghost', 'Frage beenden', () => ui.act('play.close'), !!r.target && !r.result)));
+  const ids = ui.S.project.teams.map((t) => t.id);
+  const allIn = r.closedSubmissions || ids.every((id) => r.answers[id]);
+  const locked = !!r.rv || r.revealed;
+  // Buzzer und Wahl (die Wahl sieht der Beamer erst, wenn alle abgegeben haben)
+  if (!r.buzz) out.push(muted(locked ? 'Kein Buzzer in dieser Runde.' : 'Noch kein Buzzer.'));
+  else out.push(h('p', {}, '🔔 ', h('b', {}, ui.teamName(r.buzz.teamId)), ' war am schnellsten',
+    r.target ? [' und wählt ', h('b', {}, ui.teamName(r.target)), allIn ? '' : h('span', { class: 'muted' }, ' (Beamer zeigt es, wenn alle abgegeben haben)')] : ' – wählt gerade …'));
+  if (r.buzz && !r.target && !locked) out.push(row(h('span', { class: 'muted' }, 'Für das Team wählen:'), ui.S.project.teams.filter((t) => t.id !== r.buzz.teamId).map((t) => btn('small ghost', t.name, () => ui.act('play.pick', { teamId: t.id })))));
+  out.push(h('ul', { class: 'list' }, ui.S.project.teams.map((t) => {
+    const a = r.answers[t.id];
+    const role = r.buzz?.teamId === t.id ? badge('', '🔔 Buzzer') : r.target === t.id ? badge('', '🎯 gewählt') : null;
+    return teamLi(ui, t.id, a ? [': ', answerContent(a, 'mod')] : h('span', { class: 'muted' }, ' – noch nicht abgegeben'), role,
+      a && !locked ? gradeBtns(ui, (c) => ui.act('play.grade', { teamId: t.id, correct: c }), r.grades[t.id]) : null,
+      locked && a ? badge(r.grades[t.id] ? 'ok' : 'bad', r.grades[t.id] ? '✓' : '✗') : null);
+  })));
+  if (r.revealed) { out.push(row(badge('ok', 'Aufgelöst'))); return out; }
+  const steps = r.buzz && r.target ? (() => {
+    const right = !r.answers[r.target] || r.grades[r.target] === false;
+    return ['target', 'targetAnswer', 'targetVerdict', ...(right ? ['buzzerAnswer', 'buzzerVerdict'] : []), 'rest'];
+  })() : ['rest'];
+  const next = steps[r.rv || 0];
+  const tn = (id) => ui.teamName(id);
+  const label = {
+    target: `▶ Gewähltes Team zeigen (${r.target ? tn(r.target) : ''})`,
+    targetAnswer: `▶ Antwort von ${r.target ? tn(r.target) : ''} zeigen`,
+    targetVerdict: `▶ Bewertung von ${r.target ? tn(r.target) : ''} zeigen`,
+    buzzerAnswer: `▶ Antwort von ${r.buzz ? tn(r.buzz.teamId) : ''} zeigen`,
+    buzzerVerdict: `▶ Bewertung von ${r.buzz ? tn(r.buzz.teamId) : ''} zeigen`,
+    rest: r.buzz && r.target ? '▶ Alle übrigen Teams gleichzeitig auflösen' : '▶ Alle Teams gleichzeitig auflösen',
+  }[next];
+  const ungraded = Object.keys(r.answers).filter((id) => r.grades[id] === undefined).length;
+  out.push(row(
+    !allIn && !r.rv ? btn('ghost', 'Abgabe schließen (fehlende Teams auslassen)', () => ui.confirmAct('Abgabe schließen? Teams ohne Antwort werden ausgelassen.', 'play.closeSubmissions')) : null,
+    btn('pink', label, () => ui.act('play.reveal'), !r.rv && (!allIn || ungraded > 0 || (r.buzz && !r.target))),
+    h('span', { class: 'muted' }, r.rv ? `Schritt ${r.rv} von ${steps.length}` : ungraded ? `Noch ${ungraded} Antwort${ungraded > 1 ? 'en' : ''} bewerten` : '')));
+  out.push(muted(`Punkte: Buzzer-Team ${plus(pvc(g, 'guess'))}, wenn das gewählte Team es nicht wusste, mit eigener richtiger Antwort nochmal ${plus(pvc(g, 'own'))}; wusste es das gewählte Team, bekommt es ${plus(pvc(g, 'other'))} und das Buzzer-Team 0. Alle anderen richtigen Teams ${plus(pvc(g, 'other'))}.`));
   return out;
 }
 

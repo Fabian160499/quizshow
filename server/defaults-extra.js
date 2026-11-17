@@ -296,7 +296,7 @@ const EXTRA_TYPES = {
   weissnicht: {
     title: 'Ich weiß nicht, dass du weißt es doch',
     playable: true,
-    summary: 'Bild auf dem Beamer. Wer zuerst buzzert, wählt ein Team, das es nicht weiß: 10 Sekunden, falsch +1 für den Buzzer.',
+    summary: 'Alle schreiben. Der schnellste Buzzer wählt ein Team, das es angeblich nicht weiß: liegt er richtig +1 (eigene richtige Antwort nochmal +1), sonst 0. Alle anderen richtigen Teams +1.',
     schema: [
       { key: 'rounds', label: 'Runden', type: 'list', min: 1, max: 8, itemLabel: (i) => `Runde ${i + 1}`, addLabel: 'Runde hinzufügen',
         fields: [media('image', 'Großes Bild', 'image'), area('question', 'Frage', 300), text('solution', 'Lösung', 200)] },

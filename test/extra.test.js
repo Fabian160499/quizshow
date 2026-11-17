@@ -117,25 +117,108 @@ test('Film ab: richtige Antwort gibt genau einen Punkt', () => {
   assert.equal(totals(db)[ids[0]], 1);
 });
 
-test('Ich weiß nicht 1.0: erster Buzzer sperrt alle, wählt Team, 10 Sekunden, Punkte je nach Antwort', () => {
-  const { db, ids } = setup(3);
+test('Ich weiß nicht (neue Regeln): alle schreiben, Buzzer wählt geheim, Auflösung Schritt für Schritt, bis +2', () => {
+  const { db, ids } = setup(4);
+  const [A, B, C, D] = ids;
   use(db, 'weissnicht');
   act(db, mod(), 'open', { index: 0 });
-  act(db, team(ids[0]), 'buzz');
-  assert.throws(() => act(db, team(ids[1]), 'buzz'), /schneller/);
-  assert.throws(() => act(db, team(ids[1]), 'pick', { teamId: ids[2] }), /zuerst gebuzzert/);
-  assert.throws(() => act(db, team(ids[0]), 'pick', { teamId: ids[0] }), /anderes Team/);
-  act(db, team(ids[0]), 'pick', { teamId: ids[2] });
-  assert.ok(pv(db).deadline > clock);
-  act(db, mod(), 'judge', { correct: false });
-  assert.equal(totals(db)[ids[0]], 1);
-  act(db, mod(), 'regrade', { correct: true }); // verklickt → korrigiert
-  assert.equal(totals(db)[ids[0]], 0);
-  assert.equal(totals(db)[ids[2]], 1);
-  // Niemand buzzert: Frage manuell beenden, danach keine Buzzer mehr.
+  assert.throws(() => act(db, team(A), 'buzz'), /Erst die eigene Antwort/);
+  act(db, team(A), 'submit', { ink });
+  act(db, team(A), 'buzz');
+  act(db, team(B), 'submit', { ink }); // Buzzer blockiert die Abgabe nicht
+  assert.throws(() => act(db, team(B), 'buzz'), /schneller/);
+  assert.throws(() => act(db, team(A), 'pick', { teamId: A }), /anderes Team/);
+  assert.throws(() => act(db, team(B), 'pick', { teamId: C }), /zuerst gebuzzert/);
+  assert.deepEqual(tv(db, A).choose.sort(), [B, C, D].sort());
+  act(db, team(A), 'pick', { teamId: C }); // C schreibt noch – trotzdem wählbar
+  // Geheim, bis alle abgegeben haben
+  assert.equal(pv(db).target, null);
+  assert.equal(tv(db, C).isTarget, false);
+  assert.equal(tv(db, A).myTarget, C);
+  act(db, team(C), 'submit', { ink });
+  assert.throws(() => act(db, mod(), 'reveal'), /nicht alle/);
+  act(db, team(D), 'submit', { ink });
+  assert.equal(pv(db).target, C);
+  assert.equal(tv(db, C).isTarget, true);
+  for (const [id, ok] of [[A, true], [B, true], [C, false], [D, false]]) act(db, mod(), 'grade', { teamId: id, correct: ok });
+  const fx0 = { ...db.live.effect };
+  // 1. gewähltes Team, 2. Antwort, 3. Bewertung
+  act(db, mod(), 'reveal');
+  assert.equal(pv(db).focus.targetShown, false);
+  act(db, mod(), 'reveal');
+  assert.ok(pv(db).focus.targetInk);
+  assert.equal(pv(db).focus.targetCorrect, undefined);
+  assert.deepEqual(db.live.effect, fx0); // noch kein Ton
+  assert.throws(() => act(db, mod(), 'grade', { teamId: C, correct: true }), /Auflösung/);
+  act(db, mod(), 'reveal');
+  assert.equal(pv(db).focus.targetCorrect, false);
+  assert.equal(pv(db).focus.guessRight, true);
+  assert.equal(totals(db)[A], 1);
+  // 4. Antwort Buzzer-Team, 5. Bewertung: nochmal +1
+  act(db, mod(), 'reveal');
+  assert.ok(pv(db).focus.buzzerInk);
+  assert.equal(totals(db)[A], 1);
+  act(db, mod(), 'reveal');
+  assert.equal(pv(db).focus.buzzerCorrect, true);
+  assert.equal(totals(db)[A], 2);
+  assert.equal(tv(db, A).mine.points, 2);
+  assert.equal(totals(db)[B], 0); // B erst in der Schlussauflösung
+  // 6. alle übrigen gleichzeitig, ohne Richtig-/Falsch-Ton
+  act(db, mod(), 'reveal');
+  assert.equal(db.live.effect.kind, 'show');
+  assert.deepEqual(pv(db).rest.map((x) => [x.teamId, x.points]).sort(), [[B, 1], [D, 0]].sort());
+  assert.equal(totals(db)[B], 1);
+  assert.equal(totals(db)[C], 0);
+  assert.throws(() => act(db, mod(), 'reveal'), /schon aufgelöst/);
+});
+
+test('Ich weiß nicht (neue Regeln): gewähltes Team wusste es → +1 dafür, Buzzer 0 trotz eigener richtiger Antwort; keine Abgabe zählt als nicht gewusst', () => {
+  const { db, ids } = setup(3);
+  const [A, B, C] = ids;
+  use(db, 'weissnicht');
+  act(db, mod(), 'open', { index: 0 });
+  for (const id of ids) act(db, team(id), 'submit', { ink });
+  act(db, team(B), 'buzz');
+  act(db, team(B), 'pick', { teamId: A });
+  for (const id of ids) act(db, mod(), 'grade', { teamId: id, correct: true });
+  for (let k = 0; k < 3; k++) act(db, mod(), 'reveal');
+  assert.equal(pv(db).focus.guessRight, false);
+  assert.equal(totals(db)[A], 1);
+  assert.equal(totals(db)[B], 0);
+  act(db, mod(), 'reveal'); // direkt Schlussauflösung (kein Buzzer-Einzelschritt)
+  assert.equal(pv(db).revealed, true);
+  assert.deepEqual(pv(db).rest.map((x) => [x.teamId, x.points, x.lost]).sort(), [[B, 0, true], [C, 1, false]].sort());
+  assert.equal(totals(db)[B], 0);
+  assert.equal(totals(db)[C], 1);
+  // Runde 2: gewähltes Team gibt nichts ab → wie falsch: Buzzer +1
   act(db, mod(), 'open', { index: 1 });
-  act(db, mod(), 'close');
-  assert.throws(() => act(db, team(ids[1]), 'buzz'), /nicht offen/);
+  act(db, team(A), 'submit', { ink });
+  act(db, team(A), 'buzz');
+  act(db, team(A), 'pick', { teamId: C });
+  act(db, team(B), 'submit', { ink });
+  act(db, mod(), 'closeSubmissions');
+  act(db, mod(), 'grade', { teamId: A, correct: false });
+  act(db, mod(), 'grade', { teamId: B, correct: true });
+  for (let k = 0; k < 3; k++) act(db, mod(), 'reveal');
+  assert.equal(pv(db).focus.guessRight, true);
+  assert.equal(totals(db)[A], 2); // 1 aus Runde 1 + 1 Wahl
+  act(db, mod(), 'reveal'); act(db, mod(), 'reveal'); // eigene Antwort falsch: kein Extrapunkt
+  assert.equal(totals(db)[A], 2);
+  act(db, mod(), 'reveal');
+  assert.equal(totals(db)[B], 1);
+});
+
+test('Ich weiß nicht (neue Regeln): ohne Buzzer alle gleichzeitig', () => {
+  const { db, ids } = setup(2);
+  use(db, 'weissnicht');
+  act(db, mod(), 'open', { index: 0 });
+  for (const id of ids) act(db, team(id), 'submit', { ink });
+  act(db, mod(), 'grade', { teamId: ids[0], correct: true });
+  act(db, mod(), 'grade', { teamId: ids[1], correct: false });
+  act(db, mod(), 'reveal');
+  assert.equal(pv(db).revealed, true);
+  assert.equal(totals(db)[ids[0]], 1);
+  assert.equal(totals(db)[ids[1]], 0);
 });
 
 test('Ich weiß nicht 2.0: Abgabe trotz fremdem Buzzer, Einschätzung schon während andere schreiben, alles oder nichts', () => {

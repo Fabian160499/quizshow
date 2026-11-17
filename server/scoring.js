@@ -18,7 +18,7 @@ const SCORING = {
   musik: [1, 2, 3].map((n) => S(`field${n}`, `Feld ${n} (Zeile ${n} im Spielbrett)`, n)),
   jauch: JAUCH_LADDER.map((v, i) => S(`q${i + 1}`, `Gewinnstufe Frage ${i + 1}`, v)),
   filmab: [S('correct', 'Richtig erkannter Film', 1)],
-  weissnicht: [S('winner', 'Gewinner der Runde', 1)],
+  weissnicht: [S('guess', 'Buzzer-Team: gewähltes Team wusste es nicht', 1), S('own', 'Buzzer-Team: eigene richtige Antwort (nur bei richtiger Wahl)', 1), S('other', 'Alle anderen Teams (auch das gewählte): richtige Antwort', 1)],
   weissnicht2: [S('guess', 'Buzzer-Team: je richtige Einschätzung', 1), S('own', 'Buzzer-Team: eigene richtige Antwort', 1), S('other', 'Alle anderen Teams: richtige Antwort', 1)],
   songsong: [S('correct', 'Beide Songs erkannt', 1)],
   songsong2: [1, 2, 3].map((n) => S(`n${n}`, n === 3 ? 'Alle 3 Songs erkannt' : `${n} Song${n > 1 ? 's' : ''} erkannt`, n)),

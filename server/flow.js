@@ -17,6 +17,7 @@
 const { teamName, teamIds, currentBuzz } = require('./core');
 const SONG = require('./play-songsong');
 const SONG2 = require('./play-songsong2');
+const WN = require('./play-weissnicht');
 
 const step = (label, action, payload = {}) => ({ label, action, payload });
 const wait = (text) => ({ wait: text });
@@ -220,12 +221,24 @@ const FLOW = {
     if (st.index < 0) return first(rs, 'Runde', 'open');
     const r = st.rounds[st.index];
     if (!r) return step(`Runde ${st.index + 1} zeigen`, 'open', { index: st.index });
-    if (!r.closed) {
-      if (r.target && !r.result) return wait(`Antwort von ${teamName(db, r.target)} bewerten (✓ / ✗)`);
-      if (r.buzz && !r.target) return wait(`${teamName(db, r.buzz.teamId || r.buzz)} wählt ein Team …`);
-      return step('Runde beenden (niemand buzzert)', 'close');
+    if (r.revealed) return nextOf(rs, st.index, 'Runde', 'open');
+    if (!r.rv) {
+      if (r.buzz && !r.target) return wait(`${teamName(db, r.buzz.teamId)} wählt ein Team …`);
+      if (!r.closedSubmissions && !teamIds(db).every((id) => r.answers[id])) return step(`Abgabe schließen (${ofN(db, r.answers)} abgegeben)`, 'closeSubmissions');
+      const ungraded = Object.keys(r.answers).filter((id) => r.grades[id] === undefined).length;
+      if (ungraded) return wait(`Erst alle Antworten bewerten (${ungraded} offen)`);
     }
-    return nextOf(rs, st.index, 'Runde', 'open');
+    const next = WN.stages(r)[r.rv || 0];
+    const tn = (id) => teamName(db, id);
+    const label = {
+      target: `Gewähltes Team zeigen: ${r.target ? tn(r.target) : ''}`,
+      targetAnswer: `Antwort von ${r.target ? tn(r.target) : ''} zeigen`,
+      targetVerdict: `Bewertung von ${r.target ? tn(r.target) : ''} zeigen`,
+      buzzerAnswer: `Antwort von ${r.buzz ? tn(r.buzz.teamId) : ''} (Buzzer) zeigen`,
+      buzzerVerdict: `Bewertung von ${r.buzz ? tn(r.buzz.teamId) : ''} zeigen`,
+      rest: r.buzz && r.target ? 'Alle übrigen Teams gleichzeitig auflösen' : 'Alle Teams gleichzeitig auflösen',
+    }[next];
+    return step(label, 'reveal');
   },
 
   weissnicht2(db, game, st) {

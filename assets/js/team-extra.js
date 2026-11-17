@@ -122,24 +122,40 @@ function filmab(g, ui) {
 // ---------- Ich weiß nicht, dass du weißt es doch ----------
 function weissnicht(g, ui) {
   const out = [muted(`Runde ${g.index + 1} von ${g.count}`), g.question ? question(g.question) : null];
-  if (g.result || g.closed) {
+  // Ergebnis: erst wenn es auf dem Beamer aufgelöst ist
+  if (g.mine) {
+    const m = g.mine;
     if (g.solution) out.push(stateBox('', '💡', `Lösung: ${g.solution}`));
-    if (g.result) {
-      const winner = g.result === 'right' ? g.target : g.buzzer;
-      out.push(winner === ui.team.id ? stateBox('ok', '✓', `${plus(pv(g, 'winner'))} für euch!`) : stateBox('', '■', `${plus(pv(g, 'winner'))} für ${ui.teamName(winner)}`));
+    if (m.role === 'buzzer') {
+      out.push(m.guessRight ? stateBox('ok', '🎯', `${ui.teamName(g.myTarget)} wusste es nicht – gut gewählt! ${plus(pv(g, 'guess'))}`) : stateBox('bad', '✗', `${ui.teamName(g.myTarget)} wusste es – 0 Punkte für euch, auch für die eigene Antwort.`));
+      if (m.correct !== null) out.push(m.correct ? stateBox('ok', '✓', `Eure Antwort war auch richtig: nochmal ${plus(pv(g, 'own'))}`) : stateBox('bad', '✗', 'Eure eigene Antwort war falsch.'));
+    } else if (m.role === 'target') {
+      out.push(m.correct ? stateBox('ok', '✓', `Ihr wusstet es doch! ${plus(m.points)}`) : stateBox('bad', '✗', m.correct === null ? 'Keine Abgabe.' : 'Leider falsch.'));
+    } else {
+      out.push(m.correct === null ? stateBox('', '■', 'Keine Abgabe.') : m.correct ? stateBox('ok', '✓', `Richtig! ${plus(m.points)}`) : stateBox('bad', '✗', 'Leider falsch.'));
     }
     return out;
   }
-  if (g.isTarget) return [...out, stateBox('', '🎤', h('span', {}, `${ui.teamName(g.buzzer)} glaubt, ihr wisst es nicht. Antwortet laut – noch `, countdown(g.deadline)))];
+  if (g.revealing) return [...out, stateBox('', '👀', 'Die Auflösung läuft – schaut auf den Beamer.')];
+  if (!g.submitted) {
+    if (!g.open) return [...out, stateBox('', '🔒', 'Abgabe geschlossen')];
+    out.push(h('div', {}, inkPad({ draftKey: `wn.${g.index}`, label: 'Eure Antwort', button: 'Abgeben', ask, toast, onSubmit: (ink) => run(ui.conn, 'play.submit', { ink }) })));
+    if (g.buzzTaken) out.push(muted('Ein anderes Team hat schon gebuzzert – ihr könnt trotzdem in Ruhe abgeben.'));
+    else out.push(muted('Erst abgeben – dann dürft ihr buzzern.'));
+    return out;
+  }
   if (g.choose) {
-    out.push(stateBox('ok', '🔔', 'Ihr wart am schnellsten! Welches Team weiß es eurer Meinung nach NICHT?'));
+    out.push(stateBox('ok', '🔔', 'Ihr wart am schnellsten! Welches Team weiß die Antwort eurer Meinung nach NICHT?'));
+    if (g.pendingTeams && g.pendingTeams.length) out.push(muted('Ihr könnt auch ein Team wählen, das noch schreibt.'));
     out.push(teamPodiums(ui, g.choose, (id) => run(ui.conn, 'play.pick', { teamId: id }), 'weiß es nicht'));
     return out;
   }
-  if (g.target) return [...out, stateBox('', '⏳', h('span', {}, `${ui.teamName(g.target)} antwortet – `, countdown(g.deadline)))];
-  if (g.buzzer) return [...out, stateBox('', '⏳', g.isBuzzer ? 'Ihr wählt gleich …' : `${ui.teamName(g.buzzer)} war am schnellsten und wählt ein Team.`)];
-  out.push(muted('Wer zuerst buzzert, wählt ein Team, das die Antwort angeblich nicht kennt.'));
-  out.push(buzzButton('Buzzer', g.canBuzz, () => run(ui.conn, 'play.buzz')));
+  if (g.isBuzzer && g.myTarget) return [...out, stateBox('', '🎯', `Ihr habt ${ui.teamName(g.myTarget)} gewählt – der Beamer zeigt es, sobald alle abgegeben haben.`)];
+  if (g.isTarget) return [...out, stateBox('', '🎯', `${ui.teamName(g.buzzer)} glaubt, ihr wisst es nicht! Gleich wird aufgelöst.`)];
+  out.push(stateBox('', '🔒', 'Abgegeben.'));
+  if (!g.buzzTaken) out.push(muted('Wer zuerst buzzert, wählt ein Team, das die Antwort angeblich nicht weiß.'), buzzButton('Buzzer', g.canBuzz, () => run(ui.conn, 'play.buzz')));
+  else if (!g.isBuzzer) out.push(muted(g.target ? `${ui.teamName(g.buzzer)} hat ${ui.teamName(g.target)} gewählt.` : `${ui.teamName(g.buzzer)} war schneller am Buzzer.`));
+  else out.push(muted('Ihr wählt gleich …'));
   return out;
 }
 
