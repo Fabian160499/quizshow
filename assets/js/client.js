@@ -170,6 +170,26 @@ export async function mediaUrl(id) {
   return url;
 }
 
+// Buzzer: löst schon beim Berühren aus (schneller als „click“ nach dem Loslassen). Weitere schnelle
+// Tipps auf denselben Knopf werden kurz geschluckt – so gibt es weder Doppel-Buzz noch Zoom.
+export function buzzPress(attrs, content, onPress) {
+  let busyUntil = 0;
+  const fire = (ev) => {
+    const el = ev.currentTarget;
+    if (el.disabled || Date.now() < busyUntil) return;
+    busyUntil = Date.now() + 700;
+    el.classList.add('pressed');
+    setTimeout(() => el.classList.remove('pressed'), 180);
+    onPress(ev);
+  };
+  return h('button', {
+    ...attrs,
+    onpointerdown: (ev) => { if (ev.pointerType === 'mouse' && ev.button !== 0) return; ev.preventDefault(); fire(ev); },
+    onclick: (ev) => fire(ev), // Tastatur / Bedienungshilfen
+    ondblclick: (ev) => ev.preventDefault(),
+  }, content);
+}
+
 // Team-Avatar als Bildadresse – je Version nur einmal geladen (Pult-Leiste, Punkte-Folie).
 const avatarSrcs = new Map();
 export function avatarSrc(teamId, v) {

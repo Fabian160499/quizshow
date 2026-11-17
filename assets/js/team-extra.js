@@ -2,7 +2,7 @@
 // Die Sicht kommt bereits gefiltert vom Server (keine fremden Antworten, keine
 // geheimen Joker); hier wird nur dargestellt und eingegeben.
 
-import { h, run, ask, toast, shield } from './client.js';
+import { h, run, ask, toast, shield, buzzPress } from './client.js';
 import { inkPad, clearInkDraft } from './ink.js';
 import { TEAM_NEU } from './neu-team.js';
 import { setPultPick, clearStickyPick } from './pults.js';
@@ -40,7 +40,7 @@ function abcd(options, { selected = null, correct = null, removed = [], onPick =
 }
 
 function buzzButton(label, enabled, onclick) {
-  return h('button', { class: 'buzzer', disabled: !enabled, 'aria-label': label, onclick }, 'BUZZ');
+  return buzzPress({ class: 'buzzer', disabled: !enabled, 'aria-label': label }, 'BUZZ', onclick);
 }
 
 // Schreibfeld + Buzzer: der Buzzer wird erst nach dem ersten Stiftstrich aktiv

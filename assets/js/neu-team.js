@@ -2,7 +2,7 @@
 // Große Touchflächen; Eingabe, Ändern, verbindliches Absenden und Sperre sind
 // klar getrennt. Die Sichten kommen gefiltert vom Server.
 
-import { h, run, mediaUrl, ask, toast } from './client.js';
+import { h, run, mediaUrl, ask, toast, buzzPress } from './client.js';
 import { inkPad } from './ink.js';
 import { hpBar } from './neu-beamer.js';
 
@@ -19,7 +19,7 @@ const wait = (big, small) => [h('div', { class: 'wait' }, h('p', { class: 'big' 
 const muted = (t) => h('p', { class: 'muted' }, t);
 const question = (t) => h('p', { class: 'question' }, t);
 const img = (m, cls) => { const el = h('img', { class: cls, alt: '' }); if (m) mediaUrl(m.id).then((u) => { if (u) el.src = u; }); return el; };
-const buzzButton = (label, enabled, onclick) => h('button', { class: 'buzzer', disabled: !enabled, 'aria-label': label, onclick }, 'BUZZ');
+const buzzButton = (label, enabled, onclick) => buzzPress({ class: 'buzzer', disabled: !enabled, 'aria-label': label }, 'BUZZ', onclick);
 const fmtNum = (n) => (n === null || n === undefined ? '–' : Number(n).toLocaleString('de-DE'));
 
 // Ziehen mit dem Finger (Pointer-Events, funktioniert auf dem iPad) + Antippen als
@@ -338,7 +338,7 @@ function sekunden(g, ui) {
     const running = g.phase === 'running';
     out.push(question(running ? 'Antwortet laut! Stoppt nach genau ' + g.seconds + ' Sekunden.' : 'Ihr seid dran!'),
       muted(running ? 'Es läuft keine sichtbare Uhr – zählt im Kopf mit. Drückt den Buzzer, wenn ihr glaubt, dass die Zeit um ist.' : 'Drückt den Buzzer, sobald ihr bereit seid – dann läuft die Zeit und die erste Frage kommt.'),
-      h('button', { class: `buzzer sek-buzzer${running ? ' stop' : ''}`, 'aria-label': running ? 'Stopp' : 'Start', onclick: (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.buzz'); } }, running ? 'STOPP' : 'START'),
+      buzzPress({ class: `buzzer sek-buzzer${running ? ' stop' : ''}`, 'aria-label': running ? 'Stopp' : 'Start' }, running ? 'STOPP' : 'START', (ev) => { ev.currentTarget.disabled = true; run(ui.conn, 'play.buzz'); }),
       running && g.answered ? muted(`${g.answered} ${g.answered === 1 ? 'Frage' : 'Fragen'} beantwortet`) : null);
     return out;
   }

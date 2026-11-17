@@ -2732,3 +2732,9 @@ html.reduced-motion .pult.pick { animation: none; }
 .fin-qlist li.drop-here { box-shadow: inset 0 3px 0 var(--accent); }
 .fin-qlist li.dragging-item { opacity: .4; }
 .fin-qlist .item-move { display: inline-flex; align-items: center; gap: 2px; }
+
+/* Kein Doppeltipp-Zoom auf den iPads (auch nicht neben dem Buzzer); Wischen und Zwei-Finger-Zoom
+   bleiben erlaubt. Buzzer: keine Textauswahl/Lupe, kein grauer Tipp-Schatten. */
+html, body { touch-action: manipulation; }
+.buzzer { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.buzzer.pressed { transform: translateY(8px); box-shadow: 0 6px 0 #7a003b; }

@@ -1,7 +1,7 @@
 // Team-iPad: Darstellung und Eingaben für alle acht Spiele. Die Sicht kommt
 // bereits gefiltert vom Server; hier wird nichts Geheimes ausgeblendet.
 
-import { h, run, ask, toast, coinImg, mediaUrl, shield } from './client.js';
+import { h, run, ask, toast, coinImg, mediaUrl, shield, buzzPress } from './client.js';
 import { inkPad, answerContent } from './ink.js';
 import { mapView, zoomState } from './map.js';
 import { setPultPick } from './pults.js';
@@ -61,7 +61,7 @@ function choiceButtons(options, { selected = null, correct = null, removed = [],
 }
 
 function buzzer(ui, enabled) {
-  return h('button', { class: 'buzzer', disabled: !enabled, 'aria-label': 'Buzzer', onclick: () => run(ui.conn, 'play.buzz') }, 'BUZZ');
+  return buzzPress({ class: 'buzzer', disabled: !enabled, 'aria-label': 'Buzzer' }, 'BUZZ', () => run(ui.conn, 'play.buzz'));
 }
 
 function buzzState(b, { correct = 'Richtig!', locked = 'Falsch – für diese Aufgabe gesperrt', resolved = 'Aufgabe beendet' } = {}) {
