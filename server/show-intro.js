@@ -217,13 +217,17 @@ function flow(db) {
   const next = list[i + 1];
   if (!next) return null;
   const t = texts(db.project);
+  // KI-Stimme in Gebrauch, aber für diesen Auftritt keine passende Ansage (Text/Name/Thema geändert)
+  const used = Object.keys(cfg(db.project).clips || {}).some((k) => !k.startsWith('sfx:'));
+  const valid = used ? validClips(db.project) : null;
+  const warn = (key) => (valid && !valid[key] ? ' · ⚠ keine KI-Ansage – bitte selbst sprechen oder im Editor „Fehlende Ansagen erzeugen“' : '');
   if (next.startsWith('team:')) {
     const k = Number(next.slice(5));
     const team = db.project.teams[k];
-    return { label: `🎤 Team ${k + 1} von ${db.project.teams.length} vorstellen: ${team ? team.name : ''}`, action: 'showIntro.next', mod: true, cue: t.teams[k] ? t.teams[k].call : '' };
+    return { label: `🎤 Team ${k + 1} von ${db.project.teams.length} vorstellen: ${team ? team.name : ''}`, action: 'showIntro.next', mod: true, cue: `${t.teams[k] ? t.teams[k].call : ''}${team ? warn(`team:${team.id}`) : ''}` };
   }
-  if (next === 'coHost') return { label: `🎤 Co-Moderation vorstellen: ${db.project.coHost}`, action: 'showIntro.next', mod: true, cue: t.coHost ? t.coHost.call : '' };
-  if (next === 'host') return { label: `🌟 Moderation vorstellen: ${db.project.host || 'Moderation'}`, action: 'showIntro.next', mod: true, cue: t.host.call };
+  if (next === 'coHost') return { label: `🎤 Co-Moderation vorstellen: ${db.project.coHost}`, action: 'showIntro.next', mod: true, cue: `${t.coHost ? t.coHost.call : ''}${warn('coHost')}` };
+  if (next === 'host') return { label: `🌟 Moderation vorstellen: ${db.project.host || 'Moderation'}`, action: 'showIntro.next', mod: true, cue: `${t.host.call}${warn('host')}` };
   return { label: '🎉 Alle zusammen – Intro abschließen', action: 'showIntro.next', mod: true, cue: `Begrüßung: ${t.greeting}` };
 }
 

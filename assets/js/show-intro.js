@@ -71,7 +71,7 @@ export function siBeamer(s, env) {
   const voice = (clip, text, at = 0) => {
     if (!fresh || !text) return;
     const dt = at - nowEl(el);
-    if (dt < -1) return;
+    if (dt < -3) return; // Beamer kam etwas später dazu: Ansage trotzdem noch abspielen
     if (clip && env.sound) {
       run.voice = audioEl('si-voice', env);
       later(Math.max(0, dt), () => {

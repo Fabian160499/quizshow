@@ -1640,3 +1640,19 @@ test('Pult-Leiste: im letzten Spiel bis zum Gesamtstand nach der Pause keine Pun
   go(at((x) => x.kind === 'ranking'));
   assert.ok(game.teamView(db, ids[0]).pults);
 });
+
+test('Show-Intro: Regie warnt, wenn für einen Auftritt keine passende KI-Ansage da ist', () => {
+  const { db, ids } = setup(3);
+  const SI = require('../server/show-intro.js');
+  db.project.host = 'Fabian'; db.project.coHost = 'Lena';
+  const steps = game.moderatorView(db).rundown;
+  game.applyAction(db, mod(), 'run.goto', { index: steps.findIndex((s) => s.kind === 'showIntro') });
+  // ohne KI-Stimme: keine Warnung
+  assert.doesNotMatch(game.moderatorView(db).flow.cue, /keine KI-Ansage/);
+  // KI-Ansage nur für Team 1 passend erzeugt
+  const want = SI.clipTexts(db.project);
+  db.project.showIntro = { ...(db.project.showIntro || {}), clips: { [`team:${ids[0]}`]: { id: 'media_aaaaaaaaaaaa', type: 'audio/mpeg', hash: SI.hashOf(want[`team:${ids[0]}`]) } } };
+  assert.doesNotMatch(game.moderatorView(db).flow.cue, /keine KI-Ansage/);
+  game.applyAction(db, mod(), 'run.next', {});
+  assert.match(game.moderatorView(db).flow.cue, /keine KI-Ansage/);
+});

@@ -353,8 +353,8 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-weltraum .si-line { font-family: "SI Cond", sans-serif; letter-spacing: .06em; }
 .si-weltraum .si-line::before, .si-weltraum .si-line::after { content: '['; color: #4cc9ff; -webkit-text-fill-color: #4cc9ff; margin: 0 .3em; font-weight: 600; }
 .si-weltraum .si-line::after { content: ']'; }
-.si-patch-wrap.team { margin-top: 5vh; animation-delay: var(--hit); }
-.si-patch-av { position: absolute; top: 14vh; left: 50%; transform: translateX(-50%); width: 26vh; height: 26vh; border-radius: 50%; overflow: hidden; display: grid; place-items: end center; animation: siFadeSlow .8s ease-out calc(var(--hit) + .6s) both; z-index: 2; }
+.si-patch-wrap.team { margin-top: 12vh; animation-delay: var(--hit); }
+.si-patch-av { position: absolute; top: 21vh; left: 50%; transform: translateX(-50%); width: 26vh; height: 26vh; border-radius: 50%; overflow: hidden; display: grid; place-items: end center; animation: siFadeSlow .8s ease-out calc(var(--hit) + .6s) both; z-index: 2; }
 .si-patch-av .si-avatar { height: 26vh; max-width: none; }
 .si-ret { position: relative; justify-self: start; margin-left: 10vw; width: 56vh; height: 56vh; display: grid; place-items: center; }
 .si-ret > * { grid-area: 1 / 1; }
