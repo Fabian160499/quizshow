@@ -1625,3 +1625,18 @@ test('Gespeicherter Ablauf: Rangliste vor dem Finale wandert einmalig vor die le
   const c = kinds.lastIndexOf('coin');
   assert.deepEqual(kinds.slice(c - 2, c + 2), ['pause', 'ranking', 'coin', 'finaleTitle']);
 });
+
+test('Pult-Leiste: im letzten Spiel bis zum Gesamtstand nach der Pause keine Punkte auf den iPads', () => {
+  const { db, ids } = setup();
+  const steps = game.moderatorView(db).rundown;
+  const at = (pred) => steps.findIndex(pred);
+  const go = (i) => game.applyAction(db, mod(), 'run.goto', { index: i });
+  go(at((x) => x.kind === 'game' && x.pos === 7));
+  assert.ok(game.teamView(db, ids[0]).pults);
+  go(at((x) => x.kind === 'title' && x.pos === 8));
+  assert.equal(game.teamView(db, ids[0]).pults, undefined);
+  go(at((x) => x.kind === 'pause' && steps.indexOf(x) > at((y) => y.kind === 'game' && y.pos === 8)));
+  assert.equal(game.teamView(db, ids[0]).pults, undefined);
+  go(at((x) => x.kind === 'ranking'));
+  assert.ok(game.teamView(db, ids[0]).pults);
+});

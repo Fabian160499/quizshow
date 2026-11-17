@@ -1811,8 +1811,9 @@ function teamView(db, teamId, now = Date.now()) {
     // Letzte Reaktion für dieses Team (grün/rot mit Punkten); das iPad zeigt sie, sobald die id neu ist.
     fx: (db.live.teamFx && db.live.teamFx[teamId]) || null,
   };
-  // Pult-Leiste: immer da (auch zum Auswählen anderer Teams); Punkte nur, wenn in den Einstellungen erlaubt.
-  if (db.project.settings.publicScores) { const pp = publicPoints(db); view.pults = db.project.teams.map((t) => ({ id: t.id, points: pp[t.id] || 0 })); }
+  // Pult-Leiste: immer da (auch zum Auswählen anderer Teams); Punkte nur, wenn in den Einstellungen erlaubt –
+  // und nicht im letzten Spiel bis zum Gesamtstand nach der Pause (Spannung, wer die Münze bekommt).
+  if (db.project.settings.publicScores && !scoresHiddenNow(db)) { const pp = publicPoints(db); view.pults = db.project.teams.map((t) => ({ id: t.id, points: pp[t.id] || 0 })); }
   // Abschluss der Show: jedes Team sieht seinen Platz und ein Dankeschön.
   const step = rundown(db)[db.live.run ?? -1];
   if (step && step.kind === 'end') {
@@ -1875,6 +1876,18 @@ function avatarVersion(img) {
   const tail = img.slice(-256);
   for (let i = 0; i < tail.length; i++) x = Math.imul(x ^ tail.charCodeAt(i), 16777619);
   return `${img.length.toString(36)}${(x >>> 0).toString(36)}`;
+}
+
+// Im letzten Spiel (Spieltitel/Spiel der letzten Position) bis zur nächsten Rangliste bzw. Münze
+// zeigen die iPads keine Punkte (Wunsch von Fabian, 17.11.2026).
+function scoresHiddenNow(db) {
+  const steps = rundown(db);
+  const run = db.live.run ?? -1;
+  const lastPos = db.project.games.length;
+  const start = steps.findIndex((x) => (x.kind === 'title' || x.kind === 'game') && x.pos === lastPos);
+  if (start < 0 || run < start) return false;
+  const end = steps.findIndex((x, i) => i > start && (x.kind === 'ranking' || x.kind === 'coin'));
+  return end < 0 ? true : run < end;
 }
 
 function publicTeams(db) {
