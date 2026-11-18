@@ -939,3 +939,18 @@ test('Töne erst bei der Auflösung: Telepa-Team 2.0 und stille Auflösung bei S
   act(db, mod(), 'judge', { teamId: B, match: true });
   assert.equal(fx().kind, 'correct');
 });
+
+test('5 ist Trümpf: mehr als fünf Begriffe möglich und spielbar', () => {
+  const { db, ids } = setup(2);
+  const g = db.project.games.find((x) => x.type === 'trumpf5');
+  const terms = Array.from({ length: 7 }, (_, i) => ({ category: 'Kat', term: `Begriff ${i + 1}`, hints: ['a', 'b', 'c', 'd', 'e'] }));
+  game.applyAction(db, mod(), 'game.update', { gameId: g.id, content: { ...structuredClone(g.content), terms } });
+  assert.equal(db.project.games.find((x) => x.id === g.id).content.terms.length, 7);
+  game.applyAction(db, mod(), 'show.activate', { gameId: g.id });
+  db.live.beamer = { view: 'game', data: {} };
+  act(db, mod(), 'start', { termIndex: 6 });
+  act(db, mod(), 'nextHint');
+  act(db, team(ids[0]), 'buzz');
+  act(db, mod(), 'judge', { correct: true });
+  assert.equal(pts(db, ids[0]), 5);
+});

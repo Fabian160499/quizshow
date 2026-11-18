@@ -121,9 +121,9 @@ const TYPES = {
   trumpf5: {
     title: '5 ist Trümpf',
     playable: true,
-    summary: 'Fünf Begriffe, bis zu fünf Hinweise, Buzzer: früher raten bringt mehr Punkte.',
+    summary: 'Mehrere Begriffe mit je fünf Hinweisen, Buzzer: früher raten bringt mehr Punkte.',
     schema: [
-      { key: 'terms', label: 'Begriffe', type: 'list', min: 5, max: 5, itemLabel: (i) => `Begriff ${i + 1}`,
+      { key: 'terms', label: 'Begriffe', type: 'list', min: 1, max: 15, itemLabel: (i) => `Begriff ${i + 1}`, addLabel: 'Begriff hinzufügen',
         fields: [
           text('category', 'Kategorie (sehen die Teams zuerst)', 80),
           text('term', 'Gesuchter Begriff', 120),
