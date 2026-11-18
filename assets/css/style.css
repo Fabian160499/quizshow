@@ -2763,3 +2763,21 @@ html, body { touch-action: manipulation; }
 .media-pick li { display: flex; align-items: center; gap: 10px; }
 .media-pick-audio { width: 100%; max-width: 360px; height: 32px; margin-top: 4px; }
 .media-pick-thumb { max-height: 60px; margin-top: 4px; border-radius: 6px; }
+
+/* Punkte des Spiels → Gesamtstand */
+.pult-stage { position: relative; }
+.pult-caption { position: absolute; left: 0; right: 0; top: -1.2vh; text-align: center; font: 800 2.2vh/1 var(--font-display, sans-serif); letter-spacing: .3em; text-transform: uppercase; color: rgba(255, 255, 255, .7); transition: opacity .3s, transform .3s; }
+.pult-caption.swap { opacity: 0; transform: translateY(-1vh); }
+.pult-stage.totals .pult-caption { color: #ffd166; text-shadow: 0 0 1.5vh rgba(255, 176, 0, .6); }
+.pult-stage .pult-score { transition: opacity .25s, transform .25s; }
+.pult-stage .pult-score.swap { opacity: 0; transform: scale(.7); }
+.pult-plus { position: absolute; left: 50%; top: 4vh; transform: translateX(-50%); z-index: 5; font: 900 5.5vh/1 var(--font-display, sans-serif); color: #7dffb0; text-shadow: 0 0 1.6vh rgba(40, 255, 140, .8), 0 .3vh 0 #0a5a2c; animation: pultPlusIn .5s cubic-bezier(.2, 1.5, .4, 1) both; white-space: nowrap; pointer-events: none; }
+.pult-plus.minus { color: #ff8a8a; text-shadow: 0 0 1.6vh rgba(255, 60, 60, .8), 0 .3vh 0 #5a0a0a; }
+@keyframes pultPlusIn { from { opacity: 0; transform: translate(-50%, 2vh) scale(.4); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+.pult-stage .pult.hit .pult-desk { animation: pultHit .6s ease-out; }
+@keyframes pultHit { 0% { box-shadow: 0 0 0 0 #fff, 0 0 0 var(--team); } 30% { box-shadow: 0 0 0 .5vh #fff, 0 0 5vh var(--team); } 100% { box-shadow: 0 0 0 0 transparent, 0 0 0 transparent; } }
+.pult-stage .pult.hit .pult-score { animation: pultPop .6s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pultPop { 0% { transform: scale(1); } 35% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.pult-move { position: absolute; left: 50%; bottom: -9.5vh; transform: translateX(-50%); font: 800 2.2vh/1 var(--font-display, sans-serif); padding: .4vh 1vh; border-radius: 99px; animation: pultPlusIn .5s cubic-bezier(.2, 1.5, .4, 1) both; white-space: nowrap; }
+.pult-move.up { background: #1fd67a; color: #04210f; }
+.pult-move.down { background: #ff5a6a; color: #2a0006; }

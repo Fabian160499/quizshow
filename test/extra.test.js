@@ -783,7 +783,9 @@ test('Song Song Song 2.0: einmal abspielen, Bewertung 0–3 geheim, Auflösung v
   assert.deepEqual(pv(db).songs.map((s) => s.start), [30, 0, 12.5]);
   assert.equal(pv(db).playback.state, 'playing');
   assert.throws(() => act(db, mod(), 'play'), /einmal hören/);
+  const fxSeq = db.live.effect.seq;
   act(db, team(ids[1]), 'submit', { ink }); // 1. Abgabe
+  assert.equal(db.live.effect.seq, fxSeq); // kein Buzzer-Ton bei der Abgabe
   act(db, team(ids[0]), 'submit', { ink }); // 2. Abgabe
   act(db, team(ids[2]), 'submit', { ink }); // 3. Abgabe
   assert.throws(() => act(db, team(ids[0]), 'submit', { ink }), /schon abgeschickt/);

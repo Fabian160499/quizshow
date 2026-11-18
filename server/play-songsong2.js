@@ -73,7 +73,7 @@ module.exports = {
       const auto = !!r.closeAt;
       r.subs.push({ teamId: ctx.teamId, ink, at: ctx.now, auto });
       log(db, ctx, 'buzzer', `${teamName(db, ctx.teamId)} ${auto ? 'Abgabe beim Schließen (automatisch)' : 'schickt ab'} (Platz ${r.subs.length})`);
-      if (!auto) effect(db, 'buzz');
+      // Kein Buzzer-Ton: die Zeit spielt keine Rolle, und die Musik soll ungestört weiterlaufen (Fabian, 18.11.2026).
     },
   },
 

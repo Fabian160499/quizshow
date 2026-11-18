@@ -906,7 +906,12 @@ function runStep(db, ctx, index) {
     effect(db, 'coin');
   } else if (st.kind === 'gameScore') {
     // Nur die Punkte dieses Spiels (nicht der Gesamtstand).
-    db.live.beamer = { view: 'ranking', data: { ranking: gameScoreSnapshot(db, game), at: ctx.now, game: { pos: st.pos, title: game.title } } };
+    // Danach werden die Spielpunkte auf dem Beamer zum Gesamtstand addiert. Nach dem letzten Spiel nicht:
+    // der Gesamtstand bleibt bis zur Rangliste vor der Münze geheim (Spannung).
+    const last = st.pos === db.project.games.length;
+    const sums = totals(db);
+    const totalsNow = last ? null : Object.fromEntries(db.project.teams.map((t) => [t.id, sums[t.id] || 0]));
+    db.live.beamer = { view: 'ranking', data: { ranking: gameScoreSnapshot(db, game), at: ctx.now, game: { pos: st.pos, title: game.title }, ...(totalsNow ? { totals: totalsNow } : {}) } };
     effect(db, 'reveal');
   } else if (st.kind === 'ranking' && isFinalRanking(steps, index)) {
     // Vor dem Finale: erst der Rückblick auf den Abend, dann die Rangliste von hinten.
@@ -1969,7 +1974,7 @@ function beamerView(db) {
     view.rankFinal = fin.step < S
       ? { slide: fin.slides[fin.step], index: fin.step, of: S }
       : { board: list.map((r, i) => (i >= list.length - shown ? { place: pl[i], teamId: r.teamId, name: r.name, color: r.color, points: r.points } : { place: pl[i], hidden: true })), shown, all: shown === list.length, max: Math.max(1, ...list.map((r) => r.points)) };
-  } else if (b.view === 'ranking') { view.ranking = b.data.ranking; view.rankGame = b.data.game || null; }
+  } else if (b.view === 'ranking') { view.ranking = b.data.ranking; view.rankGame = b.data.game || null; view.rankTotals = b.data.totals || null; }
   if (b.view === 'coin') view.coin = b.data;
   if (b.view === 'finale') view.finale = FINALE.beamerView(db);
   if (b.view === 'stageTitle') {

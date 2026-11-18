@@ -668,7 +668,8 @@
         nodes.set(r.teamId, n);
         row.append(n);
       });
-      const stage = h('div', { class: 'pult-stage' }, row);
+      const caption = h('div', { class: 'pult-caption' }, 'Punkte dieses Spiels');
+      const stage = h('div', { class: 'pult-stage' }, caption, row);
       const places = list.map((r, i) => (i > 0 && r.points === list[i - 1].points ? null : i + 1));
       for (let i = 1; i < places.length; i++) if (places[i] === null) places[i] = places[i - 1];
       const reduced = document.documentElement.classList.contains('reduced-motion');
@@ -682,7 +683,11 @@
           requestAnimationFrame(step);
         }
       };
-      const finish = () => { list.forEach((r, i) => nodes.get(r.teamId).classList.toggle('lead', places[i] === 1 && r.points > 0)); stage.classList.add('done'); };
+      const finish = () => {
+        list.forEach((r, i) => nodes.get(r.teamId).classList.toggle('lead', places[i] === 1 && r.points > 0));
+        stage.classList.add('done');
+        if (s.rankTotals) setTimeout(() => addToTotals(s, list, nodes, row, stage, caption, speed), 2600 * speed);
+      };
       const reorder = () => {
         const before = new Map([...nodes].map(([id, n]) => [id, n.getBoundingClientRect().left]));
         for (const n of nodes.values()) { n.classList.remove('in'); n.style.animationDelay = ''; } // sonst startet das Einblenden beim Umsortieren neu
@@ -693,12 +698,94 @@
         }
         setTimeout(finish, 1500 * speed);
       };
-      if (reduced) { grow(); for (const r of list) row.append(nodes.get(r.teamId)); finish(); }
+      if (reduced) {
+        grow(); for (const r of list) row.append(nodes.get(r.teamId)); finish();
+        if (s.rankTotals) { // ohne Animation: gleich den Gesamtstand zeigen
+          caption.textContent = 'Gesamtstand';
+          const tl = list.slice().sort((a, b) => s.rankTotals[b.teamId] - s.rankTotals[a.teamId]);
+          for (const r of tl) { row.append(nodes.get(r.teamId)); nodes.get(r.teamId).querySelector('.pult-score').textContent = String(s.rankTotals[r.teamId]); }
+        }
+      }
       else {
         setTimeout(grow, (0.8 + start.length * 0.15) * 1000 * speed);
         setTimeout(reorder, (3.6 + start.length * 0.15) * 1000 * speed);
       }
       return [tvPanel(`Kategorie ${s.rankGame.pos} von 8`, s.rankGame.title, stage)];
+    }
+
+    // Nach den Punkten des Spiels: Spielpunkte fliegen in den Gesamtstand, erst danach ändern sich die Plätze.
+    // 1) Pulte in die alte Reihenfolge (Stand vor dem Spiel), „+X“ schwebt über jedem Pult
+    // 2) „+X“ fliegt nacheinander ins Pult, der Gesamtstand zählt hoch
+    // 3) Pulte rutschen auf die neuen Plätze, Pfeile zeigen Auf- und Absteiger, Stern für die Spitze
+    function addToTotals(s, list, nodes, row, stage, caption, speed) {
+      if (!stage.isConnected) return;
+      const T = s.rankTotals;
+      const gp = Object.fromEntries(list.map((r) => [r.teamId, r.points]));
+      const oldT = Object.fromEntries(list.map((r) => [r.teamId, (T[r.teamId] || 0) - r.points]));
+      const order = (vals, prev) => list.map((r) => r.teamId).sort((a, b) => (vals[b] - vals[a]) || (prev ? prev.indexOf(a) - prev.indexOf(b) : 0));
+      const oldOrder = order(oldT, (s.teams || []).map((t) => t.id));
+      const newOrder = order(T, oldOrder);
+      const flip = (ids, dur) => {
+        const before = new Map([...nodes].map(([id, n]) => [id, n.getBoundingClientRect().left]));
+        for (const id of ids) row.append(nodes.get(id));
+        for (const [id, n] of nodes) {
+          const dx = before.get(id) - n.getBoundingClientRect().left;
+          if (dx) n.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: dur, easing: 'cubic-bezier(.45,0,.2,1)' });
+        }
+      };
+      const score = (id) => nodes.get(id).querySelector('.pult-score');
+      const count = (el, from, to, dur) => {
+        const t0 = performance.now();
+        const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(from + (to - from) * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+      };
+      // 1) alter Stand
+      stage.classList.remove('done');
+      stage.classList.add('totals');
+      for (const n of nodes.values()) n.classList.remove('lead');
+      caption.classList.add('swap');
+      setTimeout(() => { caption.textContent = 'Gesamtstand'; caption.classList.remove('swap'); }, 300);
+      flip(oldOrder, 1100 * speed);
+      const bubbles = new Map();
+      for (const id of oldOrder) {
+        const el = score(id);
+        el.classList.add('swap'); setTimeout(() => { el.textContent = String(oldT[id]); el.classList.remove('swap'); }, 250);
+        if (!gp[id]) continue;
+        const b = h('span', { class: `pult-plus${gp[id] < 0 ? ' minus' : ''}` }, gp[id] > 0 ? `+${gp[id]}` : `−${Math.abs(gp[id])}`);
+        nodes.get(id).append(b);
+        bubbles.set(id, b);
+      }
+      // 2) Punkte fliegen ins Pult (nacheinander, von links)
+      const flyAt = 1700 * speed;
+      oldOrder.forEach((id, i) => {
+        setTimeout(() => {
+          if (!stage.isConnected) return;
+          const b = bubbles.get(id);
+          const el = score(id);
+          if (b) {
+            const br = b.getBoundingClientRect(), er = el.getBoundingClientRect();
+            const dy = (er.top + er.height / 2) - (br.top + br.height / 2);
+            b.animate([{ transform: 'translate(-50%, 0) scale(1)', opacity: 1 }, { transform: `translate(-50%, ${dy}px) scale(.45)`, opacity: .2 }], { duration: 520 * speed, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+            setTimeout(() => { b.remove(); nodes.get(id).classList.add('hit'); setTimeout(() => nodes.get(id).classList.remove('hit'), 600); count(el, oldT[id], T[id], 900 * speed); }, 500 * speed);
+          }
+        }, flyAt + i * 260 * speed);
+      });
+      // 3) neue Plätze
+      const moveAt = flyAt + oldOrder.length * 260 * speed + 1700 * speed;
+      setTimeout(() => {
+        if (!stage.isConnected) return;
+        flip(newOrder, 1600 * speed);
+        setTimeout(() => {
+          const top = T[newOrder[0]];
+          newOrder.forEach((id) => {
+            const n = nodes.get(id);
+            const d = oldOrder.indexOf(id) - newOrder.indexOf(id);
+            n.classList.toggle('lead', T[id] === top && top > 0);
+            if (d) n.append(h('span', { class: `pult-move ${d > 0 ? 'up' : 'down'}` }, `${d > 0 ? '▲' : '▼'} ${Math.abs(d)}`));
+          });
+          stage.classList.add('done');
+        }, 1600 * speed);
+      }, moveAt);
     }
 
     function ranking(s) {
