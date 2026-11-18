@@ -405,9 +405,9 @@ function hostdu(v, teamOf) {
   out.push(h('div', { class: 'nb-hd-opts' }, v.options.map((o) => h('div', { class: `nb-hd-opt${revealed ? (o.correct ? ' correct' : ' fake') : ''}` },
     h('b', { class: 'l' }, o.letter), h('span', { class: 'tx' }, o.text),
     revealed ? h('span', { class: 'meta' },
-      o.correct ? h('em', {}, '✓ richtig') : o.by.length ? h('em', {}, 'erfunden von ', o.by.map((id) => teamOf(id).name).join(', ')) : null,
+      o.correct ? h('em', {}, o.by.length ? `✓ richtig – gewusst von ${o.by.map((id) => teamOf(id).name).join(', ')}` : '✓ richtig') : o.by.length ? h('em', {}, 'erfunden von ', o.by.map((id) => teamOf(id).name).join(', ')) : null,
       o.chosenBy.length ? h('span', { class: 'votes' }, o.chosenBy.map((id) => h('span', { class: 'dm-name', '--team': teamOf(id).color }, teamOf(id).name))) : null) : null))));
-  if (!revealed) out.push(sub(`${v.votedCount} Teams haben gewählt`, { marginTop: '2vh' }));
+  if (!revealed) out.push(sub(`${v.votedCount} von ${v.voterCount ?? v.teamCount} Teams haben gewählt`, { marginTop: '2vh' }));
   else out.push(row(...Object.entries(v.results).filter(([, r]) => r.regular + r.deceive > 0).map(([id, r]) => chip(teamOf(id), '', h('b', {}, ` +${r.regular + r.deceive}`)))));
   return out;
 }

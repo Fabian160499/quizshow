@@ -252,13 +252,17 @@ test('Host du das Zeug dafür: alle müssen einreichen, eigene Option gesperrt, 
   assert.throws(() => act(db, team(ids[0]), 'vote', { letter: own.letter }), /eigene/);
   const letter = (t) => tv(db, ids[0]).options.find((o) => o.text === t).letter;
   const fisch = tv(db, ids[3]).options.find((o) => o.text === 'Ein Fisch').letter;
-  assert.throws(() => act(db, team(ids[2]), 'vote', { letter: fisch }), /eigene/); // richtige, aber selbst eingereicht
+  // Team 3 hat die richtige Antwort selbst eingereicht: Punkt automatisch, keine Abstimmung.
+  assert.equal(tv(db, ids[2]).knew, true);
+  assert.throws(() => act(db, team(ids[2]), 'vote', { letter: fisch }), /richtige Antwort/);
+  assert.throws(() => act(db, team(ids[2]), 'vote', { letter: letter('Ein Vogel') }), /richtige Antwort/);
+  assert.equal(bv(db).voterCount, 3);
   act(db, team(ids[0]), 'vote', { letter: fisch }); // richtig +1
   act(db, team(ids[1]), 'vote', { letter: letter('Eine Pflanze') }); // Team 4 täuscht +1
-  act(db, team(ids[2]), 'vote', { letter: letter('Ein Vogel') }); // Team 1 und 2 je +1
   act(db, team(ids[3]), 'vote', { letter: letter('Ein Vogel') }); // Team 1 und 2 je +1
-  act(db, mod(), 'reveal');
-  assert.deepEqual(ids.map((id) => pts(db, id)), [3, 2, 0, 1]);
+  act(db, mod(), 'reveal'); // ohne „force“: Team 3 muss nicht abstimmen
+  assert.deepEqual(ids.map((id) => pts(db, id)), [2, 1, 1, 1]);
+  assert.equal(tv(db, ids[2]).result.knew, true);
 });
 
 test('Wer nix werd, werd Nerd: Notizen in der Gebotsphase und für das Team am Zug, sonst privat und nur lesbar', () => {

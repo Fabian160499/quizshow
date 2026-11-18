@@ -425,10 +425,13 @@ function hostdu(ui, g, st) {
     row(btn('pink', 'Abstimmung starten', () => ui.act('play.startVote'))));
   if (r.phase === 'vote') {
     const voted = Object.keys(r.votes).length;
-    out.push(row(badge('', `${voted} von ${teamIds(ui).length} haben gewählt`),
-      btn('pink', 'Auflösen und Punkte vergeben', () => (voted < teamIds(ui).length ? ui.confirmAct('Noch haben nicht alle gewählt. Trotzdem auflösen?', 'play.reveal', { force: true }) : ui.act('play.reveal')))));
+    const knew = (r.groups.find((gr) => gr.correct) || { teams: [] }).teams;
+    const need = teamIds(ui).filter((id) => !knew.includes(id)).length;
+    if (knew.length) out.push(muted(`${knew.map((id) => ui.teamName(id)).join(', ')} ${knew.length === 1 ? 'hatte' : 'hatten'} die richtige Antwort – Punkt automatisch, stimmt nicht ab.`));
+    out.push(row(badge('', `${voted} von ${need} haben gewählt`),
+      btn('pink', 'Auflösen und Punkte vergeben', () => (voted < need ? ui.confirmAct('Noch haben nicht alle gewählt. Trotzdem auflösen?', 'play.reveal', { force: true }) : ui.act('play.reveal')))));
   }
-  if (r.phase === 'revealed') out.push(h('ul', { class: 'list' }, teamIds(ui).map((id) => teamLi(ui, id, ` – richtig gewählt +${r.results[id].regular} · getäuscht +${r.results[id].deceive}`))));
+  if (r.phase === 'revealed') out.push(h('ul', { class: 'list' }, teamIds(ui).map((id) => teamLi(ui, id, ` – ${r.results[id].knew ? 'selbst gewusst' : 'richtig gewählt'} +${r.results[id].regular} · getäuscht +${r.results[id].deceive}`))));
   return out;
 }
 

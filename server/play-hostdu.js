@@ -8,7 +8,8 @@
 // die Moderation (zusammenführen/trennen) vor der Abstimmung. Dann wählt jedes
 // Team eine Option – nie die, in der seine eigene Antwort steckt (auch nicht die
 // richtige, wenn es sie selbst eingereicht hat). Wertung: richtige Option gewählt
-// = 1 Punkt. Für jede falsche Option bekommt jedes Team, das sie eingereicht hat,
+// = 1 Punkt. Wer die richtige Antwort selbst eingereicht hat, bekommt diesen Punkt
+// automatisch und stimmt nicht ab. Für jede falsche Option bekommt jedes Team, das sie eingereicht hat,
 // 1 Punkt pro gegnerischem Team, das sie wählt. Die richtige Option bringt keine
 // Täuschungspunkte. Mehrere Teams dürfen dieselbe Option wählen.
 
@@ -36,6 +37,8 @@ function current(st) {
 }
 const variantsOf = (q) => [q.answer, ...String(q.aliases || '').split(',')].map((s) => s.trim()).filter(Boolean);
 const groupOf = (r, teamId) => r.groups.find((g) => g.teams.includes(teamId));
+// Team hat die richtige Antwort selbst eingereicht (stimmt dann nicht ab).
+const knewIt = (r, teamId) => !!(r.groups || []).find((g) => g.correct && g.teams.includes(teamId));
 
 // Optionen aus den Einreichungen bilden.
 function build(r, q) {
@@ -67,7 +70,10 @@ function build(r, q) {
 
 function score(db, r, game = null) {
   const P = (k) => (game ? pv(game, k) : 1);
-  const pts = Object.fromEntries(teamIds(db).map((id) => [id, { regular: 0, deceive: 0 }]));
+  const pts = Object.fromEntries(teamIds(db).map((id) => [id, { regular: 0, deceive: 0, knew: false }]));
+  // Richtige Antwort selbst eingereicht: Punkt für „richtig“ ohne Abstimmung.
+  const right = r.groups.find((g) => g.correct);
+  for (const t of right ? right.teams : []) if (pts[t]) { pts[t].regular += P('correct'); pts[t].knew = true; }
   for (const [voter, gid] of Object.entries(r.votes)) {
     const g = r.groups.find((x) => x.id === gid);
     if (!g || g.teams.includes(voter)) continue; // eigene Option zählt nie
@@ -97,6 +103,7 @@ module.exports = {
       if (r.votes[ctx.teamId]) fail('Eure Wahl ist schon abgegeben.');
       const g = r.groups.find((x) => x.letter === p.letter);
       if (!g) fail('Diese Option gibt es nicht.');
+      if (knewIt(r, ctx.teamId)) fail('Ihr hattet die richtige Antwort – der Punkt ist euch sicher, ihr stimmt nicht ab.');
       if (g.teams.includes(ctx.teamId)) fail('Eure eigene Antwort könnt ihr nicht wählen.');
       r.votes[ctx.teamId] = g.id;
       log(db, ctx, 'antwort', `${teamName(db, ctx.teamId)} hat abgestimmt`);
@@ -157,7 +164,7 @@ module.exports = {
     reveal(db, ctx, game, st, p) {
       const r = current(st);
       if (r.phase !== 'vote') fail('Die Abstimmung läuft nicht.');
-      const can = teamIds(db).filter((id) => r.groups.some((g) => !g.teams.includes(id)));
+      const can = teamIds(db).filter((id) => !knewIt(r, id) && r.groups.some((g) => !g.teams.includes(id)));
       const missing = can.filter((id) => !r.votes[id]);
       if (missing.length && !p.force) fail(`Noch nicht abgestimmt: ${missing.map((id) => teamName(db, id)).join(', ')}`);
       r.phase = 'revealed';
@@ -180,6 +187,7 @@ module.exports = {
       ...base,
       options: r.groups.map((g) => ({ letter: g.letter, text: g.text, own: g.teams.includes(teamId) })),
       voted: voted ? r.groups.find((g) => g.id === voted).letter : null,
+      knew: knewIt(r, teamId),
       correct: r.phase === 'revealed' ? r.groups.find((g) => g.correct).letter : null,
       result: r.phase === 'revealed' ? r.results[teamId] : null,
     };
@@ -190,6 +198,7 @@ module.exports = {
     const r = round(st, st.index);
     const q = game.content.questions[st.index];
     const out = { index: st.index, question: q.question, phase: r.phase, submittedCount: Object.keys(r.answers).length, teamCount: db.project.teams.length };
+    if (r.groups) out.voterCount = teamIds(db).filter((id) => !knewIt(r, id)).length;
     if (r.phase === 'vote') {
       out.options = r.groups.map((g) => ({ letter: g.letter, text: g.text }));
       out.votedCount = Object.keys(r.votes).length;

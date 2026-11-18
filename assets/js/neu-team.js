@@ -473,13 +473,14 @@ function hostdu(g, ui) {
   const revealed = g.phase === 'revealed';
   out.push(h('div', { class: 'hd-options' }, g.options.map((o) => h('button', {
     class: `hd-opt${o.own ? ' own' : ''}${g.voted === o.letter ? ' selected' : ''}${revealed && g.correct === o.letter ? ' correct' : ''}`,
-    disabled: o.own || !!g.voted || revealed,
+    disabled: o.own || g.knew || !!g.voted || revealed,
     onclick: () => run(ui.conn, 'play.vote', { letter: o.letter }),
   }, h('b', {}, o.letter), h('span', {}, o.text), o.own ? h('small', {}, 'eure Antwort – nicht wählbar') : null))));
   if (revealed) {
     const r = g.result || { regular: 0, deceive: 0 };
-    out.push(stateBox(r.regular + r.deceive ? 'ok' : '', '★', `${g.voted === g.correct ? `Richtig gewählt: ${plus(r.regular)}` : 'Nicht die richtige Antwort'} · Getäuscht: +${r.deceive} · zusammen ${pts(r.regular + r.deceive)}`));
-  } else if (g.voted) out.push(stateBox('', '🔒', `Gewählt: ${g.voted} – gesperrt`));
+    out.push(stateBox(r.regular + r.deceive ? 'ok' : '', '★', `${g.knew ? `Richtige Antwort gewusst: ${plus(r.regular)}` : g.voted === g.correct ? `Richtig gewählt: ${plus(r.regular)}` : 'Nicht die richtige Antwort'} · Getäuscht: +${r.deceive} · zusammen ${pts(r.regular + r.deceive)}`));
+  } else if (g.knew) out.push(stateBox('ok', '🎯', 'Ihr hattet die richtige Antwort! Der Punkt ist euch sicher – abstimmen müsst ihr nicht.'));
+  else if (g.voted) out.push(stateBox('', '🔒', `Gewählt: ${g.voted} – gesperrt`));
   else out.push(muted('Wählt die Antwort, die ihr für richtig haltet. Eure eigene ist gesperrt.'));
   return out;
 }
