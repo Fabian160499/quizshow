@@ -146,6 +146,7 @@ export function uploadMedia(file, token, onProgress) {
     xhr.open('POST', 'api/media');
     xhr.setRequestHeader('Content-Type', file.type);
     xhr.setRequestHeader('X-Token', token);
+    if (file.name) xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
     xhr.upload.onprogress = (ev) => ev.lengthComputable && onProgress?.(ev.loaded / ev.total);
     xhr.onload = () => {
       let body = {};
@@ -155,6 +156,14 @@ export function uploadMedia(file, token, onProgress) {
     xhr.onerror = () => reject(new Error('Upload fehlgeschlagen. Ist der Server erreichbar?'));
     xhr.send(file);
   });
+}
+
+// Alle hochgeladenen Dateien (auch nicht mehr zugeordnete), neueste zuerst.
+export async function listMedia(token) {
+  if (localServer) return localServer.listMedia ? localServer.listMedia() : [];
+  const r = await fetch('api/media-list', { headers: { 'X-Token': token } });
+  if (!r.ok) throw new Error('Liste der Dateien nicht verfügbar.');
+  return (await r.json()).files || [];
 }
 
 // Abspielbare Adresse eines Videos (oder null, wenn es nicht mehr da ist).

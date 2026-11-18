@@ -35,7 +35,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'prototype', 'starter'))) {
 // CommonJS-Module der Spiellogik in ein ES-Modul verpacken (alles aus server/
 // außer dem HTTP-Server und der Dateispeicherung).
 const modules = fs.readdirSync(path.join(ROOT, 'server'))
-  .filter((f) => f.endsWith('.js') && !['server.js', 'store.js'].includes(f))
+  .filter((f) => f.endsWith('.js') && !['server.js', 'store.js', 'data-dir.js'].includes(f))
   .map((f) => f.slice(0, -3))
   .map((name) => {
     const src = fs.readFileSync(path.join(ROOT, 'server', `${name}.js`), 'utf8');

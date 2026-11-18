@@ -343,6 +343,18 @@ export function createLocalServer() {
       return { id, type: blob.type, size: blob.size };
     },
 
+    // Alle Dateien im Browser-Speicher (für „Bereits hochgeladen“)
+    async listMedia() {
+      const keys = (await mediaTx('readonly', (st) => st.getAllKeys())) || [...mediaMem.keys()];
+      const used = JSON.stringify(data);
+      const out = [];
+      for (const id of keys) {
+        const blob = mediaMem.get(id) || await mediaTx('readonly', (st) => st.get(id));
+        if (blob) out.push({ id, type: blob.type, size: blob.size, at: blob.lastModified || 0, name: blob.name || '', used: used.includes(id) });
+      }
+      return out.sort((a, b) => b.at - a.at);
+    },
+
     async getMedia(id) {
       if (mediaMem.has(id)) return mediaMem.get(id);
       const blob = await mediaTx('readonly', (st) => st.get(id));

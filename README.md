@@ -13,7 +13,7 @@ Grundlage ist der Masterprompt (Produktspezifikation, Version 1.0).
 4. Das Fenster zeigt die Adressen für iPads und Beamer (z. B. `http://192.168.178.23:3000`).
    Passwort für Regie und Editor: `fabian`. Fenster während der Show offen lassen.
 
-Alle Daten (Shows, Spiele, Medien) liegen im Ordner `data` neben den Startdateien.
+Alle Daten (Shows, Spiele, Medien, KI-Schlüssel) liegen **außerhalb** des Programmordners im Benutzerordner unter `Quizshow-Daten` (Mac: `/Users/<Name>/Quizshow-Daten`). Ein Update – neuen Quizshow-Ordner entpacken, alten ersetzen – lässt die Daten deshalb unberührt. Bei jedem Start legt der Server unter `Quizshow-Daten/backups` eine Sicherung der Datenbank an (die letzten 14 bleiben). Ein alter Ordner `data` im Programmordner wird beim ersten Start einmalig dorthin kopiert. Anderer Ort: Umgebungsvariable `QUIZ_DATA_DIR`.
 
 ## Starten
 

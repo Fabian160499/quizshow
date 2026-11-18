@@ -13,7 +13,10 @@ const SI = require('./show-intro');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT) || 3000;
-const DATA_FILE = process.env.QUIZ_DATA_FILE || path.join(ROOT, 'data', 'db.json');
+// Daten liegen außerhalb des Programmordners (Benutzerordner/Quizshow-Daten), siehe data-dir.js.
+const DATA = require('./data-dir').resolveDataDir({ root: ROOT });
+const DATA_FILE = DATA.file;
+try { require('./data-dir').backupDb(DATA_FILE); } catch (err) { console.warn('  Sicherung beim Start fehlgeschlagen:', err.message); }
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 // Medien (Intro-Videos) liegen als Dateien neben der Datenbank, nicht im JSON.
 const MEDIA_DIR = process.env.QUIZ_MEDIA_DIR || path.join(path.dirname(DATA_FILE), 'media');
@@ -155,8 +158,31 @@ function uploadMedia(req, res) {
     if (failed) return;
     if (!size) return abort(400, 'Die Datei ist leer.');
     fs.renameSync(tmp, file);
+    // Ursprünglichen Dateinamen merken (für „Bereits hochgeladen“)
+    let name = '';
+    try { name = decodeURIComponent(String(req.headers['x-file-name'] || '')).slice(0, 160); } catch { name = ''; }
+    if (name) { const names = mediaNames(); names[id] = name; try { fs.writeFileSync(path.join(MEDIA_DIR, 'names.json'), JSON.stringify(names)); } catch { /* egal */ } }
     sendJson(res, 200, { id, type, size });
   });
+}
+function mediaNames() {
+  try { return JSON.parse(fs.readFileSync(path.join(MEDIA_DIR, 'names.json'), 'utf8')) || {}; } catch { return {}; }
+}
+// Alle hochgeladenen Dateien – auch solche, die in keinem Spiel mehr stecken (z. B. verlorene Zuordnung).
+// Der Server löscht nie Medien; so lässt sich eine Datei ohne neues Hochladen wieder zuordnen.
+function listMedia(req, res) {
+  if (!validSession(req.headers['x-token'])) return sendJson(res, 401, { error: 'Bitte als Moderation anmelden.' });
+  if (!fs.existsSync(MEDIA_DIR)) return sendJson(res, 200, { files: [] });
+  const typeOf = Object.fromEntries(Object.entries(MEDIA_EXT).reverse().map(([t, e]) => [e, t]));
+  const used = JSON.stringify(store.data);
+  const names = mediaNames();
+  const files = fs.readdirSync(MEDIA_DIR).map((f) => {
+    const m = /^(media_[a-f0-9]{12,40})(\.[a-z0-9]+)$/.exec(f);
+    if (!m) return null;
+    const st = fs.statSync(path.join(MEDIA_DIR, f));
+    return { id: m[1], type: typeOf[m[2]] || 'application/octet-stream', size: st.size, at: st.mtimeMs, name: names[m[1]] || '', used: used.includes(m[1]) };
+  }).filter(Boolean).sort((a, b) => b.at - a.at);
+  sendJson(res, 200, { files });
 }
 
 // ---------- KI-Stimme fürs Show-Intro (ElevenLabs) ----------
@@ -344,6 +370,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url.pathname === '/api/media') return uploadMedia(req, res);
+    if (req.method === 'GET' && url.pathname === '/api/media-list') return listMedia(req, res);
     if (url.pathname.startsWith('/api/voice')) return voiceApi(req, res, url);
     if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname.startsWith('/media/') && serveMedia(req, res, url.pathname.slice(7))) return;
     // Team-Avatare für die Pult-Leiste: einmal laden, dann aus dem Cache (Version im Link).
@@ -637,6 +664,7 @@ server.listen(PORT, () => {
     console.log('\n  iPads und Beamer im selben WLAN öffnen (oder QR-Code auf dem Beamer scannen):');
     for (const a of nets) console.log(`    http://${a}:${PORT}`);
   }
+  console.log(`\n  Show-Daten (Shows, Medien, Sicherungen): ${path.dirname(DATA_FILE)}`);
   console.log('\n  Passwort für Regie und Editor: fabian');
   console.log('  Dieses Fenster während der Show offen lassen. Beenden mit Strg+C.\n');
 });

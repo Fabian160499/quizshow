@@ -1,4 +1,4 @@
-import { h, connect, run, store, toast, ask, showModal, localServer, uploadMedia, mediaUrl, setShowTitle, coinImg } from './client.js';
+import { h, connect, run, store, toast, ask, showModal, localServer, uploadMedia, mediaUrl, listMedia, setShowTitle, coinImg } from './client.js';
 import { buildPlay } from './mod-play.js';
 import { mapView, zoomState } from './map.js';
 import { buildFinaleLive, buildFinaleEditor } from './mod-finale.js';
@@ -1358,7 +1358,9 @@ function buildLibrary() {
 function buildGameEditor(kind, item) {
   const key = `${kind}.${item.id}`;
   let d = drafts.get(key);
-  if (!d || !(saveState.pending.has(key) || saveState.saving)) {
+  // Arbeitskopie nicht ersetzen, solange gespeichert wird oder Dateien hochladen – sonst schreibt ein
+  // fertiger Upload in eine alte Kopie und speichert sie (andere, gleichzeitige Uploads gingen verloren).
+  if (!d || !(saveState.pending.has(key) || saveState.saving || mediaUploads.size)) {
     d = { title: item.title, content: structuredClone(item.content) };
     drafts.set(key, d);
   }
@@ -1367,6 +1369,7 @@ function buildGameEditor(kind, item) {
   const save = () => autosave(key, () => (kind === 'game'
     ? act('game.update', { gameId: item.id, title: d.title, content: d.content })
     : act('library.update', { libraryId: item.id, title: d.title, content: d.content })));
+  editorSave = save;
   const rerender = () => { save(); renderAll(true); };
   const running = kind === 'game' && S.live.activeGame === item.id;
   const pos = kind === 'game' ? S.project.games.indexOf(item) + 1 : null;
@@ -1459,6 +1462,17 @@ function formFields(fields, obj, save, rerender, idBase) {
 
 // Karte im Editor: Antippen setzt Breiten- und Längengrad des gesuchten Orts.
 let editorContent = null; // Inhalt des gerade bearbeiteten Spiels (für die Standard-Karte)
+let editorSave = null; // Speichern des gerade offenen Editors (für fertige Uploads)
+// Weg eines Objekts innerhalb des Spielinhalts (z. B. ['rounds', 2]) – um es nach einem Neuzeichnen
+// in der aktuellen Arbeitskopie wiederzufinden.
+function pathOf(root, target, path = []) {
+  if (root === target) return path;
+  if (!root || typeof root !== 'object') return null;
+  for (const [k, v] of Object.entries(root)) {
+    if (v && typeof v === 'object') { const r = pathOf(v, target, [...path, k]); if (r) return r; }
+  }
+  return null;
+}
 const MAP_BOUNDS = { Europa: [34, 71.5, -25, 45], Deutschland: [46.8, 55.4, 4.5, 16.5] };
 function geoPicker(item, save, idBase) {
   const box = h('div', { class: 'map-box geo-pick' });
@@ -1632,6 +1646,8 @@ function mediaField(f, holder, k, save, rerender, id) {
   });
   // Hochladen (auch für einen frisch geschnittenen Ausschnitt)
   async function upload(file) {
+    const root = editorContent;
+    const path = root ? pathOf(root, holder) : null;
     {
       mediaUploads.set(id, { name: file.name, progress: 0 });
       renderAll(true);
@@ -1642,8 +1658,10 @@ function mediaField(f, holder, k, save, rerender, id) {
           const bar = document.getElementById(`${id}-progress`);
           if (bar) bar.value = p;
         });
-        holder[k] = { id: up.id, type: up.type, name: file.name, size: up.size };
-        save();
+        // In die AKTUELLE Arbeitskopie schreiben (der Editor kann inzwischen neu gezeichnet worden sein)
+        const cur = (path && editorContent && atPath(editorContent, path)) || holder;
+        cur[k] = { id: up.id, type: up.type, name: file.name, size: up.size };
+        (cur !== holder && editorSave ? editorSave : save)();
       } catch (err) {
         toast(err.message);
       } finally {
@@ -1652,6 +1670,15 @@ function mediaField(f, holder, k, save, rerender, id) {
       }
     }
   }
+  // Eine schon hochgeladene Datei (wieder) zuordnen – ohne neues Hochladen
+  const assign = (media) => {
+    const path = editorContent ? pathOf(editorContent, holder) : null;
+    const cur = (path && editorContent && atPath(editorContent, path)) || holder;
+    cur[k] = media;
+    (cur !== holder && editorSave ? editorSave : save)();
+    renderAll(true);
+  };
+  const pickOld = h('button', { type: 'button', class: 'btn small ghost', title: 'Eine Datei wählen, die schon auf dem Show-Rechner liegt', onclick: () => openMediaPicker(f.accept, f.label, assign) }, '📂 Bereits hochgeladen');
   // Audio: Ausschnitt aus einer (langen) Aufnahme schneiden, statt extern zu schneiden
   const clip = f.accept === 'audio' ? h('button', {
     type: 'button', class: 'btn small ghost', title: 'Aus einer Aufnahme ein Stück herausschneiden',
@@ -1680,7 +1707,38 @@ function mediaField(f, holder, k, save, rerender, id) {
           h('div', { class: 'row' },
             h('label', { class: 'btn small' }, input, m ? 'Austauschen' : '+ Datei hochladen'),
             clip,
+            pickOld,
             m ? h('button', { type: 'button', class: 'btn small ghost', onclick: () => { holder[k] = null; rerender(); } }, 'Entfernen') : null))));
+}
+
+// Auswahl „Bereits hochgeladen“: alle Dateien auf dem Show-Rechner, neueste zuerst; Dateien ohne
+// Zuordnung (z. B. nach einem verlorenen Speichern) sind markiert und standardmäßig zuerst gefiltert.
+async function openMediaPicker(accept, label, onPick) {
+  let files;
+  try { files = await listMedia(token); } catch (err) { return toast(err.message); }
+  const kind = (t) => (t.startsWith('image') ? 'image' : t.startsWith('audio') ? 'audio' : 'video');
+  const fits = (x) => (accept === 'image' ? kind(x.type) === 'image' : accept === 'video' ? kind(x.type) === 'video' : kind(x.type) !== 'image');
+  files = files.filter(fits);
+  let onlyFree = files.some((x) => !x.used);
+  const fmtSize = (b) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
+  const when = (ms) => new Date(ms).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const list = h('ul', { class: 'list media-pick' });
+  const toggle = h('label', { style: { display: 'flex', flexDirection: 'row', gap: '8px', alignItems: 'center', margin: '6px 0 10px', fontWeight: 600 } },
+    h('input', { type: 'checkbox', checked: onlyFree, onchange: (ev) => { onlyFree = ev.target.checked; draw(); } }), 'Nur Dateien ohne Zuordnung');
+  let close = null;
+  const draw = () => {
+    const show = files.filter((x) => !onlyFree || !x.used);
+    list.replaceChildren(...(show.length ? show.map((x) => {
+      const pv = kind(x.type) === 'image' ? h('img', { class: 'media-pick-thumb', alt: '' }) : h('audio', { controls: true, preload: 'none', class: 'media-pick-audio' });
+      mediaUrl(x.id).then((u) => { if (u) pv.src = u; });
+      const name = x.name || `Datei vom ${when(x.at)}`;
+      return h('li', {},
+        h('div', { class: 'grow' }, h('b', {}, x.name || 'Datei ohne Namen'), h('span', { class: 'muted' }, ` · hochgeladen ${when(x.at)} · ${fmtSize(x.size)}`), x.used ? null : h('span', { class: 'badge warn', style: { marginLeft: '6px' } }, 'ohne Zuordnung'), h('div', {}, pv)),
+        h('button', { type: 'button', class: 'btn small', onclick: () => { close(); onPick({ id: x.id, type: x.type, name, size: x.size }); } }, 'Übernehmen'));
+    }) : [h('li', { class: 'muted' }, onlyFree ? 'Keine Dateien ohne Zuordnung.' : 'Noch keine Dateien hochgeladen.')]));
+  };
+  draw();
+  close = showModal(`📂 ${label}: bereits hochgeladene Datei wählen`, h('div', {}, h('p', { class: 'muted small' }, 'Alle Dateien, die auf dem Show-Rechner liegen – neueste zuerst. Zum Erkennen kurz anhören.'), toggle, list), { wide: true });
 }
 
 // „Das Cover ist besser als das Original“: Elemente direkt auf dem Hintergrund anordnen.
