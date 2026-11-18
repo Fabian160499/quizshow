@@ -1,7 +1,7 @@
 'use strict';
 
 // Spiel „Song Song Song 2.0“: Pro Runde drei Songs (MP3/MP4). Der Beamer spielt sie
-// reihum je eine Sekunde (im Editor je Runde änderbar), mit weichem Übergang ineinander, immer weiter im Song, bis
+// reihum je zwei Sekunden (im Editor je Runde änderbar), mit weichem Übergang ineinander, immer weiter im Song, bis
 // von jedem Song 15 Sekunden gelaufen sind (ca. 45 Sekunden). Danach ist Schluss,
 // ein Neustart ist nicht möglich. Abgaben stoppen die Musik nicht, Zeit spielt keine Rolle.
 //
@@ -14,7 +14,7 @@
 const { fail, log, effect, teamName, bookTarget, cleanInk, fxRelease } = require('./core');
 const { pv } = require('./scoring');
 
-const SEGMENT = 1; // Standard: Sekunden je Song und Durchgang (im Editor je Runde änderbar)
+const SEGMENT = 2; // Standard: Sekunden je Song und Durchgang (im Editor je Runde änderbar; Fabian, 18.11.2026: 2 statt 1)
 const PER_SONG = 15; // Sekunden je Song insgesamt
 const SONGS = [1, 2, 3];
 const CLOSE_GRACE = 4000; // ms: nach „Abgabe schließen“ schicken die iPads noch das Geschriebene ab

@@ -1677,3 +1677,17 @@ test('Show-Intro läuft ohne Klick durch: Beamer meldet Ende, Sicherheitsnetz oh
   assert.equal(d().phase, 'team:1');
   assert.ok(game.nextWake(db, d().at) <= d().at + 30000);
 });
+
+test('Song Song Song 2.0: Standard 2 Sekunden je Song, alte Runden mit 1 s werden einmalig umgestellt', () => {
+  const { db } = setup(2);
+  const lib = db.library.find((e) => e.type === 'songsong2');
+  assert.equal(lib.content.rounds[0].segment, 2);
+  lib.content.rounds = [{ segment: 1 }, { segment: 1.5 }, {}];
+  delete db.ss2Seg2;
+  const m = game.migrate(db);
+  const r = m.library.find((e) => e.type === 'songsong2').content.rounds;
+  assert.deepEqual(r.map((x) => x.segment), [2, 1.5, 2]);
+  // danach bleibt ein im Editor gesetzter Wert stehen
+  r[0].segment = 1;
+  assert.equal(game.migrate(m).library.find((e) => e.type === 'songsong2').content.rounds[0].segment, 1);
+});

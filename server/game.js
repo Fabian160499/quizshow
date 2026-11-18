@@ -245,6 +245,14 @@ function migrate(db) {
     // Neue Spielart „Song Song Song 2.0“ einmalig in den Musik-Ordner.
     if (!db.libraryFolderOf.songsong2 && !db.songsong2Foldered && db.libraryFolders.some((f) => f.id === 'folder_std2')) db.libraryFolderOf.songsong2 = 'folder_std2';
     db.songsong2Foldered = true;
+    // Song Song Song 2.0: Standard von 1 auf 2 Sekunden je Song (Fabian, 18.11.2026) – einmalig auch in
+    // vorhandenen Runden, die noch auf dem alten Standard stehen. Danach bleibt jeder Wert im Editor änderbar.
+    if (!db.ss2Seg2) {
+      const fix = (c) => { for (const r of (c && c.rounds) || []) if (r && (r.segment === undefined || Number(r.segment) === 1)) r.segment = 2; };
+      for (const e of db.library || []) if (e.type === 'songsong2') fix(e.content);
+      for (const pr of [db.project, ...(db.shows || []).map((x) => x.project)]) for (const g of (pr && pr.games) || []) if (g.type === 'songsong2') fix(g.content);
+      db.ss2Seg2 = true;
+    }
     // Pult-Leiste mit Punktestand auf den iPads (Fabian, 17.11.2026): einmalig einschalten.
     if (!db.pultsOn && db.project && db.project.settings) db.project.settings.publicScores = true;
     db.pultsOn = true;

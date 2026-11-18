@@ -89,7 +89,7 @@ function konPlay(ctx, buf, from, len) {
   src.onended = () => { if (konSrc && konSrc.src === src) konSrc = null; };
 }
 
-// „Song Song Song 2.0“: drei Songs reihum je 1 Sekunde, weich ineinander (Überblendung),
+// „Song Song Song 2.0“: drei Songs reihum je 2 Sekunden (im Editor änderbar), weich ineinander (Überblendung),
 // jeder Song läuft dabei weiter, bis von jedem 15 Sekunden liefen. Alle Abschnitte werden
 // beim Start sample-genau über Web Audio eingeplant; wer später einschaltet (Neuladen),
 // hört ab der richtigen Stelle (Serverzeit).

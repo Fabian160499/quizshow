@@ -157,17 +157,17 @@ const EXTRA_TYPES = {
   songsong2: {
     title: 'Song Song Song 2.0',
     playable: true,
-    summary: 'Drei Songs pro Runde, reihum je 1 Sekunde ineinander übergehend, bis jeder 15 Sekunden lief. Teams schreiben auf, die Regie gibt 0–3 erkannte Songs.',
+    summary: 'Drei Songs pro Runde, reihum je 2 Sekunden ineinander übergehend, bis jeder 15 Sekunden lief. Teams schreiben auf, die Regie gibt 0–3 erkannte Songs.',
     schema: [
       { key: 'rounds', label: 'Runden', type: 'list', min: 1, max: 10, itemLabel: (i) => `Runde ${i + 1}`, addLabel: 'Runde hinzufügen',
-        fields: [num('segment', 'Sekunden je Song, bevor gewechselt wird (Standard 1; jeder Song läuft insgesamt 15 Sekunden)', 0.5, 10, 0.1), ...[1, 2, 3].flatMap((n) => [
+        fields: [num('segment', 'Sekunden je Song, bevor gewechselt wird (Standard 2; jeder Song läuft insgesamt 15 Sekunden)', 0.5, 10, 0.1), ...[1, 2, 3].flatMap((n) => [
           media(`audio${n}`, `Song ${n} (MP3 oder MP4; MP4 läuft nur als Ton)`, 'audio'),
           text(`title${n}`, `Song ${n}: Titel (für die Auflösung)`, 160),
           num(`start${n}`, `Song ${n}: Start im Lied (Sekunden, z. B. Refrain)`, 0, 600, 0.1),
           media(`reveal${n}`, `Song ${n}: Auflösung (eigene Datei, z. B. Refrain – läuft, wenn der Titel aufgedeckt wird)`, 'audio'),
         ])] },
     ],
-    example: { rounds: Array.from({ length: 3 }, () => ({ segment: 1, audio1: null, title1: '', start1: 0, reveal1: null, audio2: null, title2: '', start2: 0, reveal2: null, audio3: null, title3: '', start3: 0, reveal3: null })) },
+    example: { rounds: Array.from({ length: 3 }, () => ({ segment: 2, audio1: null, title1: '', start1: 0, reveal1: null, audio2: null, title2: '', start2: 0, reveal2: null, audio3: null, title3: '', start3: 0, reveal3: null })) },
   },
 
   konsequenz: {
