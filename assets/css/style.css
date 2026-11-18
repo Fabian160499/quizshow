@@ -2749,3 +2749,7 @@ html, body { touch-action: manipulation; }
 .clip-time { min-width: 5.5em; font-variant-numeric: tabular-nums; color: var(--accent-3); font-weight: 700; }
 .clip-actions { justify-content: space-between; }
 .clip-status:empty { display: none; }
+
+/* Startseite: Titel wie das Show-Logo auf dem Beamer (gestapelt, „UNS“ groß in Pink) */
+.hero h1.hero-logo { font-size: clamp(2.2rem, 6.4vw, 4.4rem); line-height: 0.92; text-shadow: none; margin: 8px 0 18px; }
+.hero h1.hero-logo span { animation-duration: .6s; }
