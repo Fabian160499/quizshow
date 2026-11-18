@@ -3,6 +3,7 @@ import { buildPlay } from './mod-play.js';
 import { mapView, zoomState } from './map.js';
 import { buildFinaleLive, buildFinaleEditor } from './mod-finale.js';
 import { buildShowIntro } from './mod-intro.js';
+import { openClipEditor } from './clip-editor.js';
 
 const token = store('quiz.modToken') || localServer?.demoToken;
 if (!token) location.href = 'index.html';
@@ -1626,6 +1627,12 @@ function mediaField(f, holder, k, save, rerender, id) {
       if (f.accept === 'image' && !/^image\/(png|jpeg|webp)$/.test(file.type)) return toast('Bitte ein Bild als PNG, JPEG oder WebP wählen.');
       if (f.accept === 'video' && !/^video\//.test(file.type)) return toast('Bitte ein Video (MP4, MOV, WebM) wählen.');
       if (f.accept === 'audio' && !/^(audio|video)\//.test(file.type)) return toast('Bitte eine MP3- oder MP4-Datei wählen.');
+      upload(file);
+    },
+  });
+  // Hochladen (auch für einen frisch geschnittenen Ausschnitt)
+  async function upload(file) {
+    {
       mediaUploads.set(id, { name: file.name, progress: 0 });
       renderAll(true);
       try {
@@ -1643,8 +1650,16 @@ function mediaField(f, holder, k, save, rerender, id) {
         mediaUploads.delete(id);
         renderAll(true);
       }
+    }
+  }
+  // Audio: Ausschnitt aus einer (langen) Aufnahme schneiden, statt extern zu schneiden
+  const clip = f.accept === 'audio' ? h('button', {
+    type: 'button', class: 'btn small ghost', title: 'Aus einer Aufnahme ein Stück herausschneiden',
+    onclick: async () => {
+      const url = m ? await mediaUrl(m.id) : null;
+      openClipEditor({ title: `✂ ${f.label}: Ausschnitt schneiden`, current: url ? { url, name: m.name || f.label } : null, onSave: upload });
     },
-  });
+  }, '✂ Ausschnitt schneiden') : null;
   let preview = null;
   if (m) {
     const tag = m.type.startsWith('image') ? 'img' : f.accept === 'audio' || m.type.startsWith('audio') ? 'audio' : 'video';
@@ -1664,6 +1679,7 @@ function mediaField(f, holder, k, save, rerender, id) {
           h('span', { class: m ? '' : 'muted' }, m ? `${m.name}${m.size ? ` · ${fmtSize(m.size)}` : ''}` : 'Noch keine Datei'),
           h('div', { class: 'row' },
             h('label', { class: 'btn small' }, input, m ? 'Austauschen' : '+ Datei hochladen'),
+            clip,
             m ? h('button', { type: 'button', class: 'btn small ghost', onclick: () => { holder[k] = null; rerender(); } }, 'Entfernen') : null))));
 }
 

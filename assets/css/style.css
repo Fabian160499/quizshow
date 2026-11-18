@@ -2738,3 +2738,14 @@ html.reduced-motion .pult.pick { animation: none; }
 html, body { touch-action: manipulation; }
 .buzzer { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 .buzzer.pressed { transform: translateY(8px); box-shadow: 0 6px 0 #7a003b; }
+
+/* ----- Ausschnitt schneiden (Editor) ----- */
+.clipper { display: flex; flex-direction: column; gap: 10px; }
+.clip-src { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.clip-wave { width: 100%; height: 90px; border-radius: 8px; cursor: crosshair; touch-action: none; display: block; }
+.clip-transport, .clip-edge, .clip-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.clip-pos { margin-left: auto; font-variant-numeric: tabular-nums; opacity: .8; }
+.clip-edge-label { width: 4.5em; font-weight: 700; }
+.clip-time { min-width: 5.5em; font-variant-numeric: tabular-nums; color: var(--accent-3); font-weight: 700; }
+.clip-actions { justify-content: space-between; }
+.clip-status:empty { display: none; }
