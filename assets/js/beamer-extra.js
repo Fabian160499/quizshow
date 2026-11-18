@@ -109,6 +109,56 @@ function ss2Stop(soft = true) {
     } catch { /* schon beendet oder noch nicht gestartet */ }
   }
 }
+// Pausen im Gesang überspringen (A-cappella): Lautstärke in 20-ms-Schritten messen; ruhige Stellen
+// ab 0,25 s fallen weg, kurze Atempausen bleiben (klingt sonst zerhackt). Ergebnis: Gesangsstücke
+// [von, bis] in Sekunden der Datei, ab der eingestellten Startsekunde.
+const SS2_WIN = 0.02, SS2_GAP = 0.25, SS2_PAD = 0.06;
+const ss2Runs = new WeakMap();
+export function ss2Voiced(buf, start = 0) {
+  let all = ss2Runs.get(buf);
+  if (!all) {
+    const n = Math.floor(buf.duration / SS2_WIN);
+    const step = Math.max(1, Math.round(buf.sampleRate * SS2_WIN));
+    const chans = Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c));
+    const rms = new Float32Array(n);
+    for (let w = 0; w < n; w++) {
+      let sum = 0; const o = w * step;
+      for (const ch of chans) for (let i = 0; i < step; i += 2) { const x = ch[o + i] || 0; sum += x * x; }
+      rms[w] = Math.sqrt(sum / (Math.ceil(step / 2) * chans.length));
+    }
+    const sorted = Array.from(rms).sort((x, y) => x - y);
+    const loud = sorted[Math.floor(sorted.length * 0.95)] || 0;
+    const thr = Math.max(0.004, loud * 0.06); // etwa 24 dB unter den lauten Stellen, mindestens -48 dB
+    all = [];
+    let runStart = -1, quiet = 0;
+    for (let w = 0; w <= n; w++) {
+      const on = w < n && rms[w] >= thr;
+      if (on) { if (runStart < 0) runStart = w; quiet = 0; continue; }
+      if (runStart < 0) continue;
+      quiet++;
+      if (quiet * SS2_WIN >= SS2_GAP || w === n) { all.push([runStart, w - quiet + 1]); runStart = -1; quiet = 0; }
+    }
+    all = all.map(([x, y]) => [Math.max(0, x * SS2_WIN - SS2_PAD), Math.min(buf.duration, y * SS2_WIN + SS2_PAD)]);
+    // überlappende Stücke (durch die Polster) zusammenfassen
+    all = all.reduce((acc, r) => { const l = acc[acc.length - 1]; if (l && r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else acc.push(r); return acc; }, []);
+    if (!all.length) all = [[0, buf.duration]]; // nichts erkannt: Datei normal abspielen
+    ss2Runs.set(buf, all);
+  }
+  return all.map(([x, y]) => [Math.max(x, start), y]).filter(([x, y]) => y - x > 0.01);
+}
+// Stück [a, b) in „Gesangszeit“ (Pausen herausgerechnet) → Abschnitte der Datei {off, at, len}
+export function ss2Pieces(runs, a, b) {
+  const out = [];
+  let tau = 0;
+  for (const [x, y] of runs) {
+    const len = y - x;
+    const lo = Math.max(a, tau), hi = Math.min(b, tau + len);
+    if (hi > lo) out.push({ off: x + (lo - tau), at: lo - a, len: hi - lo });
+    tau += len;
+    if (tau >= b) break;
+  }
+  return out;
+}
 export function ss2Schedule(ctx, bufs, v, elapsed) {
   if (ctx.state === 'suspended' && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext)) ctx.resume();
   const seg = v.segment || 1;
@@ -124,6 +174,8 @@ export function ss2Schedule(ctx, bufs, v, elapsed) {
   const now = ctx.currentTime;
   const t0 = now + 0.06 - elapsed; // Zeitpunkt „Sekunde 0“ im Audio-Takt
   const X = Math.min(SS2_FADE, seg * 0.4);
+  const runs = bufs.map((buf, j) => (buf ? ss2Voiced(buf, (v.songs[j] && v.songs[j].start) || 0) : null));
+  const EDGE = 0.012; // winziges Ein-/Ausblenden an jeder herausgeschnittenen Pause (kein Knacken)
   segs.forEach((sg, k) => {
     const buf = bufs[sg.j];
     if (!buf) return;
@@ -132,24 +184,36 @@ export function ss2Schedule(ctx, bufs, v, elapsed) {
     const s = t0 + sg.at - (first ? 0 : X / 2); // mit Vorlauf für die Überblendung
     const e = t0 + sg.at + sg.len + (lastSeg ? 0.8 : X / 2);
     if (e <= now + 0.02) return;
-    const off0 = (v.songs[sg.j].start || 0) + sg.songOff - (first ? 0 : X / 2);
-    const startAt = Math.max(s, now + 0.02);
-    const off = off0 + (startAt - s);
-    if (off >= buf.duration - 0.05) return; // Song zu kurz: an dieser Stelle Stille
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
+    const a = sg.songOff - (first ? 0 : X / 2); // in Gesangszeit
+    const pieces = ss2Pieces(runs[sg.j], Math.max(0, a), Math.max(0, a) + (e - s));
+    if (!pieces.length) return; // Song zu kurz: an dieser Stelle Stille
+    // Lautstärke des ganzen Abschnitts (Überblendung zum nächsten Song)
     const gain = ctx.createGain();
     const g = gain.gain;
     const fin = first ? 0.05 : X;
     const fout = lastSeg ? 0.8 : X;
-    // Ein- und Ausblenden (gleich lang wie die Überlappung → kein harter Schnitt)
-    g.setValueAtTime(0, startAt);
-    g.linearRampToValueAtTime(1, Math.max(startAt + 0.01, s + fin));
-    g.setValueAtTime(1, Math.max(startAt + 0.01, e - fout));
+    const gs = Math.max(s, now + 0.02);
+    g.setValueAtTime(0, gs);
+    g.linearRampToValueAtTime(1, Math.max(gs + 0.01, s + fin));
+    g.setValueAtTime(1, Math.max(gs + 0.01, e - fout));
     g.linearRampToValueAtTime(0, e);
-    src.connect(gain).connect(ctx.destination);
-    src.start(startAt, Math.max(0, off), Math.max(0.02, e - startAt));
-    ss2.nodes.push({ src, gain, ctx });
+    gain.connect(ctx.destination);
+    const lead = Math.max(0, -a); // erster Abschnitt kann nicht vor Sekunde 0 des Gesangs beginnen
+    pieces.forEach((p, i) => {
+      const ps = s + lead + p.at, pe = ps + p.len;
+      if (pe <= now + 0.02) return;
+      const startAt = Math.max(ps, now + 0.02);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const pg = ctx.createGain();
+      const cut = pieces.length > 1;
+      pg.gain.setValueAtTime(cut && i > 0 ? 0 : 1, startAt);
+      if (cut && i > 0) pg.gain.linearRampToValueAtTime(1, startAt + EDGE);
+      if (cut && i < pieces.length - 1) { pg.gain.setValueAtTime(1, Math.max(startAt + EDGE, pe - EDGE)); pg.gain.linearRampToValueAtTime(0, pe); }
+      src.connect(pg).connect(gain);
+      src.start(startAt, p.off + (startAt - ps), Math.max(0.02, pe - startAt));
+      ss2.nodes.push({ src, gain, ctx });
+    });
   });
   return total;
 }
