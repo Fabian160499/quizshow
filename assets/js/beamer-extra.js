@@ -146,6 +146,24 @@ export function ss2Voiced(buf, start = 0) {
   }
   return all.map(([x, y]) => [Math.max(x, start), y]).filter(([x, y]) => y - x > 0.01);
 }
+// Gleiche Lautstärke für alle Songs: Lautheit (RMS) der Gesangsstücke auf ein gemeinsames Ziel bringen.
+// Nie lauter als +12 dB und nie so laut, dass die lauteste Stelle übersteuert.
+const SS2_TARGET = Math.pow(10, -18 / 20); // Ziel: etwa -18 dB
+const ss2Gains = new WeakMap();
+export function ss2Gain(buf) {
+  if (ss2Gains.has(buf)) return ss2Gains.get(buf);
+  const runs = ss2Voiced(buf, 0);
+  const chans = Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c));
+  let sum = 0, n = 0, peak = 0;
+  for (const [x, y] of runs) {
+    const i0 = Math.floor(x * buf.sampleRate), i1 = Math.min(buf.length, Math.floor(y * buf.sampleRate));
+    for (const ch of chans) for (let i = i0; i < i1; i += 2) { const v = ch[i]; sum += v * v; n++; const a = v < 0 ? -v : v; if (a > peak) peak = a; }
+  }
+  const rms = n ? Math.sqrt(sum / n) : 0;
+  const g = rms > 1e-5 ? Math.min(SS2_TARGET / rms, 4, peak > 0 ? 0.98 / peak : 4) : 1;
+  ss2Gains.set(buf, g);
+  return g;
+}
 // Stück [a, b) in „Gesangszeit“ (Pausen herausgerechnet) → Abschnitte der Datei {off, at, len}
 export function ss2Pieces(runs, a, b) {
   const out = [];
@@ -202,9 +220,10 @@ export function ss2Schedule(ctx, bufs, v, elapsed) {
     const fin = first ? 0.05 : X;
     const fout = lastSeg ? 0.8 : X;
     const gs = Math.max(s, now + 0.02);
+    const vol = ss2Gain(buf); // alle Songs gleich laut
     g.setValueAtTime(0, gs);
-    g.linearRampToValueAtTime(1, Math.max(gs + 0.01, s + fin));
-    g.setValueAtTime(1, Math.max(gs + 0.01, e - fout));
+    g.linearRampToValueAtTime(vol, Math.max(gs + 0.01, s + fin));
+    g.setValueAtTime(vol, Math.max(gs + 0.01, e - fout));
     g.linearRampToValueAtTime(0, e);
     gain.connect(ctx.destination);
     const lead = Math.max(0, -a); // erster Abschnitt kann nicht vor Sekunde 0 des Gesangs beginnen
