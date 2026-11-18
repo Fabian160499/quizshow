@@ -1679,6 +1679,7 @@ body.timer-locked #main .ink-frame, body.timer-locked #main .abcd, body.timer-lo
 .hd-groups { display: grid; gap: 8px; margin: 10px 0; }
 .hd-group { padding: 10px 12px; border-radius: 10px; background: var(--surface-2, #1c1c2a); border-left: 5px solid #888; }
 .hd-group.correct { border-left-color: var(--ok); }
+.hd-merge { max-width: 220px; padding: 6px 8px; font-size: .85rem; border-radius: 8px; }
 
 /* ---- Beamer ---- */
 .beamer .nb-sort-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1.4vw; width: min(94vw, 170vh); margin: 2vh auto 0; }

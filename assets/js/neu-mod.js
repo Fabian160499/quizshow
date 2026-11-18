@@ -411,6 +411,13 @@ function hostdu(ui, g, st) {
     return out;
   }
   const groupName = (gr) => (gr.correct ? `✓ ${gr.text}` : gr.text);
+  // Jede Antwort frei mit einer anderen falschen Antwort zusammenlegen.
+  const mergeSel = (id, gr) => {
+    const others = r.groups.filter((x) => x !== gr && !x.correct);
+    if (!others.length) return null;
+    return h('select', { class: 'hd-merge', onchange: (ev) => { if (ev.target.value) ui.act('play.regroup', { teamId: id, groupId: ev.target.value }); } },
+      h('option', { value: '' }, 'zusammenführen mit …'), ...others.map((x) => h('option', { value: x.id }, `„${x.text}“`)));
+  };
   out.push(h('div', { class: 'hd-groups' }, r.groups.map((gr) => h('div', { class: `hd-group${gr.correct ? ' correct' : ''}` },
     h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', {}, `${gr.letter ? `${gr.letter}: ` : ''}${groupName(gr)}`),
       r.phase === 'revealed' ? badge('', `gewählt von ${Object.values(r.votes).filter((x) => x === gr.id).length}`) : null),
@@ -419,7 +426,8 @@ function hostdu(ui, g, st) {
       return teamLi(ui, id, ` – „${r.answers[id].text}“`,
         ...hint.map((x) => { const tg = r.groups.find((y) => y.id === x.groupId); return tg ? btn('small warn', `ähnlich wie „${tg.text}“ – zusammenführen`, () => ui.act('play.regroup', { teamId: id, groupId: tg.id })) : null; }),
         r.phase === 'review' && (gr.teams.length > 1 || gr.correct) ? btn('small ghost', 'abtrennen', () => ui.act('play.regroup', { teamId: id })) : null,
-        r.phase === 'review' && !gr.correct ? btn('small ghost', '→ zur richtigen Antwort', () => ui.act('play.regroup', { teamId: id, groupId: 'correct' })) : null);
+        r.phase === 'review' && !gr.correct ? btn('small ghost', '→ zur richtigen Antwort', () => ui.act('play.regroup', { teamId: id, groupId: 'correct' })) : null,
+        r.phase === 'review' ? mergeSel(id, gr) : null);
     }))))));
   if (r.phase === 'review') out.push(muted('Gleiche Antworten sind schon zusammengeführt. Unsichere Ähnlichkeiten bitte prüfen, dann die Abstimmung starten.'),
     row(btn('pink', 'Abstimmung starten', () => ui.act('play.startVote'))));
