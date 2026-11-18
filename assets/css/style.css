@@ -2781,3 +2781,5 @@ html, body { touch-action: manipulation; }
 .pult-move { position: absolute; left: 50%; bottom: -9.5vh; transform: translateX(-50%); font: 800 2.2vh/1 var(--font-display, sans-serif); padding: .4vh 1vh; border-radius: 99px; animation: pultPlusIn .5s cubic-bezier(.2, 1.5, .4, 1) both; white-space: nowrap; }
 .pult-move.up { background: #1fd67a; color: #04210f; }
 .pult-move.down { background: #ff5a6a; color: #2a0006; }
+
+.rank.fade-out { transition: opacity .45s, transform .45s; opacity: 0; transform: scale(.96); }

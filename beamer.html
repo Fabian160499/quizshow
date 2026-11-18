@@ -646,16 +646,22 @@
 
     // Punkte des Spiels im Pult-Layout (wie auf den iPads): Pulte erscheinen, Punkte zählen hoch,
     // dann gleiten die Pulte in die Reihenfolge – links die meisten, rechts die wenigsten Punkte.
-    function gamePults(s) {
+    // Gesamtstand in den Pulten: Pulte stehen in der Reihenfolge VOR dem Spiel und zeigen den alten Stand,
+    // dann fliegen die Spielpunkte hinein (addToTotals) und erst danach ändern sich die Plätze.
+    function totalsPults(s) {
       const list = s.ranking || [];
-      const start = (s.teams || []).map((t) => list.find((r) => r.teamId === t.id)).filter(Boolean);
-      for (const r of list) if (!start.includes(r)) start.push(r);
+      const T = s.rankTotals;
+      const oldT = Object.fromEntries(list.map((r) => [r.teamId, (T[r.teamId] || 0) - r.points]));
+      const ids = (s.teams || []).map((t) => t.id).filter((id) => id in oldT);
+      const oldOrder = ids.slice().sort((a, b) => (oldT[b] - oldT[a]) || (ids.indexOf(a) - ids.indexOf(b)));
+      const byId = Object.fromEntries(list.map((r) => [r.teamId, r]));
       const row = h('div', { class: 'pult-row' });
       const nodes = new Map();
-      start.forEach((r, i) => {
-        const n = h('div', { class: 'pult in', '--team': r.color, style: { animationDelay: `${i * 0.15}s` } },
+      oldOrder.forEach((id, i) => {
+        const r = byId[id];
+        const n = h('div', { class: 'pult in', '--team': r.color, style: { animationDelay: `${i * 0.12}s` } },
           h('div', { class: 'pult-arch' }, h('i', { class: 'pult-rings' }), (() => {
-            const t = (s.teams || []).find((x) => x.id === r.teamId);
+            const t = (s.teams || []).find((x) => x.id === id);
             if (!t || !t.av) return null;
             const img = h('img', { class: 'pult-avatar', alt: '' });
             avatarSrc(t.id, t.av).then((src) => { if (src) img.src = src; });
@@ -663,54 +669,19 @@
           })()),
           h('div', { class: 'pult-desk' }, h('div', { class: 'pult-panel' },
             h('span', { class: 'pult-names', 'aria-hidden': 'true' }, Array.from({ length: 10 }, () => r.name.toUpperCase()).join(' ')),
-            h('b', { class: 'pult-score' }, '0'))),
+            h('b', { class: 'pult-score' }, String(oldT[id])))),
           h('span', { class: 'pult-name' }, r.name));
-        nodes.set(r.teamId, n);
+        nodes.set(id, n);
         row.append(n);
       });
-      const caption = h('div', { class: 'pult-caption' }, 'Punkte dieses Spiels');
-      const stage = h('div', { class: 'pult-stage' }, caption, row);
-      const places = list.map((r, i) => (i > 0 && r.points === list[i - 1].points ? null : i + 1));
-      for (let i = 1; i < places.length; i++) if (places[i] === null) places[i] = places[i - 1];
-      const reduced = document.documentElement.classList.contains('reduced-motion');
+      const caption = h('div', { class: 'pult-caption' }, 'Gesamtstand');
+      const stage = h('div', { class: 'pult-stage totals' }, caption, row);
       const speed = Number(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
-      const grow = () => {
-        for (const r of list) {
-          const el = nodes.get(r.teamId).querySelector('.pult-score');
-          if (reduced) { el.textContent = String(r.points); continue; }
-          const t0 = performance.now(), dur = 2200 * speed;
-          const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(r.points * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
-          requestAnimationFrame(step);
-        }
-      };
-      const finish = () => {
-        list.forEach((r, i) => nodes.get(r.teamId).classList.toggle('lead', places[i] === 1 && r.points > 0));
-        stage.classList.add('done');
-        if (s.rankTotals) setTimeout(() => addToTotals(s, list, nodes, row, stage, caption, speed), 2600 * speed);
-      };
-      const reorder = () => {
-        const before = new Map([...nodes].map(([id, n]) => [id, n.getBoundingClientRect().left]));
-        for (const n of nodes.values()) { n.classList.remove('in'); n.style.animationDelay = ''; } // sonst startet das Einblenden beim Umsortieren neu
-        for (const r of list) row.append(nodes.get(r.teamId));
-        for (const [id, n] of nodes) {
-          const dx = before.get(id) - n.getBoundingClientRect().left;
-          if (dx) n.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 1500 * speed, easing: 'cubic-bezier(.45,0,.2,1)' });
-        }
-        setTimeout(finish, 1500 * speed);
-      };
-      if (reduced) {
-        grow(); for (const r of list) row.append(nodes.get(r.teamId)); finish();
-        if (s.rankTotals) { // ohne Animation: gleich den Gesamtstand zeigen
-          caption.textContent = 'Gesamtstand';
-          const tl = list.slice().sort((a, b) => s.rankTotals[b.teamId] - s.rankTotals[a.teamId]);
-          for (const r of tl) { row.append(nodes.get(r.teamId)); nodes.get(r.teamId).querySelector('.pult-score').textContent = String(s.rankTotals[r.teamId]); }
-        }
-      }
-      else {
-        setTimeout(grow, (0.8 + start.length * 0.15) * 1000 * speed);
-        setTimeout(reorder, (3.6 + start.length * 0.15) * 1000 * speed);
-      }
-      return [tvPanel(`Kategorie ${s.rankGame.pos} von 8`, s.rankGame.title, stage)];
+      if (document.documentElement.classList.contains('reduced-motion')) {
+        const nw = oldOrder.slice().sort((a, b) => (T[b] - T[a]) || (oldOrder.indexOf(a) - oldOrder.indexOf(b)));
+        for (const id of nw) { row.append(nodes.get(id)); nodes.get(id).querySelector('.pult-score').textContent = String(T[id]); }
+      } else setTimeout(() => addToTotals(s, list, nodes, row, stage, caption, speed), (0.9 + oldOrder.length * 0.12) * 1000 * speed);
+      return stage;
     }
 
     // Nach den Punkten des Spiels: Spielpunkte fliegen in den Gesamtstand, erst danach ändern sich die Plätze.
@@ -743,13 +714,15 @@
       stage.classList.remove('done');
       stage.classList.add('totals');
       for (const n of nodes.values()) n.classList.remove('lead');
-      caption.classList.add('swap');
-      setTimeout(() => { caption.textContent = 'Gesamtstand'; caption.classList.remove('swap'); }, 300);
+      if (caption.textContent !== 'Gesamtstand') {
+        caption.classList.add('swap');
+        setTimeout(() => { caption.textContent = 'Gesamtstand'; caption.classList.remove('swap'); }, 300);
+      }
       flip(oldOrder, 1100 * speed);
       const bubbles = new Map();
       for (const id of oldOrder) {
         const el = score(id);
-        el.classList.add('swap'); setTimeout(() => { el.textContent = String(oldT[id]); el.classList.remove('swap'); }, 250);
+        if (el.textContent !== String(oldT[id])) { el.classList.add('swap'); setTimeout(() => { el.textContent = String(oldT[id]); el.classList.remove('swap'); }, 250); }
         if (!gp[id]) continue;
         const b = h('span', { class: `pult-plus${gp[id] < 0 ? ' minus' : ''}` }, gp[id] > 0 ? `+${gp[id]}` : `−${Math.abs(gp[id])}`);
         nodes.get(id).append(b);
@@ -790,7 +763,6 @@
 
     function ranking(s) {
       if (s.rankFinal) return finalRanking(s);
-      if (s.rankGame) return gamePults(s);
       finalShown = 0;
       const list = s.ranking || [];
       const max = Math.max(1, ...list.map((r) => r.points));
@@ -810,9 +782,16 @@
       for (let i = 1; i < places.length; i++) if (places[i] === null) places[i] = places[i - 1];
       const reduced = document.documentElement.classList.contains('reduced-motion');
       const speed = Number(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
+      let panel = null;
       const finish = () => {
         list.forEach((r, i) => { const li = rows.get(r.teamId); li.querySelector('.pos').textContent = String(places[i]); li.classList.toggle('lead', places[i] === 1); });
         ol.classList.add('done');
+        // Nach den Punkten des Spiels (Liste): Wechsel zu den Pulten, dort kommt der Gesamtstand dazu.
+        if (s.rankGame && s.rankTotals) setTimeout(() => {
+          if (!ol.isConnected || !panel) return;
+          ol.classList.add('fade-out');
+          setTimeout(() => { if (ol.isConnected) ol.replaceWith(totalsPults(s)); }, 450);
+        }, (reduced ? 0 : 2800) * speed);
       };
       const grow = () => {
         for (const r of list) {
@@ -843,7 +822,7 @@
       }
       // Nach jedem Spiel: nur die Punkte dieses Spiels.
       ol.classList.add('tv');
-      if (s.rankGame) return [tvPanel(`Kategorie ${s.rankGame.pos} von 8`, s.rankGame.title, ol)];
+      if (s.rankGame) { panel = tvPanel(`Kategorie ${s.rankGame.pos} von 8`, s.rankGame.title, ol); return [panel]; }
       return [tvPanel('Zwischenstand', null, ol)];
     }
 
