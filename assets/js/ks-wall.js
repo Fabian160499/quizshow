@@ -18,9 +18,12 @@ export function ksWall(hints, opts = {}) {
     if (x.open && x.photo) {
       const im = h('img', { class: 'ksw-photo', alt: x.label });
       if (x.onZoom) im.addEventListener('click', (ev) => { ev.stopPropagation(); x.onZoom(im.src, x.label); });
-      mediaUrl(x.photo.id).then((u) => { if (u) im.src = u; });
+      // Ganzes Bild zeigen (nichts abgeschnitten); der freie Rand wird mit einer unscharfen
+      // Vergrößerung desselben Bildes gefüllt, so bleibt die Kachel vollflächig (Fabian, 18.11.2026).
+      const bg = h('div', { class: 'ksw-photo-bg', 'aria-hidden': 'true' });
+      mediaUrl(x.photo.id).then((u) => { if (u) { im.src = u; bg.style.backgroundImage = `url("${u}")`; } });
       // Foto oben, darunter Bildunterschrift und Käufer – nichts liegt über dem Bild.
-      body = [h('div', { class: 'ksw-photo-box' }, im), x.text && !placeholder ? h('div', { class: 'ksw-cap' }, x.text) : null];
+      body = [h('div', { class: 'ksw-photo-box' }, bg, im), x.text && !placeholder ? h('div', { class: 'ksw-cap' }, x.text) : null];
     } else if (x.open) {
       body = [h('small', { class: 'ksw-label' }, `${x.label}:`), h('b', { class: `ksw-value${x.text && x.text.length > 90 ? ' long' : x.text && x.text.length > 40 ? ' mid' : ''}` }, x.text && !placeholder ? x.text : '–')];
     } else {

@@ -2783,3 +2783,8 @@ html, body { touch-action: manipulation; }
 .pult-move.down { background: #ff5a6a; color: #2a0006; }
 
 .rank.fade-out { transition: opacity .45s, transform .45s; opacity: 0; transform: scale(.96); }
+
+/* Kassenschlager: Bild-Hinweise ganz zeigen, Rand mit unscharfem Bild füllen */
+.ksw-photo-box { overflow: hidden; background: #000; }
+.ksw-tile.photo .ksw-photo, .ksw-photo { object-fit: contain; z-index: 1; }
+.ksw-photo-bg { position: absolute; inset: -12%; background: center / cover no-repeat; filter: blur(14px) brightness(.5) saturate(1.2); transform: scale(1.05); }
