@@ -159,6 +159,15 @@ export function ss2Pieces(runs, a, b) {
   }
   return out;
 }
+const ss2rev = { key: null, el: null, fade: null };
+function ss2RevStop(soft = true) {
+  ss2rev.key = null;
+  const el = ss2rev.el;
+  clearInterval(ss2rev.fade);
+  if (!el || el.paused) return;
+  if (!soft) { el.pause(); return; }
+  ss2rev.fade = setInterval(() => { el.volume = Math.max(0, el.volume - 0.1); if (el.volume <= 0.01) { clearInterval(ss2rev.fade); el.pause(); el.volume = 1; } }, 40);
+}
 export function ss2Schedule(ctx, bufs, v, elapsed) {
   if (ctx.state === 'suspended' && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext)) ctx.resume();
   const seg = v.segment || 1;
@@ -291,6 +300,20 @@ export function syncMedia(s) {
     }
   }
   if (ss && ss.songs && env.audioCtx && env.audioCtx() && ss.playback.state !== 'playing') ss.songs.forEach((x) => x && konBuffer(env.audioCtx(), x.id)); // vorladen
+  // Auflösung: Datei des gerade aufgedeckten Songs einmal abspielen; beim nächsten Song ablösen
+  const solPlay = ss && ss.solPlay && env.soundOn() ? ss.solPlay : null;
+  if (!solPlay) { if (ss2rev.key) ss2RevStop(); }
+  else if (ss2rev.key !== solPlay.key) {
+    ss2RevStop(false);
+    ss2rev.key = solPlay.key;
+    if (!ss2rev.el) { ss2rev.el = pooled('audio'); ss2rev.el.setAttribute('aria-hidden', 'true'); document.body.append(ss2rev.el); }
+    const el = ss2rev.el;
+    mediaUrl(solPlay.id).then((url) => {
+      if (!url || ss2rev.key !== solPlay.key) return;
+      el.volume = 1; el.src = url; el.currentTime = 0;
+      playWithSound(el);
+    });
+  }
   const kon = v && v.type === 'konsequenz' && !v.waiting ? v : null;
   const mus = v && v.type === 'musik' && v.current && v.current.clip ? v.current : null;
   // Song Song Song: Auflösung mit Ton (einmal pro Rätsel), läuft wie beim Musikquiz 12 Sekunden.
@@ -607,9 +630,10 @@ function songsong2(v, teamOf) {
     if (v.order.length) out.push(h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '2vh' } }, v.order.map((o, i) => chip(teamOf(o.teamId), '', h('b', {}, ` ${i + 1}.`)))));
     return out;
   }
-  if (v.revealed) out.push(h('div', { class: 'solution ss2-solution' }, v.solution.map((t, i) => h('span', {}, h('small', {}, `Song ${i + 1}`), h('b', {}, t || '–')))));
+  // Songtitel einzeln aufgedeckt (je Klick einer, dazu läuft die Auflösungs-Datei)
+  if (v.solution) out.push(h('div', { class: 'solution ss2-solution' }, v.solution.map((t, i) => h('span', { class: `${t === null ? 'ss2-sol-hidden' : 'ss2-sol-in'}${i === v.sol - 1 ? ' now' : ''}` }, h('small', {}, `Song ${i + 1}`), h('b', {}, t === null ? '?' : (t || '–'))))));
   if (v.board && v.board.length) {
-    const solo = !v.revealed;
+    const solo = !v.revealed && !v.sol;
     const cards = solo ? v.board.filter((a) => a.current) : v.board;
     out.push(h('div', { class: `answers l5-answers n${Math.min(cards.length, 6)}${solo ? ' l5-solo' : ''}` }, cards.map((a) => {
       const t = teamOf(a.teamId);
@@ -618,7 +642,7 @@ function songsong2(v, teamOf) {
         h('div', { class: 'ans-name l5-name' }, t.name),
         a.hidden ? h('div', { class: 'ans-body l5-hidden' }, h('span', { class: 'l5-q' }, '?')) : h('div', { class: 'ans-body' }, answerContent(a, 'beamer'), mark));
     })));
-  } else if (!v.revealed) out.push(sub('Keine Abgabe in dieser Runde.'));
+  } else if (!v.revealed && !v.sol) out.push(sub('Keine Abgabe in dieser Runde.'));
   return out;
 }
 

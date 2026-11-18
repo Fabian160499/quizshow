@@ -164,9 +164,10 @@ const EXTRA_TYPES = {
           media(`audio${n}`, `Song ${n} (MP3 oder MP4; MP4 läuft nur als Ton)`, 'audio'),
           text(`title${n}`, `Song ${n}: Titel (für die Auflösung)`, 160),
           num(`start${n}`, `Song ${n}: Start im Lied (Sekunden, z. B. Refrain)`, 0, 600, 0.1),
+          media(`reveal${n}`, `Song ${n}: Auflösung (eigene Datei, z. B. Refrain – läuft, wenn der Titel aufgedeckt wird)`, 'audio'),
         ])] },
     ],
-    example: { rounds: Array.from({ length: 3 }, () => ({ segment: 1, audio1: null, title1: '', start1: 0, audio2: null, title2: '', start2: 0, audio3: null, title3: '', start3: 0 })) },
+    example: { rounds: Array.from({ length: 3 }, () => ({ segment: 1, audio1: null, title1: '', start1: 0, reveal1: null, audio2: null, title2: '', start2: 0, reveal2: null, audio3: null, title3: '', start3: 0, reveal3: null })) },
   },
 
   konsequenz: {

@@ -236,7 +236,7 @@ function songsong2(ui, g, st) {
   if (i < 0 || !r) return [...out, help('Runde zeigen, Musik einmal abspielen. Teams schicken per Buzzer ab (stoppt die Musik nicht). Je Team 0–3 erkannte Songs anklicken, dann auflösen.')];
   const p = g.content.rounds[i];
   const songs = [1, 2, 3].map((n) => ({ n, audio: p[`audio${n}`], title: p[`title${n}`], start: Number(p[`start${n}`]) || 0 }));
-  out.push(h('ol', { class: 'list ss2-songs' }, songs.map((x) => h('li', {}, h('b', {}, x.title || `Song ${x.n}`), h('span', { class: 'muted' }, x.start ? ` · ab ${String(x.start).replace('.', ',')} s` : ''), x.audio ? null : badge('bad', 'Datei fehlt')))));
+  out.push(h('ol', { class: 'list ss2-songs' }, songs.map((x) => h('li', {}, h('b', {}, x.title || `Song ${x.n}`), h('span', { class: 'muted' }, x.start ? ` · ab ${String(x.start).replace('.', ',')} s` : ''), x.audio ? null : badge('bad', 'Datei fehlt'), p[`reveal${x.n}`] ? badge('', '🎵 Auflösung') : null))));
   const missing = songs.filter((x) => !x.audio).length;
   if (missing) out.push(h('p', { class: 'notice warn' }, `Für diese Runde fehlen noch ${missing} von 3 Dateien.`));
   const playing = r.playback.state === 'playing';
@@ -260,9 +260,11 @@ function songsong2(ui, g, st) {
   } else if (r.started && !r.revealed) {
     if (!r.rv && open) out.push(muted(`Noch ${open} Abgabe${open > 1 ? 'n' : ''} bewerten, dann auflösen.`));
     else {
-      const total = r.subs.length * 3 + 1;
+      const total = r.subs.length * 3 + 3;
       const n = r.rv || 0;
-      const label = n === 0 ? '▶ Auflösung starten' : n >= total - 1 ? '▶ Die drei Songtitel zeigen' : '▶ Auflösung: nächster Schritt';
+      const songNo = n - r.subs.length * 3 + 1; // nächster Songtitel (nach den Teams)
+      const hasRev = songNo >= 1 && songNo <= 3 && p[`reveal${songNo}`];
+      const label = n === 0 && r.subs.length ? '▶ Auflösung starten' : songNo >= 1 ? `▶ Song ${songNo} auflösen${hasRev ? ' (mit Auflösungs-Datei)' : ''}` : '▶ Auflösung: nächster Schritt';
       out.push(row(btn('pink', label, () => ui.act('play.reveal')), h('span', { class: 'muted' }, `Schritt ${n} von ${total} · Reihenfolge: wenigste Punkte zuerst`)));
     }
   }

@@ -33,12 +33,12 @@ const pointsFor = (game, n) => (n > 0 ? pv(game, `n${n}`) : 0);
 function revealList(game, r) {
   return r.subs.slice().sort((a, b) => (pointsFor(game, r.grades[a.teamId]) - pointsFor(game, r.grades[b.teamId])) || (a.at - b.at));
 }
-// Klick-Zähler rv → Team und Stufe (je Team 3 Klicks, dann 1 Klick für die Titel).
+// Klick-Zähler rv → Team und Stufe (je Team 3 Klicks, dann je Song 1 Klick: Titel + Auflösungs-Datei).
 function revealState(game, r) {
   if (!r.rv) return null;
   const list = revealList(game, r);
   const k = Math.floor((r.rv - 1) / 3);
-  if (k >= list.length) return { list, k: list.length, stage: 'solution' };
+  if (k >= list.length) return { list, k: list.length, stage: 'solution', sol: Math.min(3, r.rv - list.length * 3) };
   return { list, k, stage: ['name', 'answer', 'verdict'][(r.rv - 1) % 3] };
 }
 function verdictShown(game, r, teamId) {
@@ -50,6 +50,9 @@ function verdictShown(game, r, teamId) {
 }
 const audios = (p) => SONGS.map((n) => p[`audio${n}`]).filter(Boolean);
 const titles = (p) => SONGS.map((n) => String(p[`title${n}`] || '').trim());
+// Wie viele Songtitel schon aufgedeckt sind (ältere, fertig aufgelöste Runden: alle drei)
+const solShown = (r) => (r.revealed ? 3 : r.sol || 0);
+const solTitles = (p, r) => (solShown(r) ? titles(p).map((t, i) => (i < solShown(r) ? t : null)) : null);
 
 module.exports = {
   fxManual: true, // Ergebnis aufs iPad erst bei der Auflösung
@@ -141,8 +144,13 @@ module.exports = {
         fxRelease(db, [s.teamId], n > 0, ctx.now);
         log(db, ctx, 'beamer', `Auflösung: ${teamName(db, s.teamId)} ${n} von 3`);
       } else if (rs.stage === 'solution') {
-        r.revealed = true;
-        log(db, ctx, 'ablauf', `Runde ${st.index + 1} aufgelöst`);
+        // Songtitel einzeln: Titel erscheint, die Auflösungs-Datei des Songs läuft auf dem Beamer
+        r.sol = rs.sol;
+        log(db, ctx, 'beamer', `Auflösung: Song ${rs.sol}`);
+        if (rs.sol >= 3) {
+          r.revealed = true;
+          log(db, ctx, 'ablauf', `Runde ${st.index + 1} aufgelöst`);
+        }
       }
     },
   },
@@ -164,7 +172,7 @@ module.exports = {
       found: shown ? r.grades[teamId] ?? null : null,
       points: shown ? pointsFor(game, r.grades[teamId] || 0) : null,
       revealing: !!r.rv && !r.revealed,
-      solution: r.revealed ? titles(game.content.rounds[st.index]) : null,
+      solution: solTitles(game.content.rounds[st.index], r),
     };
   },
 
@@ -172,7 +180,9 @@ module.exports = {
     if (st.index < 0) return { waiting: true };
     const r = round(st, st.index);
     const p = game.content.rounds[st.index];
-    const rs = r.revealed ? { list: revealList(game, r), k: r.subs.length, stage: 'solution' } : revealState(game, r);
+    const rs = r.revealed ? { list: revealList(game, r), k: r.subs.length, stage: 'solution', sol: 3 } : revealState(game, r);
+    const sol = solShown(r);
+    const rev = sol ? p[`reveal${sol}`] : null;
     const board = rs ? rs.list.slice(0, Math.min(rs.k + 1, rs.list.length)).map((s, i) => {
       const cur = i === rs.k;
       const showAnswer = !cur || rs.stage !== 'name';
@@ -194,7 +204,10 @@ module.exports = {
       revealing: !!rs,
       board,
       revealed: r.revealed,
-      solution: r.revealed ? titles(p) : null,
+      solution: solTitles(p, r),
+      sol,
+      // Auflösungs-Datei des zuletzt aufgedeckten Songs (läuft einmal)
+      solPlay: rev ? { n: sol, id: rev.id, type: rev.type, key: `${st.index}:${sol}` } : null,
     };
   },
 };

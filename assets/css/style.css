@@ -2619,6 +2619,10 @@ body.probe-mode .mod-top { box-shadow: inset 0 -4px 0 #ffb020; }
 @keyframes ss2Bar { from { width: 0; } to { width: 100%; } }
 .beamer .ss2-solution { display: flex; justify-content: center; gap: 3vw; flex-wrap: wrap; }
 .beamer .ss2-solution span { display: grid; gap: .6vh; text-align: center; }
+.beamer .ss2-solution .ss2-sol-hidden { opacity: .35; }
+.beamer .ss2-solution .ss2-sol-in b { animation: ss2SolIn .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+.beamer .ss2-solution .now b { color: var(--accent-2); }
+@keyframes ss2SolIn { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 .beamer .ss2-solution small { font-size: .45em; opacity: .7; text-transform: uppercase; letter-spacing: .15em; }
 .beamer .l5-stamp.ss2-stamp { width: 13vh; height: 13vh; font-size: 4.6vh; line-height: 1; gap: .4vh; align-content: center; }
 .beamer .l5-stamp.ss2-stamp small { font-size: 2.6vh; font-weight: 800; }

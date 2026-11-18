@@ -776,7 +776,7 @@ test('Show als Vorlage kopieren mit neuen Teams', () => {
 test('Song Song Song 2.0: einmal abspielen, Bewertung 0–3 geheim, Auflösung von wenig zu viel Punkten', () => {
   const { db, ids } = setup(4);
   const au = (n) => ({ id: `media_abcdefabcdef2${n}`, type: n === 3 ? 'video/mp4' : 'audio/mpeg', name: `s${n}` });
-  use(db, 'songsong2', { rounds: [{ audio1: au(1), title1: 'Eins', start1: 30, audio2: au(2), title2: 'Zwei', start2: 0, audio3: au(3), title3: 'Drei', start3: 12.5 }] });
+  use(db, 'songsong2', { rounds: [{ audio1: au(1), title1: 'Eins', start1: 30, reveal1: au(7), audio2: au(2), title2: 'Zwei', start2: 0, audio3: au(3), title3: 'Drei', start3: 12.5 }] });
   act(db, mod(), 'open', { index: 0 });
   assert.throws(() => act(db, team(ids[0]), 'submit', { ink }), /läuft noch nicht/);
   act(db, mod(), 'play');
@@ -823,9 +823,19 @@ test('Song Song Song 2.0: einmal abspielen, Bewertung 0–3 geheim, Auflösung v
   for (let i = 0; i < 9; i++) act(db, mod(), 'reveal');
   assert.deepEqual(pv(db).board.map((b) => [b.teamId, b.found, b.points]), [[ids[0], 0, 0], [ids[2], 1, 1], [ids[3], 2, 2], [ids[1], 3, 3]]);
   assert.equal(pv(db).solution, null);
+  // Songtitel einzeln: Titel + Auflösungs-Datei des Songs (falls hochgeladen)
+  act(db, mod(), 'reveal');
+  assert.deepEqual(pv(db).solution, ['Eins', null, null]);
+  assert.equal(pv(db).solPlay.id, au(7).id);
+  assert.deepEqual(tv(db, ids[3]).solution, ['Eins', null, null]);
+  assert.equal(pv(db).revealed, false);
+  act(db, mod(), 'reveal');
+  assert.deepEqual(pv(db).solution, ['Eins', 'Zwei', null]);
+  assert.equal(pv(db).solPlay, null); // Song 2 ohne Auflösungs-Datei
   act(db, mod(), 'reveal');
   assert.deepEqual(pv(db).solution, ['Eins', 'Zwei', 'Drei']);
   assert.deepEqual(tv(db, ids[3]).solution, ['Eins', 'Zwei', 'Drei']);
+  assert.equal(pv(db).revealed, true);
   assert.throws(() => act(db, mod(), 'reveal'), /schon aufgelöst/);
 });
 
