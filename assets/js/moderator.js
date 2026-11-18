@@ -4,6 +4,7 @@ import { mapView, zoomState } from './map.js';
 import { buildFinaleLive, buildFinaleEditor } from './mod-finale.js';
 import { buildShowIntro } from './mod-intro.js';
 import { openClipEditor } from './clip-editor.js';
+import { openImageCrop, imageSize } from './img-crop.js';
 
 const token = store('quiz.modToken') || localServer?.demoToken;
 if (!token) location.href = 'index.html';
@@ -1651,6 +1652,7 @@ function mediaField(f, holder, k, save, rerender, id) {
     {
       mediaUploads.set(id, { name: file.name, progress: 0 });
       renderAll(true);
+      const dims = /^image\//.test(file.type) ? imageSize(file) : null; // Maße fürs Prüfen und die Kachel-Wahl
       try {
         const up = await uploadMedia(file, token, (p) => {
           const st = mediaUploads.get(id);
@@ -1660,7 +1662,8 @@ function mediaField(f, holder, k, save, rerender, id) {
         });
         // In die AKTUELLE Arbeitskopie schreiben (der Editor kann inzwischen neu gezeichnet worden sein)
         const cur = (path && editorContent && atPath(editorContent, path)) || holder;
-        cur[k] = { id: up.id, type: up.type, name: file.name, size: up.size };
+        const d = dims ? await dims : null;
+        cur[k] = { id: up.id, type: up.type, name: file.name, size: up.size, ...(d ? { w: d.w, h: d.h } : {}) };
         (cur !== holder && editorSave ? editorSave : save)();
       } catch (err) {
         toast(err.message);
@@ -1688,12 +1691,42 @@ function mediaField(f, holder, k, save, rerender, id) {
     },
   }, '✂ Ausschnitt schneiden') : null;
   let preview = null;
+  // Bilder prüfen: Maße, Format, Auflösung; mit f.fit (Seitenverhältnis der Kachel) auch, ob es
+  // zur Kachel passt – sonst Hinweis und „Zuschneiden“ im Format der Kachel.
+  const check = m && m.type.startsWith('image') ? h('div', { class: 'img-check' }) : null;
+  const showCheck = (w, hh, url) => {
+    if (!check || !w || !hh) return;
+    const r = w / hh;
+    const fmt = r > 1.15 ? 'Querformat' : r < 0.87 ? 'Hochformat' : 'quadratisch';
+    const notes = [];
+    if (Math.max(w, hh) < 900) notes.push(['warn', 'Geringe Auflösung – kann auf dem Beamer unscharf wirken. Besser ein größeres Bild (ab ca. 1200 px Breite).']);
+    if (f.fit) {
+      if (r < f.fit * 0.6) notes.push(['warn', `${fmt === 'Hochformat' ? 'Hochformat' : 'Fast quadratisch'}: Die Kachel ist breit, das Bild steht deshalb kleiner in der Mitte (Rand wird unscharf gefüllt). Tipp: zuschneiden.`]);
+      else if (r > f.fit * 1.7) notes.push(['warn', 'Sehr breites Bild: wirkt in der Kachel flach. Tipp: zuschneiden.']);
+      else notes.push(['ok', 'Passt gut in die Kachel.']);
+    }
+    check.replaceChildren(
+      h('span', { class: 'muted small' }, `${w} × ${hh} px · ${fmt}`),
+      ...notes.map(([cls, t]) => h('span', { class: `img-note ${cls}` }, t)),
+      f.fit && url ? h('button', { type: 'button', class: 'btn small ghost', onclick: () => openImageCrop({ src: url, ratio: f.fit, name: m.name || f.label, title: `✂ ${f.label} zuschneiden`, onSave: upload }) }, '✂ Zuschneiden') : null);
+  };
   if (m) {
     const tag = m.type.startsWith('image') ? 'img' : f.accept === 'audio' || m.type.startsWith('audio') ? 'audio' : 'video';
     preview = h(tag, tag === 'img' ? { class: 'media-preview img', alt: f.label } : { class: `media-preview ${tag}`, controls: true, preload: 'metadata' });
     mediaUrl(m.id).then((url) => {
       if (url) preview.src = url;
       else preview.replaceWith(h('p', { class: 'notice warn' }, 'Die Datei ist auf diesem Gerät nicht mehr vorhanden – bitte neu hochladen.'));
+      if (url && check) {
+        if (m.w && m.h) showCheck(m.w, m.h, url);
+        else imageSize(url).then((d) => {
+          if (!d) return;
+          showCheck(d.w, d.h, url);
+          // Maße bei älteren Bildern nachtragen (für die Wahl der passenden Kachel)
+          const path = editorContent ? pathOf(editorContent, holder) : null;
+          const cur = (path && editorContent && atPath(editorContent, path)) || holder;
+          if (cur[k] && cur[k].id === m.id && !cur[k].w) { cur[k].w = d.w; cur[k].h = d.h; (cur !== holder && editorSave ? editorSave : save)(); }
+        });
+      }
     });
   }
   return h('div', { class: 'field media-field' },
@@ -1704,6 +1737,7 @@ function mediaField(f, holder, k, save, rerender, id) {
         preview,
         h('div', { class: 'media-info' },
           h('span', { class: m ? '' : 'muted' }, m ? `${m.name}${m.size ? ` · ${fmtSize(m.size)}` : ''}` : 'Noch keine Datei'),
+          check,
           h('div', { class: 'row' },
             h('label', { class: 'btn small' }, input, m ? 'Austauschen' : '+ Datei hochladen'),
             clip,

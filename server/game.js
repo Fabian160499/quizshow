@@ -592,7 +592,11 @@ function sanitizeField(f, v) {
       if (typeof v !== 'object' || typeof v.id !== 'string' || !/^media_[a-f0-9]{12,40}$/.test(v.id)) fail(`„${f.label}“: ungültige Datei.`);
       const ok = { video: /^video\//, audio: /^(audio|video)\//, image: /^image\/(png|jpeg|webp)$/ }[f.accept] || /^$/;
       if (typeof v.type !== 'string' || !ok.test(v.type)) fail(`„${f.label}“: falscher Dateityp.`);
-      return { id: v.id, type: v.type, name: String(v.name || 'Datei').slice(0, 100), size: Number(v.size) || 0 };
+      const out = { id: v.id, type: v.type, name: String(v.name || 'Datei').slice(0, 100), size: Number(v.size) || 0 };
+      // Bildmaße (vom Editor gemessen) – für die Prüfung und die Wahl der passenden Kachel
+      const w = Math.round(Number(v.w)), hh = Math.round(Number(v.h));
+      if (f.accept === 'image' && w > 0 && hh > 0 && w < 100000 && hh < 100000) { out.w = w; out.h = hh; }
+      return out;
     }
     case 'list': {
       let arr = Array.isArray(v) ? v : [];

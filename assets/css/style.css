@@ -2788,3 +2788,14 @@ html, body { touch-action: manipulation; }
 .ksw-photo-box { overflow: hidden; background: #000; }
 .ksw-tile.photo .ksw-photo, .ksw-photo { object-fit: contain; z-index: 1; }
 .ksw-photo-bg { position: absolute; inset: -12%; background: center / cover no-repeat; filter: blur(14px) brightness(.5) saturate(1.2); transform: scale(1.05); }
+
+/* Editor: Bild prüfen und zuschneiden */
+.img-check { display: grid; gap: 4px; }
+.img-note { font-size: .85rem; padding: 4px 8px; border-radius: 6px; }
+.img-note.warn { background: rgba(255, 194, 61, .14); color: #ffd47a; }
+.img-note.ok { background: rgba(61, 220, 132, .12); color: #8ff0b8; }
+.imgcrop-stage { display: flex; justify-content: center; margin: 8px 0 12px; }
+.imgcrop-view { position: relative; user-select: none; touch-action: none; }
+.imgcrop-img { display: block; width: 100%; height: 100%; }
+.imgcrop-frame { position: absolute; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .6); outline: 2px solid #ffc23d; cursor: move; touch-action: none; }
+.imgcrop-view { overflow: hidden; }

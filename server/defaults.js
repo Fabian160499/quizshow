@@ -104,7 +104,7 @@ const TYPES = {
           { key: 'hints', label: 'Hinweise (Text – bei einem Foto unten optional, dann als Bildunterschrift)', type: 'list', min: 10, max: 10, itemLabel: (i) => `Hinweis ${i + 1}`, of: 'text', maxLength: 300 },
           { key: 'hintPhotos', label: 'Foto als Hinweis (optional – statt oder zusätzlich zum Text)', type: 'list', min: 10, max: 10, fixedOrder: true, noPreview: true,
             itemLabel: (i) => `Foto zu Hinweis ${i + 1}`, defaultItems: MOVIE_HINTS.map(() => ({ photo: null })),
-            fields: [{ key: 'photo', label: 'Foto', type: 'media', accept: 'image' }] },
+            fields: [{ key: 'photo', label: 'Foto', type: 'media', accept: 'image', fit: 2 }] }, // fit: Seitenverhältnis der Bild-Kachel auf dem Beamer
         ] },
     ],
     example: {

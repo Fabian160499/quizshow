@@ -1691,3 +1691,20 @@ test('Song Song Song 2.0: Standard 2 Sekunden je Song, alte Runden mit 1 s werde
   r[0].segment = 1;
   assert.equal(game.migrate(m).library.find((e) => e.type === 'songsong2').content.rounds[0].segment, 1);
 });
+
+test('Kassenschlager: Fotos kommen nach Format in die passende große Kachel; Bildmaße werden gespeichert', () => {
+  const KS = require('../server/play-kassenschlager.js');
+  const { db } = setup(2);
+  const lib = db.library.find((e) => e.type === 'kassenschlager');
+  const content = JSON.parse(JSON.stringify(lib.content));
+  const m = content.movies[0];
+  m.hintPhotos = Array.from({ length: 10 }, () => ({ photo: null }));
+  m.hintPhotos[8] = { photo: { id: 'media_aaaaaaaaaaaa', type: 'image/png', name: 'breit', size: 1, w: 1800, h: 500 } };
+  m.hintPhotos[9] = { photo: { id: 'media_bbbbbbbbbbbb', type: 'image/png', name: 'hoch', size: 1, w: 600, h: 1300 } };
+  game.applyAction(db, { role: 'moderator', actor: 'mod', now: 1 }, 'library.update', { libraryId: lib.id, title: lib.title, content });
+  const saved = db.library.find((e) => e.id === lib.id).content.movies[0].hintPhotos;
+  assert.deepEqual([saved[8].photo.w, saved[8].photo.h, saved[9].photo.w], [1800, 500, 600]);
+  const layout = KS.wallLayout(db.library.find((e) => e.id === lib.id).content.movies[0]);
+  assert.equal(layout[9], 'a'); // Hochformat: eher quadratische große Kachel
+  assert.equal(layout[8], 'i'); // breites Bild: breite große Kachel
+});

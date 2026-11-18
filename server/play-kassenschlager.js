@@ -104,7 +104,12 @@ function wallLayout(content) {
   const hasPhoto = (i) => !!(content.hintPhotos && content.hintPhotos[i] && content.hintPhotos[i].photo);
   const len = (i) => String((content.hints || [])[i] || '').trim().length;
   const idx = MOVIE_HINTS.map((_, i) => i);
-  const order = [...idx.filter(hasPhoto), ...idx.filter((i) => !hasPhoto(i)).sort((x, y) => len(y) - len(x) || x - y)];
+  // Fotos nach Format: das schmalste bekommt die eher quadratische große Kachel (a), das breiteste die
+  // breite große Kachel (i) – so wirkt jedes Bild möglichst groß. Ohne bekannte Maße: Reihenfolge wie bisher.
+  const ratio = (i) => { const p = content.hintPhotos[i].photo; return p.w && p.h ? p.w / p.h : null; };
+  const photos = idx.filter(hasPhoto);
+  if (photos.every((i) => ratio(i))) photos.sort((x, y) => ratio(x) - ratio(y) || x - y);
+  const order = [...photos, ...idx.filter((i) => !hasPhoto(i)).sort((x, y) => len(y) - len(x) || x - y)];
   const out = [];
   order.forEach((hint, k) => { out[hint] = SLOTS[k]; });
   return out;
@@ -116,6 +121,7 @@ function lastAnswer(tm) {
 
 module.exports = {
   START_MONEY,
+  wallLayout, // für Tests
   init: () => ({ movieIndex: -1, movies: {}, wallet: {}, out: [], converted: null }),
 
   team: {
