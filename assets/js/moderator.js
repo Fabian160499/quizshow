@@ -748,6 +748,30 @@ function removeLightBackground(ctx, w, h) {
     if (y > 0) push(i - w);
     if (y < h - 1) push(i + w);
   }
+  // Weißer Hintergrund: eingeschlossene Lücken (zwischen zwei Personen, Arm und Körper) entfernen,
+  // wenn sie exakt so aussehen wie der Hintergrund am Rand – gleichmäßig, ohne Schattierung.
+  // Weiße Kleidung hat Falten und Schatten und bleibt deshalb stehen.
+  if (minLight >= 228) {
+    let sr = 0, sg = 0, sb = 0, cnt = 0;
+    for (let i = 0; i < n; i++) if (bg[i]) { sr += d[i * 4]; sg += d[i * 4 + 1]; sb += d[i * 4 + 2]; cnt++; }
+    if (cnt) {
+      const mr = sr / cnt, mg = sg / cnt, mb = sb / cnt;
+      const near = (i, tol) => Math.abs(d[i * 4] - mr) <= tol && Math.abs(d[i * 4 + 1] - mg) <= tol && Math.abs(d[i * 4 + 2] - mb) <= tol && d[i * 4 + 3] > 200;
+      const seen = new Uint8Array(n);
+      for (let s0 = 0; s0 < n; s0++) {
+        if (bg[s0] || seen[s0] || !near(s0, 10)) continue;
+        const comp = [s0]; seen[s0] = 1; let exact = 0;
+        for (let k = 0; k < comp.length; k++) {
+          const i = comp[k]; if (near(i, 3)) exact++;
+          const x = i % w;
+          for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) {
+            if (j >= 0 && j < n && !seen[j] && !bg[j] && near(j, 10)) { seen[j] = 1; comp.push(j); }
+          }
+        }
+        if (comp.length > n * 0.0008 && exact > comp.length * 0.93) for (const i of comp) bg[i] = 1;
+      }
+    }
+  }
   // Schachbrett: auch eingeschlossene Flächen (z. B. zwischen Arm und Körper) entfernen,
   // wenn sie das typische Grau-Weiß-Muster haben. Unten mit starten.
   if (minLight < 228) {
@@ -802,6 +826,34 @@ function removeLightBackground(ctx, w, h) {
   return true;
 }
 
+// Greenscreen: Ist der Bildrand fast überall eine kräftige, einheitliche Farbe (z. B. reines Grün
+// oder Magenta), wird genau diese Farbe im ganzen Bild durchsichtig – auch in Lücken zwischen
+// Personen. Ränder werden weich ausgeblendet, der farbige Saum herausgerechnet.
+function removeKeyBackground(ctx, w, h) {
+  const im = ctx.getImageData(0, 0, w, h); const d = im.data; const n = w * h;
+  const edge = [];
+  for (let x = 0; x < w; x += 2) edge.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y += 2) edge.push(y * w, y * w + w - 1);
+  let r = 0, g = 0, b = 0;
+  for (const i of edge) { r += d[i * 4]; g += d[i * 4 + 1]; b += d[i * 4 + 2]; }
+  r /= edge.length; g /= edge.length; b /= edge.length;
+  if (Math.max(r, g, b) - Math.min(r, g, b) < 90) return false; // kein kräftiger Farbrand
+  const dist = (i) => Math.hypot(d[i * 4] - r, d[i * 4 + 1] - g, d[i * 4 + 2] - b);
+  if (edge.filter((i) => dist(i) < 60).length < edge.length * 0.8) return false;
+  const inner = 45, outer = 110; // bis inner: ganz weg, bis outer: weicher Übergang
+  const spill = g >= r && g >= b ? 1 : r >= g && r >= b ? 0 : 2; // dominanter Kanal der Schlüsselfarbe
+  for (let i = 0; i < n; i++) {
+    const dd = dist(i);
+    if (dd <= inner) { d[i * 4 + 3] = 0; continue; }
+    if (dd < outer) d[i * 4 + 3] = Math.round(d[i * 4 + 3] * (dd - inner) / (outer - inner));
+    // Farbsaum dämpfen: dominanten Kanal nicht über die beiden anderen hinaus
+    const o = [0, 1, 2].filter((k) => k !== spill); const lim = Math.max(d[i * 4 + o[0]], d[i * 4 + o[1]]);
+    if (dd < outer * 1.6 && d[i * 4 + spill] > lim) d[i * 4 + spill] = lim;
+  }
+  ctx.putImageData(im, 0, 0);
+  return true;
+}
+
 async function shrinkImage(file) {
   if (!/^image\/(png|webp|jpeg)$/.test(file.type)) throw new Error('Bitte ein PNG-, WebP- oder JPEG-Bild wählen.');
   const url = URL.createObjectURL(file);
@@ -822,7 +874,7 @@ async function shrinkImage(file) {
       const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(img, 0, 0, c.width, c.height);
       // Weißen (oder sehr hellen, einfarbigen) Hintergrund automatisch entfernen.
-      removeLightBackground(ctx, c.width, c.height);
+      if (!removeKeyBackground(ctx, c.width, c.height)) removeLightBackground(ctx, c.width, c.height);
       // Leere (durchsichtige) Ränder abschneiden, damit die Figur das Pult ausfüllt.
       c = trimTransparent(c);
       // WebP behält Transparenz und ist klein; Safari kann es nicht erzeugen → PNG.
