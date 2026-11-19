@@ -166,7 +166,7 @@ function globePoints() {
     const land = isLand(lat, lon);
     if (!land && i % 3) continue; // Ozean nur angedeutet
     const city = land && Math.random() < 0.035;
-    pts.push([lat, lon, land, city]);
+    pts.push([lat, lon, land, city, Math.cos(lat), Math.sin(lat)]);
   }
   GLOBE_PTS = pts;
   return pts;
@@ -181,7 +181,10 @@ function globe() {
     if (!cv.isConnected) { if (cv.__started) return; requestAnimationFrame(draw); return; }
     cv.__started = true;
     if (!pts) pts = globePoints();
-    const rect = cv.getBoundingClientRect(); const d = Math.min(2, devicePixelRatio || 1);
+    // Sparsam zeichnen: 30 Bilder pro Sekunde reichen für die langsame Drehung.
+    if (now - (cv.__last || 0) < 32) { requestAnimationFrame(draw); return; }
+    cv.__last = now;
+    const rect = cv.getBoundingClientRect(); const d = 1; // volle Pixeldichte bringt am Beamer nichts, kostet aber das Vierfache
     if (cv.width !== Math.round(rect.width * d)) { cv.width = Math.round(rect.width * d); cv.height = Math.round(rect.height * d); }
     const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
     const W = rect.width; const H = rect.height; const dt = Math.min(0.1, (now - last) / 1000); last = now; rot += dt * 0.06;
@@ -195,18 +198,25 @@ function globe() {
     const proj = (lat, lon) => { const l2 = lon + rot; const X = Math.cos(lat) * Math.sin(l2); const Z = Math.cos(lat) * Math.cos(l2); const Y = Math.sin(lat); const Y2 = Y * Math.cos(tilt) - Z * Math.sin(tilt); const Z2 = Y * Math.sin(tilt) + Z * Math.cos(tilt); return [cx + X * R, cy - Y2 * R, Z2, X]; };
     g.globalCompositeOperation = 'lighter';
     const dot = Math.max(1, R / 300);
-    for (const [lat, lon, land, city] of pts) {
-      const [x, y, z, X] = proj(lat, lon); if (z < 0.02) continue;
+    // Punkte nach Farbe/Helligkeit in wenige Gruppen sortieren und jede Gruppe in einem Zug füllen
+    // (statt tausender einzelner Farbwechsel pro Bild – das hat auf schwächeren Rechnern geruckelt).
+    const LV = 6; const buckets = new Map();
+    const add = (key, style, x, y, w) => { let b = buckets.get(key); if (!b) { b = { style, path: new Path2D() }; buckets.set(key, b); } b.path.rect(x - w / 2, y - w / 2, w, w); };
+    const ct = Math.cos(tilt); const sn = Math.sin(tilt);
+    for (const [, lon, land, city, cl, sl] of pts) {
+      // wie proj(), aber mit vorberechnetem cos/sin der Breite
+      const l2 = lon + rot; const Zr = cl * Math.cos(l2); const z = sl * sn + Zr * ct; if (z < 0.02) continue;
+      const X = cl * Math.sin(l2); const x = cx + X * R; const y = cy - (sl * ct - Zr * sn) * R;
       const lit = 0.35 + 0.65 * Math.max(0, 0.6 - X * 0.6 + (1 - z) * 0.2); // links heller (Gegenlicht)
       if (land) {
-        const a = Math.min(1, (0.25 + 0.75 * z) * lit);
-        g.fillStyle = `rgba(${Math.round(120 + 100 * lit)},${Math.round(200 + 50 * lit)},255,${a.toFixed(2)})`;
-        g.fillRect(x - dot / 2, y - dot / 2, dot, dot);
-        if (city) { g.fillStyle = `rgba(200,245,255,${(0.6 * z).toFixed(2)})`; g.fillRect(x - dot, y - dot, dot * 2, dot * 2); }
+        const li = Math.round(lit * LV) / LV; const a = Math.round(Math.min(1, (0.25 + 0.75 * z) * lit) * 10) / 10;
+        add(`l${li}|${a}`, `rgba(${Math.round(120 + 100 * li)},${Math.round(200 + 50 * li)},255,${a})`, x, y, dot);
+        if (city) { const ca = Math.round(0.6 * z * 10) / 10; add(`c${ca}`, `rgba(200,245,255,${ca})`, x, y, dot * 2); }
       } else {
-        g.fillStyle = `rgba(60,130,210,${(0.12 * z).toFixed(2)})`; g.fillRect(x - dot / 2, y - dot / 2, dot * 0.8, dot * 0.8);
+        const oa = Math.round(0.12 * z * 50) / 50; add(`o${oa}`, `rgba(60,130,210,${oa})`, x, y, dot * 0.8);
       }
     }
+    for (const b of buckets.values()) { g.fillStyle = b.style; g.fill(b.path); }
     // leuchtende Kante, links stärker
     const rim = g.createLinearGradient(cx - R, cy, cx + R, cy); rim.addColorStop(0, 'rgba(170,235,255,.95)'); rim.addColorStop(0.5, 'rgba(90,190,255,.35)'); rim.addColorStop(1, 'rgba(90,190,255,.15)');
     g.strokeStyle = rim; g.lineWidth = Math.max(1.5, R / 160); g.beginPath(); g.arc(cx, cy, R, 0, 7); g.stroke();
