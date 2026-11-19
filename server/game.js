@@ -2054,6 +2054,7 @@ function moderatorView(db, connections) {
 }
 
 module.exports = {
+  publicTeams,
   hostView,
   trimForConnection,
   QuizError,

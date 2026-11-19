@@ -75,9 +75,9 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 @keyframes siGlint { 0% { transform: translateX(-120%); } 35%, 100% { transform: translateX(120%); } }
 .si-logo-wrap { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; animation: siLogoIn 1.3s cubic-bezier(.15, 1.25, .3, 1) both; }
 .si-logo-wrap.from-particles { animation: siLogoFromParticles 2.2s ease-out both; }
-@keyframes siLogoIn { from { transform: scale(.4); opacity: 0; filter: blur(14px); } to { transform: none; opacity: 1; filter: none; } }
-@keyframes siLogoFromParticles { 0%, 55% { opacity: 0; transform: scale(1.04); filter: blur(6px); } 85% { opacity: 1; filter: blur(0); } 100% { opacity: 1; transform: none; } }
-@keyframes siWord { from { transform: translateY(.4em) scale(.9); opacity: 0; letter-spacing: .25em; } to { transform: none; opacity: 1; } }
+@keyframes siLogoIn { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes siLogoFromParticles { 0%, 55% { opacity: 0; transform: scale(1.04); } 85% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes siWord { from { transform: translateY(.4em) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
 .si-logo-wrap.small { align-self: start; margin-top: 5vh; animation: siDrop .8s cubic-bezier(.2, 1.2, .4, 1) both; }
 .si-logo-wrap.small .si-logo { font-size: min(6vh, 4vw); }
 @keyframes siDrop { from { opacity: 0; transform: translateY(-4vh); } to { opacity: 1; transform: none; } }
@@ -88,7 +88,7 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-present { display: flex; flex-direction: column; align-items: center; gap: 1.2vh; animation: siFadeSlow 1.6s ease-out both; }
 .si-present small { font-family: var(--ui); font-weight: 800; font-size: 4.2vh; letter-spacing: .4em; text-transform: uppercase; color: #fff; text-shadow: 0 0 2vh rgba(255, 255, 255, .5); }
 .si-present b { font-family: var(--ui); font-weight: 600; font-size: 2.2vh; letter-spacing: .9em; text-transform: uppercase; color: var(--b); }
-@keyframes siFadeSlow { from { opacity: 0; filter: blur(6px); letter-spacing: .2em; } to { opacity: 1; filter: none; } }
+@keyframes siFadeSlow { from { opacity: 0; } to { opacity: 1; } }
 .si-kicker-big { font-family: var(--ui); font-weight: 800; font-size: 5vh; letter-spacing: .5em; text-transform: uppercase; animation: siFadeSlow 1.2s ease-out both; text-shadow: 0 0 3vh var(--a); }
 
 .si-teaser-head { font-family: var(--f); font-weight: 900; font-size: 9vh; text-transform: uppercase; letter-spacing: .08em; color: #fff; animation: siCutIn .5s cubic-bezier(.2, 1.4, .4, 1) both; text-shadow: 0 0 3vh var(--a); }
@@ -96,13 +96,13 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-cut { display: flex; flex-direction: column; align-items: center; gap: 1vh; animation: siCutIn .32s cubic-bezier(.2, 1.4, .4, 1) both; }
 .si-cut b { font-family: var(--f); font-weight: 900; font-size: min(10vh, 6.6vw); line-height: 1.02; text-transform: uppercase; max-width: 88vw; color: #fff; text-shadow: -.04em 0 0 rgba(255, 0, 80, .7), .04em 0 0 rgba(0, 220, 255, .7), 0 0 3vh var(--a); }
 .si-cut-1 { transform: rotate(-3deg); } .si-cut-2 { transform: rotate(2deg) translateY(-4vh); } .si-cut-3 { transform: rotate(-1deg) translateY(4vh); }
-@keyframes siCutIn { from { opacity: 0; transform: scale(1.6); filter: blur(10px); } to { opacity: 1; filter: none; } }
+@keyframes siCutIn { from { opacity: 0; transform: scale(1.6); } to { opacity: 1; } }
 
 /* Countdown */
 .si-count { position: relative; display: grid; place-items: center; width: 62vh; height: 62vh; }
 .si-count > * { grid-area: 1 / 1; }
 .si-num { font-family: var(--f); font-size: 36vh; font-weight: 900; line-height: 1; animation: siNum 1s cubic-bezier(.2, 1.4, .4, 1) both; font-variant-numeric: tabular-nums; }
-@keyframes siNum { 0% { transform: scale(2.6); opacity: 0; filter: blur(10px); } 22% { transform: scale(1); opacity: 1; filter: none; } 85% { opacity: 1; } 100% { transform: scale(.85); opacity: 0; } }
+@keyframes siNum { 0% { transform: scale(2.6); opacity: 0; } 22% { transform: scale(1); opacity: 1; } 85% { opacity: 1; } 100% { transform: scale(.85); opacity: 0; } }
 .si-ring { width: 58vh; height: 58vh; border-radius: 50%; border: .5vh solid color-mix(in srgb, var(--b) 60%, transparent); box-shadow: 0 0 4vh var(--b), inset 0 0 4vh var(--b); animation: siRing 1s ease-out both; }
 @keyframes siRing { from { transform: scale(.6); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
 .si-count-final { align-self: end; margin-bottom: -10vh; font-family: var(--ui); font-weight: 800; font-size: 4.4vh; letter-spacing: .25em; text-transform: uppercase; color: var(--a); text-shadow: 0 0 2vh var(--a); animation: siCutIn .4s ease-out both; white-space: nowrap; }
@@ -126,18 +126,18 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 /* Drop */
 .si-flash { position: absolute; inset: 0; background: #fff; animation: siFlash 1.1s ease-out forwards; z-index: 9; }
 @keyframes siFlash { 0% { opacity: 1; } 15% { opacity: .9; } 100% { opacity: 0; } }
-.si-rays { position: absolute; left: 50%; top: 50%; width: 220vmax; height: 220vmax; margin: -110vmax 0 0 -110vmax; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--a) 34%, transparent) 0 5deg, transparent 5deg 17deg, color-mix(in srgb, var(--b) 26%, transparent) 17deg 20deg, transparent 20deg 34deg); -webkit-mask: radial-gradient(circle, #000 0%, transparent 42%); mask: radial-gradient(circle, #000 0%, transparent 42%); animation: siSpin 40s linear infinite; opacity: .55; }
+.si-rays { position: absolute; left: 50%; top: 50%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--a) 34%, transparent) 0 5deg, transparent 5deg 17deg, color-mix(in srgb, var(--b) 26%, transparent) 17deg 20deg, transparent 20deg 34deg); -webkit-mask: radial-gradient(circle, #000 0%, transparent 42%); mask: radial-gradient(circle, #000 0%, transparent 42%); animation: siSpin 40s linear infinite; opacity: .55; }
 .si-rays.dim { opacity: .2; }
 
 /* Off-Ansage */
 .si-line { z-index: 3; max-width: 86vw; font-family: var(--f); font-size: min(10vh, 6.4vw); font-weight: 900; line-height: 1.04; animation: siLine 2.8s cubic-bezier(.2, .9, .3, 1) both; }
 .si-line.last { --m2: var(--c); font-size: min(12.5vh, 7.6vw); animation: siLineLast 1.1s cubic-bezier(.2, 1.4, .4, 1) both; }
-@keyframes siLine { 0% { opacity: 0; transform: scale(1.18); letter-spacing: .25em; filter: blur(8px); } 16% { opacity: 1; transform: none; letter-spacing: .01em; filter: none; } 84% { opacity: 1; transform: scale(.985); } 100% { opacity: 0; transform: scale(.96); filter: blur(4px); } }
+@keyframes siLine { 0% { opacity: 0; transform: scale(1.18); } 16% { opacity: 1; transform: none; } 84% { opacity: 1; transform: scale(.985); } 100% { opacity: 0; transform: scale(.96); } }
 /* Zeilen im Takt der KI-Stimme: reinkommen und stehen bleiben, bis die nächste Zeile kommt */
 .si-line.chain { animation: siLineIn .45s cubic-bezier(.2, .9, .3, 1) both; }
 .si-line.chain.last { animation: siLineLast 1.1s cubic-bezier(.2, 1.4, .4, 1) both; }
-@keyframes siLineIn { 0% { opacity: 0; transform: scale(1.18); letter-spacing: .25em; filter: blur(8px); } 100% { opacity: 1; transform: none; letter-spacing: .01em; filter: none; } }
-@keyframes siLineLast { from { opacity: 0; transform: scale(2.2); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes siLineIn { 0% { opacity: 0; transform: scale(1.18); } 100% { opacity: 1; transform: none; } }
+@keyframes siLineLast { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: none; } }
 .si-hold { align-self: end; margin-bottom: 13vh; z-index: 3; font-family: var(--ui); font-size: 3.4vh; font-weight: 800; letter-spacing: .4em; text-transform: uppercase; color: var(--b); text-shadow: 0 0 2vh var(--b); animation: siBlink 1.8s ease-in-out infinite alternate; }
 @keyframes siBlink { from { opacity: .4; } to { opacity: 1; } }
 
@@ -368,7 +368,8 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-ret .r1 { width: 56vh; height: 56vh; border-radius: 50%; border: .4vh solid #4cc9ff; box-shadow: 0 0 3vh #4cc9ff; animation: siSpin 6s linear infinite; border-style: dashed; }
 .si-ret .r2 { width: 64vh; height: 64vh; border-radius: 50%; border: .2vh solid rgba(76, 201, 255, .5); animation: siRetIn .8s ease-out both; }
 .si-ret .x { width: 100%; height: 100%; background: linear-gradient(#4cc9ff, #4cc9ff) center/ .3vh 100% no-repeat, linear-gradient(#4cc9ff, #4cc9ff) center/100% .3vh no-repeat; opacity: .5; animation: siRetIn .8s ease-out both; }
-@keyframes siLock { 0% { filter: brightness(3) blur(10px); opacity: 0; transform: scale(1.3); } 100% { filter: none; opacity: 1; transform: none; } }
+/* Ohne Filter-Animation: ein animierter Weichzeichner über einem Foto mit Schatten musste jedes Bild neu berechnet werden. */
+@keyframes siLock { 0% { opacity: 0; transform: scale(1.3); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
 @keyframes siRetIn { from { transform: scale(2); opacity: 0; } }
 .si-ret-data { justify-self: start; margin-left: calc(10vw + 68vh); max-width: calc(100vw - 10vw - 68vh - 5vw); text-align: left; display: flex; flex-direction: column; gap: 1.2vh; font-family: "SI Mono", monospace; color: #9fe3ff; animation: siItem .6s ease-out calc(var(--hit) + .3s) both; }
 .si-ret-data small { font-size: 2.2vh; letter-spacing: .3em; text-transform: uppercase; }
@@ -383,7 +384,7 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-hero.small { margin-bottom: 4vh; }
 .si-hero.small .si-avatar { height: 36vh; }
 .si-hero.left { justify-self: start; margin-left: 8vw; }
-@keyframes siHero { 0% { transform: translateY(14vh) scale(.7); opacity: 0; filter: brightness(3) blur(10px); } 60% { filter: brightness(1.6); } 100% { transform: none; opacity: 1; filter: none; } }
+@keyframes siHero { 0% { transform: translateY(14vh) scale(.7); opacity: 0; } 100% { transform: none; opacity: 1; } } /* ohne Filter-Animation (ruckelte) */
 .si-avatar { height: 52vh; width: auto; max-width: 42vw; object-fit: contain; filter: drop-shadow(0 0 3vh var(--team, var(--a))) drop-shadow(0 2vh 3vh rgba(0, 0, 0, .7)); }
 .si-avatar.host { height: 58vh; }
 .si-avatar.si-initials { width: 34vh; height: 34vh; border-radius: 50%; display: grid; place-items: center; font-family: "SI Display", sans-serif; font-size: 13vh; font-weight: 900; color: #fff; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--team) 60%, #fff), var(--team) 60%); box-shadow: 0 0 6vh var(--team); }
@@ -416,7 +417,7 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-type-name { font-family: var(--f); font-size: min(22vh, 12vw); line-height: .9; text-transform: uppercase; z-index: 3; max-width: 94vw; }
 .si-type-word { font-style: normal; white-space: nowrap; }
 .si-type-name span { display: inline-block; color: #fff; text-shadow: 0 0 4vh var(--team), .05em .05em 0 color-mix(in srgb, var(--team) 70%, #000); animation: siSlam .45s cubic-bezier(.2, 1.6, .4, 1) both; }
-@keyframes siSlam { from { transform: scale(4) translateY(-.4em); opacity: 0; filter: blur(8px); } to { transform: none; opacity: 1; filter: none; } }
+@keyframes siSlam { from { transform: scale(4) translateY(-.4em); opacity: 0; } to { transform: none; opacity: 1; } }
 .si-type-sub { align-self: end; margin-bottom: 10vh; display: flex; align-items: center; gap: 2vw; font-family: var(--ui); font-weight: 700; font-size: 3vh; letter-spacing: .3em; text-transform: uppercase; z-index: 3; animation: siFadeSlow .8s ease-out calc(var(--hit) + .7s) both; }
 .si-type-sub i { width: 6vw; height: .4vh; background: var(--team); }
 .lay-type .si-extra { align-self: start; margin-top: 8vh; text-align: center; align-items: center; }
@@ -424,7 +425,7 @@ body.si-active .studio-bg, body.si-active .beamer-controls, body.si-active .badg
 .si-speed { position: absolute; inset: -20%; background: repeating-conic-gradient(from 0deg, transparent 0 3deg, rgba(255, 255, 255, .35) 3deg 3.3deg, transparent 3.3deg 9deg); -webkit-mask: radial-gradient(circle, transparent 15%, #000 65%); mask: radial-gradient(circle, transparent 15%, #000 65%); animation: siWarp 1.7s ease-in both; }
 @keyframes siWarp { from { transform: scale(.4) rotate(0); opacity: 0; } 50% { opacity: 1; } to { transform: scale(2) rotate(20deg); opacity: 0; } }
 .si-zoom-av { z-index: 2; animation: siZoomIn 1.7s cubic-bezier(.7, 0, .2, 1) both; }
-@keyframes siZoomIn { 0% { transform: scale(.02) rotate(-20deg); filter: blur(4px) brightness(3); opacity: 0; } 80% { transform: scale(1.08); filter: none; opacity: 1; } 100% { transform: scale(1); } }
+@keyframes siZoomIn { 0% { transform: scale(.02) rotate(-20deg); opacity: 0; } 80% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
 .si-zoom-name { align-self: end; margin-bottom: 12vh; z-index: 3; font-family: var(--f); font-size: min(14vh, 9vw); line-height: 1; text-transform: uppercase; color: #fff; text-shadow: 0 0 4vh var(--team); animation: siStampBig .5s cubic-bezier(.2, 1.6, .4, 1) var(--hit) both; }
 @keyframes siStampBig { from { transform: scale(3); opacity: 0; } to { transform: none; opacity: 1; } }
 .si-zoom-kick { align-self: start; margin-top: 6vh; font-family: var(--ui); font-weight: 700; font-size: 2.6vh; letter-spacing: .6em; text-transform: uppercase; color: var(--team); }
@@ -790,3 +791,13 @@ body.si-ipad-on .team-head { opacity: 0; pointer-events: none; }
 .lay-allchairs .si-hero.voice .si-avatar { height: 44vh; }
 .lay-allchairs .si-plate { margin-bottom: 33vh; align-self: end; justify-self: end; margin-right: 6vw; }
 .si-all .si-chairs.final { position: relative; bottom: auto; margin-top: 8vh; animation: none; } .si-voice .si-all .si-hosts { margin-bottom: 14vh; }
+
+/* ---- Leistung: teure Effekte entschärfen (ruckelte auf dem Show-Rechner) ---- */
+/* Avatar mit Schatten bekommt eine eigene Ebene: Schatten wird einmal berechnet, nicht bei jeder Bewegung der Eltern. */
+.si-avatar { will-change: transform; }
+/* Filmkorn im Weltraum unnötig – und das bildschirmgroße Überblenden kostet bei jedem Bild. */
+.si-weltraum .si-grain { display: none; }
+/* Sterne im Weltraum stehen still: das langsame Driften war kaum zu sehen, kostete aber jedes Bild. */
+.si-weltraum .si-stars { animation: none; inset: 0; }
+.si-weltraum .si-stars.two { display: none; }
+.si-weltraum .si-haze { animation: none; }

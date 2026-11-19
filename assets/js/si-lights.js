@@ -114,7 +114,12 @@ export function siTeam(v, me, teams, now, opts = {}) {
     if (t < tl.count) { fill('#02030a'); const y = ((t * 0.6 + pos) % 1) * H; const gr = g.createLinearGradient(0, y - 20, 0, y + 20); gr.addColorStop(0, 'rgba(76,201,255,0)'); gr.addColorStop(0.5, 'rgba(76,201,255,.55)'); gr.addColorStop(1, 'rgba(76,201,255,0)'); g.fillStyle = gr; g.fillRect(0, y - 20, W, 40); say(''); return; }
     if (t < boom) { const k = Math.floor(t - tl.count); const left = Math.max(1, 10 - k); fill('#02030a'); if (left <= 6) flicker('#ff9f1c', (7 - left) / 6, t); say(`${tx.label || ''}${left}`, '', 'count'); return; }
     if (t < boom + 3.2) { fill(strobe(t, 11) ? '#ffffff' : '#ff9f1c', 0.9); flicker('#ff9f1c', 1, t); say(tx.start, '', 'go'); return; }
-    fill('#02030a'); dots('#ffffff', t * 4, 40, 0.9); radial('#4cc9ff', 0.35, 0.5, 1.3, 1); say('', tx.wait);
+    // Lange Phase mit den Off-Ansagen: der Raum bleibt in Bewegung – blaue Welle läuft durch alle iPads,
+    // dazu ein oranger Lichtpunkt, der wie ein Satellit über die Reihe wandert.
+    const wave = 0.5 + 0.5 * Math.sin(t * 2.2 - pos * 5);
+    fill('#02030a'); fill('#4cc9ff', 0.12 + 0.5 * wave); dots('#ffffff', t * 4, 40, 0.9);
+    const sat = chase(((t * 0.35) % 1.4) - 0.2, 0.1); if (sat > 0.02) { fill('#ff9f1c', 0.75 * sat); radial('#ffffff', 0.6 * sat); }
+    say('', tx.wait);
   };
 
   const teamProgram = (t, k) => {
@@ -130,7 +135,9 @@ export function siTeam(v, me, teams, now, opts = {}) {
     const other = teams[k] || { color: '#888888' };
     const pk = N > 1 ? k / (N - 1) : 0.5;
     if (t < HIT) { const from = pk < 0.5 ? 1 : 0; const x = from + (pk - from) * clamp(t / HIT); black(); fill(other.color, chase(x, 0.1)); say(''); return; }
-    black(); radial(other.color, 0.35 + 0.1 * Math.sin(t * 3 + pos * 4), 0.5, 0.5, 0.9); say('', tx.other);
+    // Der ganze Raum leuchtet in der Farbe des vorgestellten Teams: Lichtwellen laufen von dessen iPad nach außen.
+    const ph = (t * 1.1 - Math.abs(pos - pk) * 2.2) % 1; const pulse = ph > 0 && ph < 0.3 ? 1 - ph / 0.3 : 0;
+    black(); fill(other.color, 0.22 + 0.68 * pulse); radial('#ffffff', 0.35 * pulse, 0.5, 0.5, 0.7); say('', tx.other);
   };
 
   const hostProgram = (t) => {
@@ -139,14 +146,16 @@ export function siTeam(v, me, teams, now, opts = {}) {
       const x = ((t * 1.4) % 1.2) - 0.1; black(); fill('#fff1c9', chase(x, 0.08)); if (t > HIT && t < HIT + 0.2) fill('#ffffff');
       say('', t > HIT ? tx.host : ''); return;
     }
-    black(); radial('#fff4d6', 0.55, 0.5 + 0.3 * Math.sin(t * 1.3 + pos * 4), 0.3, 0.6); say('', tx.host);
+    // Warmer Suchscheinwerfer, der langsam über alle iPads schwenkt.
+    const beam = chase(0.5 + 0.6 * Math.sin(t * 0.9), 0.16);
+    black(); fill('#ffcf7a', 0.12 + 0.7 * beam); radial('#fff4d6', 0.35 + 0.4 * beam, 0.5, 0.3, 0.7); say('', tx.host);
   };
 
   const allProgram = (t) => {
     if (t < 0.35) { fill('#ffffff'); say(''); return; }
     const col = teams[v.idx] ? teams[v.idx].color : me.color;
     if (t < 4) { g.fillStyle = hsl(t * 120 + pos * 240, 1); g.fillRect(0, 0, W, H); if (strobe(t, 7)) fill('#ffffff', 0.4); }
-    else { fill(col); radial('#ffffff', 0.3 + 0.25 * Math.sin(t * 4 + pos * 6), 0.5, 0.5, 0.7); }
+    else { fill(col); radial('#ffffff', 0.3 + 0.25 * Math.sin(t * 4 + pos * 6), 0.5, 0.5, 0.7); fill('#ffffff', 0.75 * chase(((t * 0.8) % 1.4) - 0.2, 0.1)); }
     say(me.name, tx.all, 'all');
   };
 

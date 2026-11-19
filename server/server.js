@@ -326,7 +326,7 @@ const server = http.createServer(async (req, res) => {
 
     // Teamliste für die Startseite: nur Namen und Farben, niemals Zugangscodes.
     if (req.method === 'GET' && url.pathname === '/api/teams') {
-      return sendJson(res, 200, store.data.project.teams.map((t) => ({ id: t.id, name: t.name, color: t.color })));
+      return sendJson(res, 200, game.publicTeams(store.data)); // mit Avatar-Version, ohne Zugangscodes
     }
 
     if (req.method === 'POST' && url.pathname === '/api/login') {

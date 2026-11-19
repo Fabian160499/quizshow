@@ -195,15 +195,16 @@ export function audioEl(key, env) {
 }
 export function fadeOut(el, ms = 1100) {
   if (!el || el.paused) return;
-  const start = el.volume; let k = 0; const steps = 14;
+  // Lautstärke weich nach Zeit statt in wenigen großen Stufen (große Sprünge knacken hörbar).
+  const start = el.volume; const t0 = performance.now();
   clearInterval(el.__fade);
-  el.__fade = setInterval(() => { k += 1; el.volume = Math.max(0, start * (1 - k / steps)); if (k >= steps) { clearInterval(el.__fade); el.pause(); } }, ms / steps);
+  el.__fade = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); el.volume = Math.max(0, start * (1 - k)); if (k >= 1) { clearInterval(el.__fade); el.pause(); } }, 16);
 }
 export function setVol(el, v, ms = 400) {
   if (!el) return;
   clearInterval(el.__fade);
-  const start = el.volume; let k = 0; const steps = 8;
-  el.__fade = setInterval(() => { k += 1; el.volume = clamp(start + (v - start) * (k / steps)); if (k >= steps) clearInterval(el.__fade); }, ms / steps);
+  const start = el.volume; const t0 = performance.now();
+  el.__fade = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); el.volume = clamp(start + (v - start) * k); if (k >= 1) clearInterval(el.__fade); }, 16);
 }
 
 // ======================= Effekt-Leinwand =======================

@@ -1708,3 +1708,12 @@ test('Kassenschlager: Fotos kommen nach Format in die passende große Kachel; Bi
   assert.equal(layout[9], 'a'); // Hochformat: eher quadratische große Kachel
   assert.equal(layout[8], 'i'); // breites Bild: breite große Kachel
 });
+
+test('Show-Intro: KI-Soundeffekte lassen sich wieder entfernen, Ansagen bleiben', () => {
+  const { db } = setup();
+  game.applyAction(db, mod(), 'showIntro.voiceSet', { clips: { host: { id: 'media_abcdefabcdef01', type: 'audio/mpeg' }, 'sfx:boom': { id: 'media_abcdefabcdef02', type: 'audio/mpeg' }, 'sfx:hit': { id: 'media_abcdefabcdef03', type: 'audio/mpeg' } } });
+  assert.equal(game.moderatorView(db).showIntro.sfx.ready, 2);
+  game.applyAction(db, mod(), 'showIntro.sfxClear', {});
+  assert.equal(game.moderatorView(db).showIntro.sfx.ready, 0);
+  assert.equal(game.moderatorView(db).showIntro.voice.ready, 1);
+});

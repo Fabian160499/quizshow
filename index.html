@@ -27,44 +27,44 @@
       funktionieren Teilnahme und Moderation nicht.
     </div>
 
-    <section class="choices">
-      <article class="card choice" aria-labelledby="team-h">
-        <h2 id="team-h">Als Team teilnehmen</h2>
-        <p class="muted">
-          So tretet ihr bei: Wählt euer Team aus der Liste und gebt den Zugangscode ein, den ihr von der
-          Moderation bekommen habt. Alternativ öffnet ihr direkt euren persönlichen Team-Link.
-          Bei einem Verbindungsabbruch einfach erneut beitreten – Punkte und Spielstand bleiben erhalten.
-        </p>
-        <div id="team-list" class="team-pick" role="group" aria-label="Team auswählen"></div>
-        <p id="no-teams" class="muted hidden">Die Moderation hat noch keine Teams angelegt.</p>
-        <div class="team-pick host-pick hidden" id="probe-pick"><button type="button" class="btn" style="border-left: 10px solid #ffb020" onclick="location.href='team.html?code=DEMO'">🧪 Probelauf beitreten</button></div>
-        <div class="team-pick host-pick"><button type="button" id="host-pick" class="btn ghost" aria-pressed="false" style="border-left: 10px solid #7fc8bd">🎤 Moderation (Finale)</button></div>
-        <form id="team-form">
-          <label for="code" id="code-label">Team-Zugangscode</label>
-          <p id="team-error" class="notice bad hidden" role="alert"></p>
-          <input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="numeric" placeholder="z. B. 4821" required>
-          <p style="margin-top:14px"><button class="btn pink huge" id="team-submit" type="submit" style="width:100%">Beitreten</button></p>
-        </form>
-      </article>
-
-      <article class="card choice mod" aria-labelledby="mod-h">
-        <h2 id="mod-h">Moderator-Login</h2>
-        <p class="muted">Show-Regie, Teams, Inhalte und Beamer-Steuerung. Passwortgeschützt.</p>
-        <form id="mod-form">
-          <label for="pw">Passwort</label>
-          <input id="pw" name="pw" type="password" autocomplete="current-password" required>
-          <p id="mod-error" class="notice bad hidden" role="alert"></p>
-          <p style="margin-top:14px"><button class="btn cyan huge" type="submit" style="width:100%">Anmelden</button></p>
-        </form>
-        <p class="muted" style="margin-top:18px">
-          Beamer/Publikum: <a href="beamer.html">Beamer-Ansicht öffnen</a> (zeigt nur freigegebene Inhalte).
-        </p>
-      </article>
+    <section class="team-stage" aria-labelledby="team-h">
+      <h2 id="team-h">Wer seid ihr?</h2>
+      <p class="muted team-hint">Tippt auf euer Team und gebt euren Zugangscode ein. Bei einem Verbindungsabbruch einfach erneut beitreten – Punkte und Spielstand bleiben erhalten.</p>
+      <div id="team-list" class="team-tiles" role="group" aria-label="Team auswählen"></div>
+      <p id="no-teams" class="muted hidden">Die Moderation hat noch keine Teams angelegt.</p>
+      <div class="team-pick host-pick hidden" id="probe-pick"><button type="button" class="btn" style="border-left: 10px solid #ffb020" onclick="location.href='team.html?code=DEMO'">🧪 Probelauf beitreten</button></div>
+      <form id="team-form" class="team-form">
+        <label for="code" id="code-label">Team-Zugangscode</label>
+        <p id="team-error" class="notice bad hidden" role="alert"></p>
+        <input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="numeric" placeholder="z. B. 4821" required>
+        <p style="margin-top:14px"><button class="btn pink huge" id="team-submit" type="submit" style="width:100%">Beitreten</button></p>
+      </form>
     </section>
+
+    <footer class="staff">
+      <details class="staff-login">
+        <summary>Moderation</summary>
+        <div class="staff-box">
+          <form id="mod-form" class="staff-form">
+            <label for="pw">Passwort für die Regie</label>
+            <div class="staff-row">
+              <input id="pw" name="pw" type="password" autocomplete="current-password" required>
+              <button class="btn cyan" type="submit">Anmelden</button>
+            </div>
+            <p id="mod-error" class="notice bad hidden" role="alert"></p>
+          </form>
+          <div class="staff-links">
+            <button type="button" id="host-pick" class="btn ghost small" aria-pressed="false">🎤 Finale-iPad der Moderation</button>
+            <a class="btn ghost small" href="beamer.html">Beamer-Ansicht öffnen</a>
+          </div>
+        </div>
+      </details>
+    </footer>
   </main>
 
   <script type="module">
-    import { h, store } from './assets/js/client.js';
+    import { h, store, avatarSrc } from './assets/js/client.js';
+    const initialsOf = (name) => String(name || '').split(/[\s&+]+/).filter((w) => /\p{L}/u.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
     // Ticket auf der Startseite: immer das heutige Datum
     document.getElementById('ticket-date').textContent = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -110,16 +110,21 @@
         const res = await fetch('api/teams', { cache: 'no-store' });
         if (!res.ok) throw new Error();
         const teams = await res.json();
-        teamList.replaceChildren(...teams.map((t) => h('button', {
-          type: 'button', class: 'btn ghost', 'aria-pressed': 'false', style: { borderLeft: `10px solid ${t.color}` },
-          onclick: (ev) => {
-            if (hostMode) setHostMode(false);
-            selectedTeam = t;
-            teamList.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
-            ev.currentTarget.setAttribute('aria-pressed', 'true');
-            codeInput.focus();
-          },
-        }, t.name)));
+        teamList.replaceChildren(...teams.map((t) => {
+          const pic = h('span', { class: 'tile-pic', '--team': t.color },
+            h('span', { class: 'tile-initials' }, initialsOf(t.name)));
+          if (t.av) avatarSrc(t.id, t.av).then((src) => { if (!src) return; const img = h('img', { src, alt: '' }); img.onload = () => pic.classList.add('has-av'); pic.append(img); });
+          return h('button', {
+            type: 'button', class: 'team-tile', 'aria-pressed': 'false', '--team': t.color,
+            onclick: (ev) => {
+              if (hostMode) setHostMode(false);
+              selectedTeam = t;
+              teamList.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+              ev.currentTarget.setAttribute('aria-pressed', 'true');
+              codeInput.focus();
+            },
+          }, pic, h('b', { class: 'tile-name' }, t.name));
+        }));
         document.getElementById('no-teams').classList.toggle('hidden', teams.length > 0);
       } catch {
         document.getElementById('offline').classList.remove('hidden');

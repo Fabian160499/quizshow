@@ -322,6 +322,18 @@ const actions = {
     log(db, ctx, 'editor', `Show-Intro: ${Object.keys(p.clips || {}).length} Clips erzeugt`);
   },
 
+  // Alle KI-Soundeffekte wieder entfernen (dann laufen die eingebauten Standard-Effekte).
+  'showIntro.sfxClear'(db, ctx) {
+    const pr = db.project;
+    const c = { ...(pr.showIntro || {}) };
+    const clips = { ...(c.clips || {}) };
+    let n = 0;
+    for (const k of Object.keys(clips)) if (k.startsWith('sfx:')) { delete clips[k]; n += 1; }
+    c.clips = clips;
+    pr.showIntro = c;
+    log(db, ctx, 'editor', `Show-Intro: ${n} KI-Soundeffekte entfernt`);
+  },
+
   // Nächster Schritt im laufenden Intro.
   'showIntro.next'(db, ctx) {
     const d = current(db);

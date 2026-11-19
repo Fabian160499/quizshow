@@ -126,7 +126,8 @@ function voiceCard(x, si) {
       h('div', { class: 'row' },
         h('button', { class: 'btn', disabled: !!ui.busy || !si.config.voiceId, onclick: () => gen('/generate', { voiceId: si.config.voiceId }, 'voice') }, ui.busy === 'voice' ? '… Stimme wird erzeugt' : '🎙 Fehlende Ansagen erzeugen'),
         h('button', { class: 'btn ghost small', disabled: !!ui.busy || !si.config.voiceId, onclick: () => gen('/generate', { voiceId: si.config.voiceId, all: true }, 'voice') }, 'Alle neu'),
-        h('button', { class: 'btn ghost small', disabled: !!ui.busy, onclick: () => gen('/sfx', {}, 'sfx') }, ui.busy === 'sfx' ? '… Effekte werden erzeugt' : `✨ KI-Soundeffekte (${si.sfx.ready}/${si.sfx.total})`))) : null,
+        h('button', { class: 'btn ghost small', disabled: !!ui.busy, onclick: () => gen('/sfx', {}, 'sfx') }, ui.busy === 'sfx' ? '… Effekte werden erzeugt' : `✨ KI-Soundeffekte (${si.sfx.ready}/${si.sfx.total})`),
+        si.sfx.ready ? h('button', { class: 'btn ghost small', disabled: !!ui.busy, onclick: () => x.act('showIntro.sfxClear').then(() => toast('KI-Soundeffekte entfernt – es laufen wieder die Standard-Effekte.')) }, '✕ KI-Effekte entfernen') : null)) : null,
     clipList(x, si));
 }
 function clipList(x, si) {

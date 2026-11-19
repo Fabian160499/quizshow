@@ -2800,3 +2800,32 @@ html, body { touch-action: manipulation; }
 .imgcrop-img { display: block; width: 100%; height: 100%; }
 .imgcrop-frame { position: absolute; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .6); outline: 2px solid #ffc23d; cursor: move; touch-action: none; }
 .imgcrop-view { overflow: hidden; }
+
+/* ---- Startseite: gehört den Teams ---- */
+.team-stage { margin-top: 26px; padding: 22px; border-radius: 18px; background: var(--surface); border-top: 8px solid var(--accent); }
+.team-stage h2 { margin: 0 0 4px; font-size: 1.6rem; }
+.team-hint { margin: 0 0 16px; }
+.team-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin: 10px 0 18px; }
+.team-tile { position: relative; display: flex; flex-direction: column; align-items: stretch; padding: 0; border: 3px solid transparent; border-radius: 16px; overflow: hidden; cursor: pointer; color: #fff; font: inherit;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--team) 38%, #101018), #101018 85%); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); transition: transform .15s, border-color .15s, box-shadow .15s; }
+.team-tile:active { transform: scale(.97); }
+.team-tile[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--team) 60%, transparent), 0 10px 26px rgba(0, 0, 0, .45); transform: translateY(-2px); }
+/* Avatar nur vom Oberkörper: Bild ist doppelt so hoch wie die Fläche und oben ausgerichtet, unten weich ausgeblendet. */
+.tile-pic { position: relative; display: grid; place-items: center; height: 150px; overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--team) 55%, transparent), transparent 70%); }
+.tile-pic img { position: absolute; left: 50%; top: 6px; height: 200%; width: auto; max-width: none; transform: translateX(-50%);
+  -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 50%); mask-image: linear-gradient(180deg, #000 42%, transparent 50%); filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .5)); }
+.tile-initials { display: grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; font-weight: 900; font-size: 2.2rem; color: #fff;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--team) 70%, #fff), var(--team) 60%, color-mix(in srgb, var(--team) 60%, #000)); box-shadow: 0 0 24px color-mix(in srgb, var(--team) 70%, transparent); }
+.tile-pic.has-av .tile-initials { display: none; }
+.tile-name { display: block; padding: 10px 10px 12px; font-size: 1.05rem; line-height: 1.2; text-align: center; border-top: 4px solid var(--team); background: rgba(0, 0, 0, .35); }
+.team-form { max-width: 520px; margin: 0 auto; }
+/* Moderation: klein und unauffällig ganz unten */
+.staff { margin: 28px auto 20px; max-width: 520px; text-align: center; opacity: .75; }
+.staff-login summary { display: inline-block; cursor: pointer; font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #9a9aab); padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .15); list-style: none; }
+.staff-login summary::-webkit-details-marker { display: none; }
+.staff-login[open] { opacity: 1; }
+.staff-box { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--surface); text-align: left; }
+.staff-row { display: flex; gap: 8px; }
+.staff-row input { flex: 1; min-width: 0; }
+.staff-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

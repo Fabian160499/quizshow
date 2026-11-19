@@ -24,6 +24,17 @@ export function siStop() {
 }
 
 const duckTargets = () => [run.music, run.bed].filter(Boolean);
+// Zwei Sprecher-Spuren im Wechsel: eine neue Ansage schneidet die alte nicht hart ab (das knackte),
+// die alte wird kurz ausgeblendet.
+function voiceEl(env) {
+  const prev = run.voice;
+  const key = run.voiceKey === 'si-voice' ? 'si-voice2' : 'si-voice';
+  run.voiceKey = key;
+  const el = audioEl(key, env);
+  if (prev && prev !== el && !prev.paused) fadeOut(prev, 120);
+  el.onended = null; el.onerror = null;
+  return el;
+}
 function duck(v, ms = 350) { for (const el of duckTargets()) setVol(el, v * (el === run.bed ? 0.55 : 1), ms); }
 
 // env: { now(), ctx() (AudioContext|null), audible(), sound (bool), speak?(text), audioEl?(key) }
@@ -73,7 +84,7 @@ export function siBeamer(s, env) {
     const dt = at - nowEl(el);
     if (dt < -3) return; // Beamer kam etwas später dazu: Ansage trotzdem noch abspielen
     if (clip && env.sound) {
-      run.voice = audioEl('si-voice', env);
+      run.voice = voiceEl(env);
       later(Math.max(0, dt), () => {
         duck(0.3); setVol(run.song, 0.35); setVol(run.jingle, 0.45);
         run.voice.onended = () => { duck(run.jingle && !run.jingle.paused ? 0.2 : 1, 900); setVol(run.song, 1); setVol(run.jingle, 1); };
@@ -83,7 +94,7 @@ export function siBeamer(s, env) {
   };
   // Eine Ansage sofort (nach delay Sekunden) sprechen, onEnd wenn sie zu Ende ist (Zeilen im Takt der Stimme).
   const say = (clip, onEnd, delay = 0) => {
-    run.voice = audioEl('si-voice', env);
+    run.voice = voiceEl(env);
     const v = run.voice;
     setTimeout(() => { // bewusst ohne later(): ein neues Zeichnen des Beamers darf die Ansage nicht verschlucken
       duck(0.3); setVol(run.song, 0.35); setVol(run.jingle, 0.45);
