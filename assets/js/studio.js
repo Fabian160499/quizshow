@@ -187,12 +187,16 @@ function avatarSlot(src, cx, frame = ROOM_FRAME) {
   return box;
 }
 
-// who: 'both' (Moderation + Co-Moderation) oder 'cohost' (nur Co-Moderation in der Mitte, Finale)
+// who: 'both' (Moderation + Co-Moderation), 'cohost' (nur Co-Moderation in der Mitte, Finale)
+// oder 'finale' (Finale-Duo: eigene Finalmoderation in der Mitte)
 export function pultLayers(show, who = 'both') {
   const out = [studioRoom('pult-bg')];
   if (who === 'both') {
     out.push(avatarSlot(show.hostAvatar || DEFAULT_AV.host.src, 385, { w: 112, h: 100 }));
     out.push(avatarSlot(show.coHostAvatar || DEFAULT_AV.cohost.src, 500, { w: 112, h: 100 }));
+  } else if (who === 'finale') {
+    // Finale-Duo: eigene Finalmoderation in der Mitte (ohne Bild der Standard-Avatar)
+    out.push(avatarSlot(show.finaleHostAvatar || DEFAULT_AV.cohost.src, 442));
   } else {
     out.push(avatarSlot(show.coHostAvatar || DEFAULT_AV.cohost.src, 442));
   }
@@ -287,10 +291,10 @@ function computeFrame(b, frame) {
   return { s, mid: (l + r) / 2, bottom: b.y0 + visSrc };
 }
 
-function fitAvatar(img, src, cx, deskY) {
+function fitAvatar(img, src, cx, deskY, frame = SIDE_FRAME) {
   figureBox(src).then((b) => {
     if (!b) return;
-    const { s, mid, bottom } = computeFrame(b, SIDE_FRAME);
+    const { s, mid, bottom } = computeFrame(b, frame);
     img.setAttribute('preserveAspectRatio', 'none');
     img.setAttribute('width', b.W * s);
     img.setAttribute('height', b.H * s);
@@ -302,7 +306,7 @@ function fitAvatar(img, src, cx, deskY) {
 // ---------- Einzelnes Finalpult (Vorlage: Fabians Finalbild) ----------
 // Das Pult ist ein freigestelltes Bild; rechts wird es gespiegelt. Der Avatar steht
 // dahinter, extra (z. B. die Münzen des Teams) liegt oben auf dem Pult.
-export function singlePodium({ avatar, color, label, mirror = false, extra = null }) {
+export function singlePodium({ avatar, avatar2 = null, color, label, mirror = false, extra = null }) {
   const VW = 394, VH = 560, PY = VH - 342;
   const svg = el('svg', { class: 'single-podium', viewBox: `0 0 ${VW} ${VH}`, role: 'img', 'aria-label': label || '' });
   const cx = mirror ? 100 : 294;
@@ -323,9 +327,14 @@ export function singlePodium({ avatar, color, label, mirror = false, extra = nul
     const defs = el('defs');
     defs.append(clip, fx);
     svg.append(defs);
-    const img = el('image', { href: avatar, class: 'sp-avatar', x: cx - 92, y: PY - 228, width: 184, height: 240, preserveAspectRatio: 'xMidYMax meet', 'clip-path': `url(#${clipId})`, filter: `url(#${clipId}-l)` });
-    svg.append(img);
-    fitAvatar(img, avatar, fcx, PY);
+    // Zwei Personen (Finale-Duo): nebeneinander, jede in der halben Rahmenbreite.
+    const people = avatar2 ? [[avatar, fcx - SIDE_FRAME.w * 0.23], [avatar2, fcx + SIDE_FRAME.w * 0.23]] : [[avatar, fcx]];
+    const frame = avatar2 ? { w: SIDE_FRAME.w * 0.58, h: SIDE_FRAME.h } : SIDE_FRAME;
+    for (const [src, x] of people) {
+      const img = el('image', { href: src, class: 'sp-avatar', x: x - 92, y: PY - 228, width: 184, height: 240, preserveAspectRatio: 'xMidYMax meet', 'clip-path': `url(#${clipId})`, filter: `url(#${clipId}-l)` });
+      svg.append(img);
+      fitAvatar(img, src, x, PY, frame);
+    }
   }
   svg.append(el('ellipse', { cx: VW / 2, cy: VH - 8, rx: 180, ry: 12, fill: '#000', opacity: 0.45 }));
   svg.append(el('image', { href: 'assets/img/finale-pult.webp', x: 0, y: PY, width: VW, height: 342, transform: mirror ? `translate(${VW} 0) scale(-1 1)` : null }));

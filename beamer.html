@@ -883,7 +883,7 @@
         return [h('div', { class: `fb-stage result ${won ? 'won' : 'lost'}` }, conf, top,
           h('div', { class: 'fb-result' },
             won ? h('div', { class: 'fb-winner', '--team': f.team.color }, h('span', {}, f.team.name), h('b', {}, 'STIEHLT DIE SHOW!'))
-                : h('div', { class: 'fb-winner mod' }, h('span', {}, f.host || 'Die Moderation'), h('b', {}, 'BEHÄLT DIE SHOW!')),
+                : h('div', { class: 'fb-winner mod' }, h('span', {}, f.host || 'Die Moderation'), h('b', {}, f.duo ? 'BEHALTEN DIE SHOW!' : 'BEHÄLT DIE SHOW!')),
             won ? h('div', { class: 'fb-ticket' }, h('div', { class: 'fb-ticket-l' }, h('small', {}, 'TICKET'), h('b', {}, 'Die große Finalshow'), h('span', {}, f.team.name)), h('div', { class: 'fb-ticket-r' }, coinImg('fb-ticket-coin'), h('small', {}, 'ADMIT ONE')))
                 : h('div', { class: 'fb-sub' }, `Endstand ${f.score.team} : ${f.score.mod}`)))];
       }
@@ -927,7 +927,7 @@
       const { W: PW, H: PH, pc } = PULT;
       // Ein durchgehender Raum: das ganze Studio-Bild füllt den Beamer, das Pult steht in der Mitte.
       const pult = h('div', { class: 'scene fx-room' },
-        ...pultLayers(s.show, 'cohost'),
+        ...pultLayers(s.show, f.duo ? 'finale' : 'cohost'),
         h('div', { class: 'overlay fx-screen', style: { left: pc(389, PW), top: pc(34, PH), width: pc(159, PW), height: pc(124, PH) } }, h('b', {}, f.sudden ? 'SUDDEN DEATH' : 'FINALE')),
         // „FINALE“ nur innerhalb der dunklen Fläche der Pultfront (zugeschnitten)
         h('div', { class: 'fx-field', style: { left: pc(362, PW), top: pc(307, PH), width: pc(168, PW), height: pc(81, PH) } },
@@ -941,7 +941,7 @@
             singlePodium({ avatar: f.team.avatar, color: f.team.color, label: `Pult ${f.team.name}`, extra: coinRow })),
           h('div', { class: 'fx-mid' }, question),
           side('mod', f.host || 'Moderation', '#7fc8bd', modBoard, f.score.mod, r ? r.modGrade : null, isNew.modGrade,
-            singlePodium({ mirror: true, avatar: hostAvatar, color: '#7fc8bd', label: `Pult ${f.host || 'Moderation'}` }))))];
+            singlePodium({ mirror: true, avatar: hostAvatar, avatar2: f.duo ? s.show.coHostAvatar || 'assets/img/avatar-cohost.webp' : null, color: '#7fc8bd', label: `Pult ${f.host || 'Moderation'}` }))))];
       // Münzflug: Einsatz → vom Team auf das Pult; zurück → vom Pult zum Team.
       if (isNew.challenge || (isNew.resolved && r.challenged && !r.coinLost)) {
         setTimeout(() => {

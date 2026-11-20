@@ -309,8 +309,11 @@ function base(db, f) {
   const r = f.rounds[f.qIndex];
   return {
     team: { id: f.teamId, name: t.name, color: t.color },
-    host: db.project.host,
-    coHost: db.project.coHost,
+    // Finale-Duo: Moderation und Co-Moderation spielen zusammen gegen das Team,
+    // eine eigene Finalmoderation leitet das Finale.
+    host: db.project.finaleDuo ? [db.project.host, db.project.coHost].filter(Boolean).join(' & ') : db.project.host,
+    coHost: db.project.finaleDuo ? (db.project.finaleHost || '') : db.project.coHost,
+    duo: !!db.project.finaleDuo,
     target: config(db).target,
     score: f.score,
     coins: coinsLeft(db, f),

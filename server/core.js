@@ -39,7 +39,7 @@ function teamIds(db) {
 
 function totals(db) {
   const sums = {};
-  for (const t of db.project.teams) sums[t.id] = 0;
+  for (const t of db.project.teams) sums[t.id] = Number(t.startPoints) || 0; // Startpunkte zählen mit
   for (const e of db.ledger) if (e.teamId in sums) sums[e.teamId] += e.points;
   return sums;
 }

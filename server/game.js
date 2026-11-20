@@ -1050,6 +1050,10 @@ const moderatorActions = {
     // 3D-Avatare der Moderation (null = Standard-Avatar aus dem Pultbild)
     if ('hostAvatar' in p) pr.hostAvatar = p.hostAvatar ? cleanImage(p.hostAvatar) : null;
     if ('coHostAvatar' in p) pr.coHostAvatar = p.coHostAvatar ? cleanImage(p.coHostAvatar) : null;
+    // Finale-Duo: Moderation + Co-Moderation stehen zusammen am Pult, eigene Finalmoderation in der Mitte.
+    if ('finaleDuo' in p) pr.finaleDuo = !!p.finaleDuo;
+    if ('finaleHost' in p) pr.finaleHost = cleanText(p.finaleHost, 80);
+    if ('finaleHostAvatar' in p) pr.finaleHostAvatar = p.finaleHostAvatar ? cleanImage(p.finaleHostAvatar) : null;
     if ('date' in p) pr.date = cleanDate(p.date);
     if (p.settings && typeof p.settings === 'object') {
       for (const k of ['publicScores', 'reducedMotion', 'sound']) {
@@ -1162,6 +1166,12 @@ const moderatorActions = {
     if ('color' in p) team.color = cleanColor(p.color);
     // 3D-Avatar hinter dem Pult; null entfernt ihn (Pult bleibt dann leer).
     if ('avatar' in p) team.avatar = p.avatar ? cleanImage(p.avatar) : null;
+    // Startpunkte (z. B. Bonus aus früheren Shows): zählen zum Punktestand, bleiben auch nach einem Neustart.
+    if ('startPoints' in p) {
+      const n = Number(p.startPoints);
+      if (!Number.isInteger(n) || n < 0 || n > 99) fail('Startpunkte: ganze Zahl von 0 bis 99.');
+      if (n) team.startPoints = n; else delete team.startPoints;
+    }
     log(db, ctx, 'team', `Team „${team.name}“ geändert${'avatar' in p ? (p.avatar ? ' (Avatar gesetzt)' : ' (Avatar entfernt)') : ''}`);
   },
 
@@ -1182,6 +1192,21 @@ const moderatorActions = {
     sh.project.teams = sh.project.teams.filter((t) => t.id !== team.id);
     log(db, ctx, 'team', `Team „${team.name}“ gelöscht`);
     return sh.current ? { kick: team.id } : {};
+  },
+
+  // Ein einzelnes Team aus einer anderen Show übernehmen (Name, Farbe, Avatar; neuer Code).
+  'team.importFrom'(db, ctx, p) {
+    const target = showFor(db, p.showId);
+    const src = showFor(db, p.fromShowId);
+    if (target.project === src.project) fail('Bitte eine andere Show wählen.');
+    const from = teamIn(src, p.teamId);
+    const teams = target.project.teams;
+    if (teams.length >= 12) fail('Maximal 12 Teams.');
+    if (teams.some((t) => t.name.trim().toLowerCase() === from.name.trim().toLowerCase())) fail(`„${from.name}“ ist schon in dieser Show.`);
+    const team = { id: newId('team'), name: from.name, color: from.color, code: newTeamCode(teams.map((t) => t.code)) };
+    if (from.avatar) team.avatar = from.avatar;
+    teams.push(team);
+    log(db, ctx, 'team', `Team „${team.name}“ aus „${src.project.name}“ übernommen`);
   },
 
   // Teams einer anderen Show übernehmen (ersetzt die Teams der Zielshow, neue Codes).
@@ -1938,7 +1963,8 @@ function beamerView(db) {
   const sums = b.view === 'coin' ? totals(db) : null;
   const view = {
     role: 'beamer',
-    show: { name: pr.name, subtitle: pr.subtitle, host: pr.host, coHost: pr.coHost, hostAvatar: pr.hostAvatar || null, coHostAvatar: pr.coHostAvatar || null },
+    show: { name: pr.name, subtitle: pr.subtitle, host: pr.host, coHost: pr.coHost, hostAvatar: pr.hostAvatar || null, coHostAvatar: pr.coHostAvatar || null,
+      finaleDuo: !!pr.finaleDuo, finaleHost: pr.finaleHost || '', finaleHostAvatar: b.view === 'finale' ? pr.finaleHostAvatar || null : null },
     teams: publicTeams(db).map((t, i) => {
       const out = sums ? { ...t, points: sums[t.id] || 0 } : { ...t };
       // Avatare nur in den Ansichten mit Teampulten mitschicken (große Bilder).

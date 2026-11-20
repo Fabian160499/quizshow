@@ -927,6 +927,17 @@ function hostAvatarCell(label, key) {
     cur ? h('button', { class: 'btn small ghost', onclick: () => act('project.update', { [key]: null }) }, 'Standard-Avatar') : h('span', { class: 'muted' }, 'Standard-Avatar')));
 }
 
+// Ein Team (Name, Farbe, Avatar) aus einer anderen Show dazuholen – neuer Code, keine Punkte.
+function importRow(others, teams) {
+  const have = new Set(teams.map((t) => t.name.trim().toLowerCase()));
+  const sel = h('select', { 'aria-label': 'Team aus früherer Show', style: { flex: '1 1 260px', width: 'auto' } },
+    others.filter((x) => x.teams.length).map((x) => h('optgroup', { label: `${x.name}${x.date ? ` (${x.date.split('-').reverse().join('.')})` : ''}` },
+      x.teams.map((t) => h('option', { value: `${x.id}|${t.id}`, disabled: have.has(t.name.trim().toLowerCase()) }, `${t.name}${t.hasAvatar ? ' 🧍' : ''}${have.has(t.name.trim().toLowerCase()) ? ' – schon dabei' : ''}`)))));
+  return [h('div', { class: 'row' }, sel,
+    h('button', { class: 'btn small', onclick: () => { const [fromShowId, teamId] = sel.value.split('|'); if (teamId) act('team.importFrom', { fromShowId, teamId }); } }, '+ Übernehmen')),
+  h('p', { class: 'muted' }, 'Übernimmt Name, Farbe und Avatar (🧍) mit neuem Zugangscode. Die andere Show bleibt unverändert.')];
+}
+
 // Teams je Show: Die Auswahl oben legt fest, für welche Show die Teams bearbeitet werden –
 // so lassen sich mehrere Shows mit wechselnden Teams im Voraus vorbereiten.
 function buildTeams() {
@@ -945,6 +956,7 @@ function buildTeams() {
       h('div', { class: 'row' }, copySel,
         h('button', { class: 'btn small ghost', disabled: hasPoints, title: hasPoints ? 'Diese Show hat schon Punkte.' : '',
           onclick: () => confirmAct(`Die Teams von „${showName}“ durch eine Kopie der Teams der gewählten Show ersetzen? (neue Zugangscodes, die andere Show bleibt unverändert)`, 'teams.copyFrom', { showId: S.project.id, fromShowId: copySel.value }) }, 'Übernehmen'))) : null,
+    others.some((x) => x.teams.length) ? card('Einzelnes Team aus einer früheren Show übernehmen', importRow(others, teams)) : null,
     card('Team anlegen',
       h('form', {
         class: 'row', onsubmit: (ev) => {
@@ -959,11 +971,13 @@ function buildTeams() {
       h('p', { class: 'muted' }, '3D-Avatar: am besten ein freigestelltes PNG (transparenter Hintergrund), hochkant. Ein weißer Hintergrund wird beim Hochladen automatisch entfernt. Er steht auf dem Beamer im Bogen hinter dem Pult; ohne Avatar bleibt das Pult leer.')),
     card(`Teams von „${showName}“ (${teams.length})`,
       teams.length ? h('table', {},
-        h('thead', {}, h('tr', {}, h('th', {}, 'Farbe'), h('th', {}, 'Name'), h('th', {}, '3D-Avatar'), h('th', {}, 'Zugangscode / Link'), h('th', {}, ''))),
+        h('thead', {}, h('tr', {}, h('th', {}, 'Farbe'), h('th', {}, 'Name'), h('th', {}, '3D-Avatar'), h('th', { title: 'Punkte, mit denen das Team in die Show startet' }, 'Startpunkte'), h('th', {}, 'Zugangscode / Link'), h('th', {}, ''))),
         h('tbody', {}, teams.map((t) => h('tr', {},
           h('td', {}, h('input', { type: 'color', value: t.color, 'aria-label': `Farbe ${t.name}`, style: { width: '56px', padding: '2px' }, onchange: (ev) => act('team.update', { showId, teamId: t.id, color: ev.target.value }) })),
           h('td', {}, h('input', { value: t.name, maxlength: '40', 'aria-label': 'Teamname', onchange: (ev) => act('team.update', { showId, teamId: t.id, name: ev.target.value }) })),
           h('td', {}, avatarCell(t, showId)),
+          h('td', {}, h('input', { type: 'number', min: '0', max: '99', step: '1', value: String(t.startPoints || 0), 'aria-label': `Startpunkte ${t.name}`, style: { width: '72px' },
+            onchange: (ev) => act('team.update', { showId, teamId: t.id, startPoints: Number(ev.target.value) || 0 }) })),
           h('td', {}, h('div', { class: 'code' }, t.code),
             other ? h('span', { class: 'muted', style: { fontSize: '0.8rem' } }, 'gilt, sobald die Show geöffnet ist')
               : h('button', { class: 'btn small ghost', onclick: () => Promise.resolve(navigator.clipboard?.writeText(base + t.code)).then(() => toast('Link kopiert', 'info'), () => toast(`Kopieren nicht möglich. Link: ${base + t.code}`, 'info')) }, 'Link kopieren')),
@@ -1017,7 +1031,7 @@ const drafts = new Map();
 function buildEditor() {
   const p = S.project;
   const field = (label, key, max) => h('div', {}, h('label', { for: `proj-${key}` }, label),
-    h('input', { id: `proj-${key}`, value: p[key], maxlength: String(max), oninput: (ev) => autosave(`project.${key}`, () => act('project.update', { [key]: ev.target.value })) }));
+    h('input', { id: `proj-${key}`, value: p[key] || '', maxlength: String(max), oninput: (ev) => autosave(`project.${key}`, () => act('project.update', { [key]: ev.target.value })) }));
   const check = (label, key) => h('label', { style: { fontWeight: 400 } },
     h('input', { type: 'checkbox', checked: p.settings[key], style: { width: 'auto', marginRight: '8px' }, onchange: (ev) => act('project.update', { settings: { [key]: ev.target.checked } }) }), label);
 
@@ -1029,7 +1043,12 @@ function buildEditor() {
       h('div', {}, h('label', { for: 'show-date' }, 'Datum der Show'),
         h('input', { id: 'show-date', type: 'date', value: p.date || '', onchange: (ev) => act('project.update', { date: ev.target.value }) })),
       field('Untertitel', 'subtitle', 160), field('Moderation (Name)', 'host', 80), hostAvatarCell('Avatar Moderation', 'hostAvatar'),
-      field('Co-Moderation (Name, leitet das Finale)', 'coHost', 80), hostAvatarCell('Avatar Co-Moderation', 'coHostAvatar')),
+      field(p.finaleDuo ? 'Co-Moderation (Name)' : 'Co-Moderation (Name, leitet das Finale)', 'coHost', 80), hostAvatarCell('Avatar Co-Moderation', 'coHostAvatar'),
+      // Finale-Duo: Moderation und Co-Moderation spielen zusammen gegen das Gewinnerteam.
+      h('label', { style: { fontWeight: 400, marginTop: '10px' } },
+        h('input', { type: 'checkbox', checked: !!p.finaleDuo, style: { width: 'auto', marginRight: '8px' }, onchange: (ev) => act('project.update', { finaleDuo: ev.target.checked }) }),
+        'Finale-Duo: Moderation und Co-Moderation stehen im Finale zusammen am Pult'),
+      p.finaleDuo ? [field('Finalmoderation (Name, leitet nur das Finale)', 'finaleHost', 80), hostAvatarCell('Avatar Finalmoderation', 'finaleHostAvatar')] : null),
     card('Darstellung',
       check('Animationen reduzieren', 'reducedMotion'),
       check('Soundeffekte auf dem Beamer', 'sound'),

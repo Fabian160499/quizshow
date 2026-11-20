@@ -1717,3 +1717,41 @@ test('Show-Intro: KI-Soundeffekte lassen sich wieder entfernen, Ansagen bleiben'
   assert.equal(game.moderatorView(db).showIntro.sfx.ready, 0);
   assert.equal(game.moderatorView(db).showIntro.voice.ready, 1);
 });
+
+test('Finalshow: Startpunkte zählen mit, überstehen den Neustart und entscheiden das Finalteam', () => {
+  const { db, ids } = setup(2);
+  game.applyAction(db, mod(), 'team.update', { teamId: ids[0], startPoints: 6 });
+  assert.throws(() => game.applyAction(db, mod(), 'team.update', { teamId: ids[0], startPoints: -1 }), /Startpunkte/);
+  game.applyAction(db, mod(), 'points.adjust', { teamId: ids[1], points: 4, reason: 'x' });
+  assert.deepEqual(game.totals(db), { [ids[0]]: 6, [ids[1]]: 4 });
+  game.applyAction(db, mod(), 'live.reset', { confirm: 'NEUSTART' });
+  assert.deepEqual(game.totals(db), { [ids[0]]: 6, [ids[1]]: 0 });
+  game.applyAction(db, mod(), 'team.update', { teamId: ids[0], startPoints: 0 });
+  assert.equal('startPoints' in db.project.teams[0], false);
+});
+
+test('Finalshow: einzelnes Team mit Avatar aus früherer Show übernehmen', () => {
+  const { db } = setup(1);
+  game.applyAction(db, mod(), 'team.update', { teamId: db.project.teams[0].id, name: 'Mike & John', avatar: 'data:image/png;base64,iVBORw0KGgo=' });
+  const old = db.project.teams[0];
+  const oldShow = db.project.id;
+  game.applyAction(db, mod(), 'shows.create', { name: 'Die große Finalshow', date: '2027-01-17' });
+  game.applyAction(db, mod(), 'team.importFrom', { fromShowId: oldShow, teamId: old.id });
+  const t = db.project.teams.find((x) => x.name === 'Mike & John');
+  assert.ok(t && t.id !== old.id && t.code && t.avatar === old.avatar);
+  assert.throws(() => game.applyAction(db, mod(), 'team.importFrom', { fromShowId: oldShow, teamId: old.id }), /schon in dieser Show/);
+});
+
+test('Finale-Duo: Moderation + Co-Moderation spielen zusammen, eigene Finalmoderation', () => {
+  const { db, ids } = setup(2);
+  game.applyAction(db, mod(), 'project.update', { host: 'Fabian', coHost: 'Fabi H', finaleDuo: true, finaleHost: 'Olivia' });
+  game.applyAction(db, mod(), 'finale.config', { target: 2, questions: [1, 2, 3].map((n) => ({ question: `F${n}?`, answer: `A${n}` })) });
+  const idx = game.moderatorView(db).rundown.findIndex((s) => s.kind === 'finale');
+  game.applyAction(db, mod(), 'run.goto', { index: idx });
+  const b = game.beamerView(db);
+  assert.equal(b.finale.host, 'Fabian & Fabi H');
+  assert.equal(b.finale.coHost, 'Olivia');
+  assert.equal(b.finale.duo, true);
+  assert.equal(b.show.finaleDuo, true);
+  assert.ok(ids.length === 2);
+});
