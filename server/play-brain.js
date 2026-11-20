@@ -611,6 +611,8 @@ module.exports = {
       removed: r.removed[teamId] || [],
       blocked: t.blockedNow,
       answer: r.answers[teamId]?.choice ?? null,
+      // Antworttausch: die übernommene Antwort zählt für dieses Team.
+      swappedTo: r.swapped && r.swapped.teamId === teamId ? r.swapped.used : null,
       correct: ['evaluated', 'wheel'].includes(r.phase) ? q.correct : null,
       gained: r.gains ? r.gains[teamId] || 0 : null,
       points: t.points,

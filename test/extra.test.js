@@ -859,3 +859,25 @@ test('Song Song Song 2.0: Punkte je erkannte Songs im Editor änderbar, ohne all
   clock += 5000; // Nachfrist vorbei
   assert.throws(() => act(db, team(ids[1]), 'submit', { ink }), /geschlossen/);
 });
+
+test('Brain or Dreh\'n: Antworttausch – getauschte richtige Antwort darf ans Rad', () => {
+  const { db, ids } = setup(3);
+  const [A, B, C] = ids;
+  const g = use(db, 'brain');
+  act(db, mod(), 'start');
+  db.live.games[g.id].t[A].jokers = [{ id: 'jt', key: 'tausch' }];
+  act(db, team(A), 'useJoker', { jokerId: 'jt', target: B });
+  act(db, mod(), 'showQuestion');
+  const right = g.content.rounds[0].correct;
+  const wrong = ['A', 'B', 'C', 'D'].find((l) => l !== right);
+  act(db, team(A), 'answer', { choice: wrong });
+  act(db, team(B), 'answer', { choice: right });
+  act(db, team(C), 'answer', { choice: wrong });
+  act(db, team(A), 'swap', { swap: true });
+  act(db, mod(), 'evaluate');
+  assert.equal(tv(db, A).gained, 1);
+  act(db, mod(), 'openWheel');
+  assert.equal(tv(db, A).wheel.canBuzz, true);
+  act(db, team(A), 'wheelBuzz');
+  assert.equal(tv(db, A).wheel.mine, true);
+});

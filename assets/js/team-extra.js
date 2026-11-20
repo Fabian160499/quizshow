@@ -498,13 +498,17 @@ function brain(g, ui) {
     const second = g.two && g.answer && !g.answer2;
     const canAnswer = (!g.answer || second) && !(g.detective && g.detective.waiting);
     if (g.two && !g.answer2) out.push(stateBox('ok', '✌️', g.answer ? 'Jetzt euer zweites Kreuz setzen.' : 'Zwei Kreuze: Ihr dürft zwei Antworten wählen.'));
-    out.push(abcd(g.options, { selected: g.answer, removed: g.removed, disabled: !canAnswer, onPick: canAnswer ? (l) => run(ui.conn, 'play.answer', { choice: l }) : null }));
-    if (g.answer && !second) out.push(shield(stateBox('', '🔒', `Eingeloggt: ${g.answer}${g.answer2 ? ` und ${g.answer2}` : ''}`)));
+    // Blickschutz: Die gewählte Antwort wird im Raster NICHT markiert (nur beim zweiten Kreuz nötig),
+    // sondern steht nur verdeckt im Blickschutz-Feld.
+    out.push(abcd(g.options, { selected: second ? g.answer : null, removed: g.removed, disabled: !canAnswer, onPick: canAnswer ? (l) => run(ui.conn, 'play.answer', { choice: l }) : null }));
+    if (g.answer && !second) out.push(shield(stateBox('', '🔒', g.swappedTo ? `Getauscht: ihr nehmt ${g.swappedTo} (statt ${g.answer})` : `Eingeloggt: ${g.answer}${g.answer2 ? ` und ${g.answer2}` : ''}`)));
     return out;
   }
-  out.push(abcd(g.options, { selected: g.answer, correct: g.correct, removed: g.removed }));
-  const right = g.answer && (g.answer === g.correct || g.answer2 === g.correct);
-  if (g.answer) out.push(right ? stateBox('ok', '✓', `Richtig! +${g.gained || 0}`) : stateBox('bad', '✗', g.gained ? `Leider falsch – trotzdem +${g.gained}` : 'Leider falsch'));
+  const mine = g.swappedTo || g.answer;
+  out.push(abcd(g.options, { selected: mine, correct: g.correct, removed: g.removed }));
+  if (g.swappedTo) out.push(muted(`🔁 Getauscht: für euch zählt ${g.swappedTo} (eure eigene war ${g.answer}).`));
+  const right = mine && (mine === g.correct || g.answer2 === g.correct);
+  if (mine) out.push(right ? stateBox('ok', '✓', `Richtig! +${g.gained || 0}`) : stateBox('bad', '✗', g.gained ? `Leider falsch – trotzdem +${g.gained}` : 'Leider falsch'));
   for (const x of g.extra || []) out.push(muted(x));
   if (g.wheel) {
     if (g.redirect) {

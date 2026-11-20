@@ -155,7 +155,8 @@ module.exports = {
     startVote(db, ctx, game, st) {
       const r = current(st);
       if (r.phase !== 'review') fail('Erst die Einreichung schließen.');
-      const order = shuffled(r.groups.map((g) => g.id), `${game.id}:hd:${st.index}:${r.groups.length}`);
+      // Echt zufällig mischen (Zeit + Zufall), damit man aus der Reihenfolge nicht auf die Abgabe schließen kann.
+      const order = shuffled(r.groups.map((g) => g.id), `${game.id}:hd:${st.index}:${ctx.now}:${Math.random()}`);
       order.forEach((id, k) => { r.groups.find((g) => g.id === id).letter = LETTERS[k]; });
       r.groups.sort((a, b) => a.letter.localeCompare(b.letter));
       r.phase = 'vote';
