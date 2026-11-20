@@ -908,3 +908,18 @@ test('Brain or Dreh\'n: Glücksrad-Buzzer – Frühstart sperrt, nach Grün gewi
   assert.equal(tv(db, C).wheel.mine, true);
   assert.equal(pv(db).wheel.falseStart.length, 1);
 });
+
+test('Brain or Dreh\'n: Auflösen wartet auf die Tausch-Entscheidung (außer mit force)', () => {
+  const { db, ids } = setup(2);
+  const [A, B] = ids;
+  const g = use(db, 'brain');
+  act(db, mod(), 'start');
+  db.live.games[g.id].t[A].jokers = [{ id: 'jt', key: 'tausch' }];
+  act(db, team(A), 'useJoker', { jokerId: 'jt', target: B });
+  act(db, mod(), 'showQuestion');
+  act(db, team(B), 'answer', { choice: 'A' });
+  act(db, team(A), 'answer', { choice: 'B' });
+  assert.throws(() => act(db, mod(), 'evaluate'), /Antworttausch/);
+  act(db, mod(), 'evaluate', { force: true });
+  assert.equal(db.live.games[g.id].r.phase, 'evaluated');
+});

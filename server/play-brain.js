@@ -479,9 +479,13 @@ module.exports = {
       log(db, ctx, 'ablauf', `Runde ${st.round + 1}: Frage offen`);
     },
 
-    evaluate(db, ctx, game, st) {
+    evaluate(db, ctx, game, st, p = {}) {
       const r = cur(st);
       if (r.phase !== 'question') fail('Gerade läuft keine Frage.');
+      // Antworttausch: Hat das Joker-Team noch nicht entschieden, nicht aus Versehen vorher auflösen.
+      if (!p.force && r.joker?.key === 'tausch' && !r.swapDecided && r.answers[r.joker.teamId] && r.answers[r.joker.target]) {
+        fail(`${teamName(db, r.joker.teamId)} entscheidet noch über den Antworttausch – kurz warten.`);
+      }
       const q = game.content.rounds[st.round];
       r.phase = 'evaluated';
       r.correct = [];

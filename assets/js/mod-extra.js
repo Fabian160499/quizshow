@@ -417,7 +417,12 @@ function brain(ui, g, st) {
   })));
   const actions = [];
   if (r.phase === 'category') actions.push(btn('pink', 'Frage zeigen', () => ui.act('play.showQuestion')));
-  if (r.phase === 'question') actions.push(btn('pink', `Auflösen (${Object.keys(r.answers).length} Antworten)`, () => ui.confirmAct('Frage auflösen und Spielpunkte vergeben?', 'play.evaluate')));
+  // Antworttausch offen: Regie sieht es und kann notfalls ohne Tausch auflösen.
+  const swapOpen = r.phase === 'question' && r.joker?.key === 'tausch' && !r.swapDecided && r.answers[r.joker.teamId] && r.answers[r.joker.target];
+  if (swapOpen) actions.push(badge('warn', `🔁 ${ui.teamName(r.joker.teamId)} entscheidet gerade über den Antworttausch`));
+  if (r.phase === 'question') actions.push(btn('pink', `Auflösen (${Object.keys(r.answers).length} Antworten)`, () => (swapOpen
+    ? ui.confirmAct('Das Team hat sich noch nicht entschieden, ob es tauscht. Trotzdem ohne Tausch auflösen?', 'play.evaluate', { force: true })
+    : ui.confirmAct('Frage auflösen und Spielpunkte vergeben?', 'play.evaluate'))));
   if (r.phase === 'evaluated') actions.push(btn('pink', 'Glücksrad freigeben', () => ui.act('play.openWheel'), !(r.correct || []).length));
   if (r.phase === 'wheel') {
     if (r.redirect && r.redirect.pending) actions.push(h('span', {}, `↪️ ${ui.teamName(r.redirect.from)} leitet um – Ziel wählen:`), ...ui.S.project.teams.filter((t) => t.id !== r.redirect.from).map((t) => btn('small ghost', t.name, () => ui.act('play.redirectFor', { target: t.id }))));
