@@ -2840,3 +2840,6 @@ html, body { touch-action: manipulation; }
 /* Finale-Tafeln: Handschrift immer vollständig auf der Tafel. Im Raster (grid) wurde „height: 100 %“
    ignoriert – hohe Handschrift (zwei Zeilen) wurde in Originalgröße gezeigt und unten abgeschnitten. */
 .fb-stage.fx .fx-board-body > .fx-ink, .fb-stage.fx .fx-face > .fx-ink { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; }
+/* Große Finalshow: statt Ticket der Siegertitel */
+.fb-sub.fb-grand { font-size: 6vh; font-weight: 900; color: #ffc23d; text-transform: uppercase; letter-spacing: 0.04em; text-shadow: 0 0 3vh rgba(255, 194, 61, 0.55); animation: fbGrand calc(1.4s * var(--speed)) calc(1s * var(--speed)) cubic-bezier(.2,1.3,.4,1) both; }
+@keyframes fbGrand { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }

@@ -884,7 +884,8 @@
           h('div', { class: 'fb-result' },
             won ? h('div', { class: 'fb-winner', '--team': f.team.color }, h('span', {}, f.team.name), h('b', {}, 'STIEHLT DIE SHOW!'))
                 : h('div', { class: 'fb-winner mod' }, h('span', {}, f.host || 'Die Moderation'), h('b', {}, f.duo ? 'BEHALTEN DIE SHOW!' : 'BEHÄLT DIE SHOW!')),
-            won ? h('div', { class: 'fb-ticket' }, h('div', { class: 'fb-ticket-l' }, h('small', {}, 'TICKET'), h('b', {}, 'Die große Finalshow'), h('span', {}, f.team.name)), h('div', { class: 'fb-ticket-r' }, coinImg('fb-ticket-coin'), h('small', {}, 'ADMIT ONE')))
+            won && s.show.grandFinal ? h('div', { class: 'fb-sub fb-grand' }, 'Sieger der großen Finalshow')
+              : won ? h('div', { class: 'fb-ticket' }, h('div', { class: 'fb-ticket-l' }, h('small', {}, 'TICKET'), h('b', {}, 'Die große Finalshow'), h('span', {}, f.team.name)), h('div', { class: 'fb-ticket-r' }, coinImg('fb-ticket-coin'), h('small', {}, 'ADMIT ONE')))
                 : h('div', { class: 'fb-sub' }, `Endstand ${f.score.team} : ${f.score.mod}`)))];
       }
 

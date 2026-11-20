@@ -1753,5 +1753,8 @@ test('Finale-Duo: Moderation + Co-Moderation spielen zusammen, eigene Finalmoder
   assert.equal(b.finale.coHost, 'Olivia');
   assert.equal(b.finale.duo, true);
   assert.equal(b.show.finaleDuo, true);
+  assert.equal(b.show.grandFinal, false);
+  game.applyAction(db, mod(), 'project.update', { grandFinal: true });
+  assert.equal(game.beamerView(db).show.grandFinal, true);
   assert.ok(ids.length === 2);
 });

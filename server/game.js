@@ -1052,6 +1052,8 @@ const moderatorActions = {
     if ('coHostAvatar' in p) pr.coHostAvatar = p.coHostAvatar ? cleanImage(p.coHostAvatar) : null;
     // Finale-Duo: Moderation + Co-Moderation stehen zusammen am Pult, eigene Finalmoderation in der Mitte.
     if ('finaleDuo' in p) pr.finaleDuo = !!p.finaleDuo;
+    // Große Finalshow: nach dem Finalsieg kein Ticket, sondern „Sieger der großen Finalshow“.
+    if ('grandFinal' in p) pr.grandFinal = !!p.grandFinal;
     if ('finaleHost' in p) pr.finaleHost = cleanText(p.finaleHost, 80);
     if ('finaleHostAvatar' in p) pr.finaleHostAvatar = p.finaleHostAvatar ? cleanImage(p.finaleHostAvatar) : null;
     if ('date' in p) pr.date = cleanDate(p.date);
@@ -1964,7 +1966,7 @@ function beamerView(db) {
   const view = {
     role: 'beamer',
     show: { name: pr.name, subtitle: pr.subtitle, host: pr.host, coHost: pr.coHost, hostAvatar: pr.hostAvatar || null, coHostAvatar: pr.coHostAvatar || null,
-      finaleDuo: !!pr.finaleDuo, finaleHost: pr.finaleHost || '', finaleHostAvatar: b.view === 'finale' ? pr.finaleHostAvatar || null : null },
+      finaleDuo: !!pr.finaleDuo, grandFinal: !!pr.grandFinal, finaleHost: pr.finaleHost || '', finaleHostAvatar: b.view === 'finale' ? pr.finaleHostAvatar || null : null },
     teams: publicTeams(db).map((t, i) => {
       const out = sums ? { ...t, points: sums[t.id] || 0 } : { ...t };
       // Avatare nur in den Ansichten mit Teampulten mitschicken (große Bilder).
