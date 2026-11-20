@@ -1590,7 +1590,9 @@ function formField(f, holder, k, save, rerender, id) {
     case 'textarea':
       return h('div', { class: 'field' }, h('label', { for: id }, f.label), h('textarea', { id, rows: String(f.rows || 2), maxlength: String(f.max), oninput: (ev) => set(ev.target.value) }, holder[k] ?? ''));
     case 'number':
-      return h('div', { class: 'field' }, h('label', { for: id }, f.label), h('input', { id, type: 'number', min: String(f.min), max: String(f.max), step: String(f.step || 1), value: holder[k] ?? '', placeholder: f.placeholder ?? '', oninput: (ev) => set(ev.target.value === '' ? null : Number(ev.target.value)) }));
+      return h('div', { class: 'field' }, h('label', { for: id }, f.label), h('input', { id, type: 'number', min: String(f.min), max: String(f.max), step: String(f.step || 1), value: holder[k] ?? '', placeholder: f.placeholder ?? '', oninput: (ev) => set(ev.target.value === '' ? null : Number(ev.target.value)),
+        // Scrollen mit Maus/Trackpad über einem aktiven Zahlenfeld ändert sonst unbemerkt den Wert (z. B. Punkte 1 → 0).
+        onwheel: (ev) => { if (document.activeElement === ev.target) ev.target.blur(); } }));
     case 'select': {
       // unique: in den anderen Einträgen derselben Liste schon gewählte Optionen sind gesperrt.
       const others = f.optionSource?.unique ? (atPath(previewTarget?.d?.content, f.optionSource.unique) || []).filter((x) => x !== holder).map((x) => x && x[f.key]) : [];
