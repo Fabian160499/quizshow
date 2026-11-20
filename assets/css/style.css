@@ -2829,3 +2829,10 @@ html, body { touch-action: manipulation; }
 .staff-row { display: flex; gap: 8px; }
 .staff-row input { flex: 1; min-width: 0; }
 .staff-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Glücksrad-Buzzer mit Frühstart-Sperre */
+.buzzer.armed { background: radial-gradient(circle at 35% 30%, #ff8a8a, #c62828 60%, #6d0f0f); box-shadow: 0 14px 0 #4a0909, var(--shadow); font-size: 1.8rem; }
+.buzzer.go { background: radial-gradient(circle at 35% 30%, #b9ffb0, #22c55e 60%, #0b6b2e); box-shadow: 0 14px 0 #064d20, var(--shadow); animation: buzzGo .5s ease-out; }
+@keyframes buzzGo { from { transform: scale(.85); } to { transform: none; } }
+.wheel-wait { font: 900 4vh var(--font-display); padding: 1vh 3vh; border-radius: 99px; background: rgba(198, 40, 40, .85); color: #fff; }
+.wheel-wait.go { background: rgba(34, 197, 94, .9); animation: buzzGo .5s ease-out; }

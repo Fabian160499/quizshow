@@ -506,7 +506,7 @@ test('Brain or Dreh’n: neue positive Joker (Rettungsring, Zwei Kreuze, Wette, 
   act(db, team(A), 'answer', { choice: q(5) });
   act(db, team(B), 'answer', { choice: q(5) });
   act(db, mod(), 'evaluate');
-  act(db, mod(), 'openWheel');
+  act(db, mod(), 'openWheel'); clock += 3100; // Buzzer wird nach 1–3 s grün
   assert.equal(st.r.buzz, A);
   assert.throws(() => act(db, team(B), 'wheelBuzz'), /schneller/);
 });
@@ -613,7 +613,7 @@ test('Brain or Dreh’n: neue negative Joker und Punktabzug 1 geht an ein andere
   act(db, mod(), 'showQuestion');
   act(db, team(A), 'answer', { choice: q(3) });
   act(db, mod(), 'evaluate');
-  act(db, mod(), 'openWheel'); // dritte Runde: Sperre vorbei
+  act(db, mod(), 'openWheel'); clock += 3100; // dritte Runde: Sperre vorbei
   act(db, team(A), 'wheelBuzz');
   void t0; void wrong;
 });

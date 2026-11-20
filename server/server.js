@@ -657,6 +657,7 @@ function lanAddresses() {
 }
 
 server.listen(PORT, () => {
+  scheduleWake(); // nach einem Neustart laufende Zeitabläufe (Countdowns, Rad-Buzzer) wieder einplanen
   console.log(`„Wer stiehlt uns die Show“ läuft auf http://localhost:${PORT}`);
   // Adressen im WLAN für iPads und Beamer anzeigen.
   const nets = lanAddresses();

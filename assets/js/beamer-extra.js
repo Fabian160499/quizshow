@@ -826,7 +826,10 @@ function brainBody(v, teamOf) {
   }
   if (v.phase === 'wheel' || (v.phase === 'evaluated' && v.wheel.spin)) {
     return [h('div', { class: 'row', style: { justifyContent: 'center', marginBottom: '1vh' } },
-      v.wheel.buzz ? chip(teamOf(v.wheel.buzz), 'answering', ' 🎡 dreht das Glücksrad') : sub('Wer richtig lag, buzzert jetzt ans Glücksrad!')), wheel(v, teamOf)];
+      v.wheel.buzz ? chip(teamOf(v.wheel.buzz), 'answering', ' 🎡 dreht das Glücksrad')
+        : v.wheel.armed ? h('div', { class: 'wheel-wait' }, '🔴 Achtung … erst bei GRÜN buzzern!')
+        : h('div', { class: 'wheel-wait go' }, '🟢 JETZT buzzern!'),
+      ...(v.wheel.falseStart || []).map((id) => chip(teamOf(id), 'wrong', ' 🚫 Frühstart'))), wheel(v, teamOf)];
   }
   const marks = {};
   const out = [h('div', { class: 'level-tag' }, v.category), banner(v.question, 'compact'), options(v, { correct: v.correct, marks })];

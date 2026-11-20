@@ -497,7 +497,7 @@ test('Brain or Dreh\'n: Joker, Glücksrad, Sperren, Reset nur Spielpunkte, Gehei
   act(db, mod(), 'evaluate');
   assert.equal(tv(db, A).points, 1);
   assert.equal(pv(db).points.find((x) => x.teamId === A).points, 1); // Spielpunkte aller Teams dauerhaft sichtbar
-  act(db, mod(), 'openWheel');
+  act(db, mod(), 'openWheel'); clock += 3100; // Buzzer wird nach 1–3 s grün
   assert.throws(() => act(db, team(C), 'wheelBuzz'), /richtiger Antwort/);
   act(db, team(B), 'wheelBuzz');
   assert.throws(() => act(db, team(A), 'wheelBuzz'), /schneller/);
@@ -876,8 +876,33 @@ test('Brain or Dreh\'n: Antworttausch – getauschte richtige Antwort darf ans R
   act(db, team(A), 'swap', { swap: true });
   act(db, mod(), 'evaluate');
   assert.equal(tv(db, A).gained, 1);
-  act(db, mod(), 'openWheel');
+  act(db, mod(), 'openWheel'); clock += 3100; // Buzzer wird nach 1–3 s grün
   assert.equal(tv(db, A).wheel.canBuzz, true);
   act(db, team(A), 'wheelBuzz');
   assert.equal(tv(db, A).wheel.mine, true);
+});
+
+test('Brain or Dreh\'n: Glücksrad-Buzzer – Frühstart sperrt, nach Grün gewinnt der Schnellste', () => {
+  const { db, ids } = setup(3);
+  const [A, B, C] = ids;
+  const g = use(db, 'brain');
+  act(db, mod(), 'start');
+  act(db, mod(), 'showQuestion');
+  const right = g.content.rounds[0].correct;
+  for (const id of ids) act(db, team(id), 'answer', { choice: right });
+  act(db, mod(), 'evaluate');
+  act(db, mod(), 'openWheel'); clock += 3100; // Buzzer wird nach 1–3 s grün
+  const st = db.live.games[g.id];
+  assert.equal(tv(db, A).wheel.armed, true);
+  // A tippt zu früh → raus, aber kein Fehler (Sperre bleibt gespeichert)
+  game.applyAction(db, { role: 'team', teamId: A, actor: 'team:' + A, now: st.r.greenAt - 500 }, 'play.wheelBuzz', {});
+  assert.equal(tv(db, A).wheel.falseStart, true);
+  assert.equal(tv(db, A).wheel.canBuzz, false);
+  assert.throws(() => game.applyAction(db, { role: 'team', teamId: A, actor: 'team:' + A, now: st.r.greenAt + 10 }, 'play.wheelBuzz', {}), /Frühstart/);
+  // Grün schalten über den Zeittakt
+  game.tick(db, db.live.games[g.id].r.greenAt + 1); // (passiert auch automatisch vor jeder Aktion)
+  assert.equal(tv(db, B).wheel.armed, false);
+  game.applyAction(db, { role: 'team', teamId: C, actor: 'team:' + C, now: st.r.greenAt + 20 }, 'play.wheelBuzz', {});
+  assert.equal(tv(db, C).wheel.mine, true);
+  assert.equal(pv(db).wheel.falseStart.length, 1);
 });

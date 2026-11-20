@@ -517,7 +517,12 @@ function brain(g, ui) {
     } else if (g.wheel.spin) out.push(stateBox(g.wheel.spin.field.good ? 'ok' : 'bad', g.wheel.spin.field.icon, g.wheel.spin.text && !g.wheel.spin.field.good ? `${g.wheel.spin.field.name}: ${g.wheel.spin.text}` : `${g.wheel.spin.field.name}: ${g.wheel.spin.field.text}`));
     else if (g.wheel.mine) out.push(stateBox('ok', '🎡', 'Ihr dürft drehen!'), h('button', { class: 'btn pink huge', style: { width: '100%' }, onclick: () => run(ui.conn, 'play.spin') }, 'Glücksrad drehen'));
     else if (g.wheel.banned) out.push(stateBox('bad', '🚫', 'Rad-Sperre: Diesmal dürft ihr nicht ans Glücksrad.'));
-    else if (g.wheel.canBuzz) out.push(muted('Ihr lagt richtig – wer zuerst buzzert, dreht das Glücksrad.'), buzzButton('Buzzer', true, () => run(ui.conn, 'play.wheelBuzz')));
+    else if (g.wheel.falseStart) out.push(stateBox('bad', '🚫', 'Frühstart! Ihr habt vor Grün getippt – diesmal nicht ans Glücksrad.'));
+    else if (g.wheel.canBuzz && g.wheel.armed) {
+      // Noch rot: Tippen jetzt = Frühstart. Der Buzzer wird zu einer zufälligen Zeit grün.
+      out.push(muted('Ihr lagt richtig! Wartet, bis der Buzzer GRÜN wird – wer vorher tippt, ist raus.'),
+        buzzPress({ class: 'buzzer armed', 'aria-label': 'Buzzer – noch nicht grün' }, 'WARTEN …', () => run(ui.conn, 'play.wheelBuzz')));
+    } else if (g.wheel.canBuzz) out.push(muted('JETZT! Wer zuerst buzzert, dreht das Glücksrad.'), buzzPress({ class: 'buzzer go', 'aria-label': 'Buzzer – jetzt' }, 'BUZZ', () => run(ui.conn, 'play.wheelBuzz')));
     else if (g.wheel.taken) out.push(stateBox('', '🎡', `${ui.teamName(g.wheel.taken)} dreht das Glücksrad.`));
   }
   if (g.finished) out.push(stateBox('ok', '🏁', `Spiel beendet – ${pts(g.points)} gehen in euren Punktestand.`));

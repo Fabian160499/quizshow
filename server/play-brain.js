@@ -18,6 +18,8 @@ const core = require('./core');
 const { fail, log, effect, teamName, teamIds, bookTarget, cleanChoice } = core;
 // Zufall über core.randomInt (im Test austauschbar).
 const randomInt = (n) => core.randomInt(n);
+const GREEN_MIN_MS = 1000; // Glücksrad-Buzzer: frühestens nach 1 s grün …
+const GREEN_SPAN_MS = 2000; // … spätestens nach 3 s
 const { WHEEL, WHEEL_SLOTS } = require('./defaults-extra');
 
 const NEEDS_TARGET = ['raeuber', 'dieb', 'blockade', 'detektiv', 'tausch'];
@@ -393,6 +395,19 @@ module.exports = {
       if (!r.correct.includes(ctx.teamId)) fail('Nur Teams mit richtiger Antwort dürfen ans Rad.');
       if (teamState(st, ctx.teamId).wheelBanNow) fail('Ihr habt Rad-Sperre.');
       if (r.buzz) fail(`${teamName(db, r.buzz)} war schneller.`);
+      r.falseStart = r.falseStart || [];
+      if (r.falseStart.includes(ctx.teamId)) fail('Frühstart – ihr seid für dieses Glücksrad raus.');
+      if (r.greenAt && !r.green) {
+        if (ctx.now < r.greenAt) {
+          // Zu früh getippt: gesperrt (kein Fehler, damit die Sperre gespeichert wird).
+          r.falseStart.push(ctx.teamId);
+          note(st, `${teamName(db, ctx.teamId)}: Frühstart – raus für dieses Glücksrad`);
+          log(db, ctx, 'buzzer', `${teamName(db, ctx.teamId)}: Frühstart am Glücksrad`);
+          effect(db, 'wrong');
+          return;
+        }
+        r.green = true;
+      }
       r.buzz = ctx.teamId;
       log(db, ctx, 'buzzer', `${teamName(db, ctx.teamId)} darf das Glücksrad drehen`);
       effect(db, 'buzz');
@@ -539,6 +554,12 @@ module.exports = {
       if (r.priority && allowed.includes(r.priority)) {
         r.buzz = r.priority;
         note(st, `${teamName(db, r.priority)} hat Vorfahrt am Glücksrad`);
+      } else {
+        // Frühstart-Sperre: Der Buzzer wird erst nach 1–3 Sekunden (zufällig) grün.
+        // Wer vorher tippt, ist für dieses Rad raus – Dauertippen lohnt sich nicht.
+        r.greenAt = ctx.now + GREEN_MIN_MS + randomInt(GREEN_SPAN_MS + 1);
+        r.green = false;
+        r.falseStart = [];
       }
       log(db, ctx, 'ablauf', 'Glücksrad frei – richtige Teams dürfen buzzern');
     },
@@ -587,8 +608,18 @@ module.exports = {
     },
   },
 
-  // Neu zeichnen, wenn eine Zeitdruck-Frist abläuft.
+  // Glücksrad: Buzzer zur zufälligen Zeit grün schalten.
+  tick(db, ctx, game, st) {
+    const r = st.r;
+    if (st.round < 0 || !r || r.phase !== 'wheel' || r.green || !r.greenAt || ctx.now < r.greenAt) return false;
+    r.green = true;
+    effect(db, 'buzz');
+    return true;
+  },
+
+  // Neu zeichnen, wenn eine Zeitdruck-Frist abläuft oder der Rad-Buzzer grün wird.
   wakeAt(db, game, st, now) {
+    if (st.round >= 0 && st.r && st.r.phase === 'wheel' && st.r.greenAt && !st.r.green) return st.r.greenAt;
     if (st.round < 0 || !st.r || st.r.phase !== 'question') return null;
     const next = Object.values(st.r.rush || {}).map((d) => d + RUSH_GRACE_MS).filter((d) => d > now).sort((a, b) => a - b)[0];
     return next || null;
@@ -644,7 +675,8 @@ module.exports = {
       // Detektiv: Antwort des beobachteten Teams nur für das Joker-Team, erst nach dessen Abgabe.
       detective: det ? { target: r.joker.target, answer: r.answers[r.joker.target]?.choice ?? null, waiting: !r.answers[r.joker.target] } : null,
       swap: tau && r.phase === 'question' ? { target: r.joker.target, ready: !!r.answers[teamId] && !!r.answers[r.joker.target], decided: !!r.swapDecided, theirs: r.answers[teamId] && r.answers[r.joker.target] ? r.answers[r.joker.target].choice : null } : null,
-      wheel: r.phase === 'wheel' ? { canBuzz: r.correct.includes(teamId) && !r.buzz && !t.wheelBanNow, banned: r.correct.includes(teamId) && !!t.wheelBanNow, mine: r.buzz === teamId, taken: r.buzz, spin: r.spin ? { index: r.spin.index, field: spunField(game, r.spin), text: r.spin.text || null } : null } : null,
+      wheel: r.phase === 'wheel' ? { canBuzz: r.correct.includes(teamId) && !r.buzz && !t.wheelBanNow && !(r.falseStart || []).includes(teamId),
+        armed: !!r.greenAt && !r.green, falseStart: (r.falseStart || []).includes(teamId), banned: r.correct.includes(teamId) && !!t.wheelBanNow, mine: r.buzz === teamId, taken: r.buzz, spin: r.spin ? { index: r.spin.index, field: spunField(game, r.spin), text: r.spin.text || null } : null } : null,
       targets: teamIds(db).filter((id) => id !== teamId),
       finished: st.finished,
     };
@@ -671,7 +703,8 @@ module.exports = {
       // Nach der Auflösung: gewertete Antworten (ein Tausch bleibt geheim, nur das Ergebnis zählt).
       results: ['evaluated', 'wheel'].includes(r.phase) ? teamIds(db).map((id) => ({ teamId: id, ok: r.correct.includes(id), answered: effective(r, id) !== null })) : [],
       joker: publicJoker,
-      wheel: { fields: wheelFields(game).map((f) => ({ n: f.n, icon: f.icon, good: f.good, name: f.name })), buzz: r.phase === 'wheel' ? r.buzz : null, spin: r.spin ? { index: r.spin.index, field: spunField(game, r.spin), teamId: r.spin.teamId, text: r.spin.text || null, redirect: r.redirect ? { pending: r.redirect.pending, to: r.redirect.to } : null } : null, open: r.phase === 'wheel' },
+      wheel: { fields: wheelFields(game).map((f) => ({ n: f.n, icon: f.icon, good: f.good, name: f.name })), buzz: r.phase === 'wheel' ? r.buzz : null,
+        armed: r.phase === 'wheel' && !!r.greenAt && !r.green, falseStart: r.phase === 'wheel' ? r.falseStart || [] : [], spin: r.spin ? { index: r.spin.index, field: spunField(game, r.spin), teamId: r.spin.teamId, text: r.spin.text || null, redirect: r.redirect ? { pending: r.redirect.pending, to: r.redirect.to } : null } : null, open: r.phase === 'wheel' },
       // Spielpunkte dieses Spiels (nicht der Show-Gesamtstand) dauerhaft auf dem Beamer.
       points: teamIds(db).map((id) => ({ teamId: id, points: teamState(st, id).points })),
       events: st.events.filter((e) => e.pub).slice(-4),
