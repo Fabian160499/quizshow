@@ -30,7 +30,7 @@ const WHEEL = [
   { n: 14, key: 'verbot', good: false, icon: '🤐', name: 'Antwortverbot', text: 'Ihr dürft die nächste Frage nicht beantworten.' },
   { n: 7, key: 'detektiv', good: true, icon: '🕵️', name: 'Detektiv-Joker', text: 'Wählt heimlich ein Team: Sobald es geantwortet hat, seht nur ihr seine Antwort – dann antwortet ihr.' },
   { n: 15, key: 'enteignung', good: false, icon: '🗑️', name: 'Joker-Enteignung', text: 'Alle Joker in eurem Vorrat gehen verloren.' },
-  { n: 8, key: 'tausch', good: true, icon: '🔁', name: 'Antworttausch', text: 'Wählt heimlich ein Team: Wenn beide geantwortet haben, dürft ihr eure Antwort gegen seine tauschen.' },
+  { n: 8, key: 'tausch', good: true, icon: '🔁', name: 'Antworttausch', text: 'Wählt heimlich ein Team: Wenn beide geantwortet haben, dürft ihr eure Antworten tauschen – ihr bekommt seine, es bekommt eure.' },
   { n: 16, key: 'reset', good: false, icon: '0️⃣', name: 'Reset', text: 'Eure Spielpunkte in diesem Spiel fallen auf 0.' },
   // Erweiterung der Joker-Datenbank (Oktober 2026): je 7 weitere positive und negative Joker.
   { n: 17, key: 'rettung', good: true, icon: '🛟', name: 'Rettungsring', text: 'Ist eure Antwort bei dieser Frage falsch, bekommt ihr trotzdem 1 Punkt. Eine laufende Streak bleibt erhalten.' },

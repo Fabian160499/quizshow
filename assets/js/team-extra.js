@@ -488,7 +488,7 @@ function brain(g, ui) {
     }
     if (g.swap && g.swap.ready && !g.swap.decided) {
       out.push(stateBox('ok', '🔁', `${ui.teamName(g.swap.target)} hat ${g.swap.theirs} geantwortet. Tauschen?`),
-        h('div', { class: 'row' }, h('button', { class: 'btn pink', onclick: () => run(ui.conn, 'play.swap', { swap: true }) }, `Ja, ${g.swap.theirs} nehmen`), h('button', { class: 'btn ghost', onclick: () => run(ui.conn, 'play.swap', { swap: false }) }, 'Eigene behalten')));
+        h('div', { class: 'row' }, h('button', { class: 'btn pink', onclick: () => run(ui.conn, 'play.swap', { swap: true }) }, `Ja, tauschen (${g.swap.theirs} für uns)`), h('button', { class: 'btn ghost', onclick: () => run(ui.conn, 'play.swap', { swap: false }) }, 'Eigene behalten')));
     }
     if (g.rush && !g.answer) {
       if (g.rush.over) return [...out, stateBox('bad', '⏱', 'Zeitdruck: Eure Zeit ist abgelaufen.')];
@@ -506,7 +506,7 @@ function brain(g, ui) {
   }
   const mine = g.swappedTo || g.answer;
   out.push(abcd(g.options, { selected: mine, correct: g.correct, removed: g.removed }));
-  if (g.swappedTo) out.push(muted(`🔁 Getauscht: für euch zählt ${g.swappedTo} (eure eigene war ${g.answer}).`));
+  if (g.swappedTo) out.push(muted(g.swappedBy ? `🔁 ${ui.teamName(g.swappedBy)} hat mit euch getauscht: für euch zählt ${g.swappedTo} (eure eigene war ${g.answer}).` : `🔁 Getauscht: für euch zählt ${g.swappedTo} (eure eigene war ${g.answer}).`));
   const right = mine && (mine === g.correct || g.answer2 === g.correct);
   if (mine) out.push(right ? stateBox('ok', '✓', `Richtig! +${g.gained || 0}`) : stateBox('bad', '✗', g.gained ? `Leider falsch – trotzdem +${g.gained}` : 'Leider falsch'));
   for (const x of g.extra || []) out.push(muted(x));

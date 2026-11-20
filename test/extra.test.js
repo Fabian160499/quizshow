@@ -553,7 +553,7 @@ test('Brain or Dreh\'n: Joker, Glücksrad, Sperren, Reset nur Spielpunkte, Gehei
   assert.equal(totals(db)[B], 11 + 4);
 });
 
-test('Brain or Dreh\'n: Antworttausch wertet die getauschte Antwort, Original des Gegners bleibt', () => {
+test('Brain or Dreh\'n: Antworttausch – beide Teams tauschen ihre Antworten', () => {
   const { db, ids } = setup(2);
   const [A, B] = ids;
   const g = use(db, 'brain');
@@ -569,10 +569,12 @@ test('Brain or Dreh\'n: Antworttausch wertet die getauschte Antwort, Original de
   assert.equal(tv(db, A).swap.theirs, right);
   assert.equal(tv(db, B).swap, null); // B erfährt nichts
   act(db, team(A), 'swap', { swap: true });
+  assert.equal(tv(db, B).swappedTo, null); // B erfährt es erst bei der Auflösung
   act(db, mod(), 'evaluate');
   assert.equal(tv(db, A).points, 1);
-  assert.equal(tv(db, B).points, 1);
-  assert.equal(db.live.games[g.id].r.answers[B].choice, right);
+  assert.equal(tv(db, B).points, 0); // B hat jetzt A's falsche Antwort
+  assert.equal(tv(db, B).swappedTo, wrong);
+  assert.equal(tv(db, B).swappedBy, A);
 });
 
 test('Brain or Dreh\'n: Joker-Dieb nur einsetzbar, wenn ein anderes Team Joker hat', () => {

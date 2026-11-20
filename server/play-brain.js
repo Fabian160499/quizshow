@@ -304,8 +304,10 @@ function doRedirect(db, ctx, game, st, target) {
 }
 
 // Antwort, die für ein Team gewertet wird (Antworttausch des Joker-Teams separat protokolliert).
+// Antworttausch: Beide Teams tauschen ihre Antworten – jedes wird mit der des anderen gewertet.
 function effective(r, id) {
   if (r.swapped && r.swapped.teamId === id) return r.answers[r.swapped.with]?.choice ?? null;
+  if (r.swapped && r.swapped.with === id) return r.answers[r.swapped.teamId]?.choice ?? null;
   return r.answers[id]?.choice ?? null;
 }
 
@@ -385,7 +387,7 @@ module.exports = {
       r.swapDecided = true;
       if (p.swap) {
         r.swapped = { teamId: ctx.teamId, with: r.joker.target, original: r.answers[ctx.teamId].choice, used: r.answers[r.joker.target].choice };
-        log(db, ctx, 'joker', `Antworttausch: ${teamName(db, ctx.teamId)} wertet ${r.swapped.used} statt ${r.swapped.original} (Antwort von ${teamName(db, r.joker.target)} bleibt unverändert)`);
+        log(db, ctx, 'joker', `Antworttausch: ${teamName(db, ctx.teamId)} (${r.swapped.original}) und ${teamName(db, r.joker.target)} (${r.swapped.used}) tauschen ihre Antworten`);
       }
     },
 
@@ -643,7 +645,9 @@ module.exports = {
       blocked: t.blockedNow,
       answer: r.answers[teamId]?.choice ?? null,
       // Antworttausch: die übernommene Antwort zählt für dieses Team.
-      swappedTo: r.swapped && r.swapped.teamId === teamId ? r.swapped.used : null,
+      // Nach dem Tausch zählt für beide Teams die Antwort des anderen (das getauschte Team erfährt es erst bei der Auflösung).
+      swappedTo: r.swapped && (r.swapped.teamId === teamId || (r.swapped.with === teamId && ['evaluated', 'wheel'].includes(r.phase))) ? effective(r, teamId) : null,
+      swappedBy: r.swapped && r.swapped.with === teamId && ['evaluated', 'wheel'].includes(r.phase) ? r.swapped.teamId : null,
       correct: ['evaluated', 'wheel'].includes(r.phase) ? q.correct : null,
       gained: r.gains ? r.gains[teamId] || 0 : null,
       points: t.points,
