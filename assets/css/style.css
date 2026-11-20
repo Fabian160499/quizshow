@@ -2836,3 +2836,7 @@ html, body { touch-action: manipulation; }
 @keyframes buzzGo { from { transform: scale(.85); } to { transform: none; } }
 .wheel-wait { font: 900 4vh var(--font-display); padding: 1vh 3vh; border-radius: 99px; background: rgba(198, 40, 40, .85); color: #fff; }
 .wheel-wait.go { background: rgba(34, 197, 94, .9); animation: buzzGo .5s ease-out; }
+
+/* Finale-Tafeln: Handschrift immer vollständig auf der Tafel. Im Raster (grid) wurde „height: 100 %“
+   ignoriert – hohe Handschrift (zwei Zeilen) wurde in Originalgröße gezeigt und unten abgeschnitten. */
+.fb-stage.fx .fx-board-body > .fx-ink, .fb-stage.fx .fx-face > .fx-ink { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; }
